@@ -1,0 +1,13 @@
+[package]
+name = "asciidoc2rs"
+version = "0.1.0"
+authors = ["kPherox <kphrx@kpherox.dev>"]
+license = "MIT"
+description = "A parser for AsciiDoc"
+repository = "https://github.com/kphrx/asciidoc2rs"
+keywords = ["asciidoc"]
+categories = ["text-processing"]
+edition = "2021"
+
+
+[dependencies]
