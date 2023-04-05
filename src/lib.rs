@@ -1,23 +1,7 @@
-pub trait Block: BlockClone {}
+use dyn_clone::{clone_trait_object, DynClone};
 
-impl<T> BlockClone for T
-where
-    T: 'static + Block + Clone,
-{
-    fn clone_box(&self) -> Box<dyn Block> {
-        Box::new(self.clone())
-    }
-}
-
-pub trait BlockClone {
-    fn clone_box(&self) -> Box<dyn Block>;
-}
-
-impl Clone for Box<dyn Block> {
-    fn clone(&self) -> Box<dyn Block> {
-        self.clone_box()
-    }
-}
+pub trait Block: DynClone {}
+clone_trait_object!(Block);
 
 #[derive(Clone)]
 pub struct Document {
