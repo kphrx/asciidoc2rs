@@ -1,5 +1,59 @@
-pub fn add(left: usize, right: usize) -> usize {
-    left + right
+pub trait Block: BlockClone {}
+
+impl<T> BlockClone for T
+where
+    T: 'static + Block + Clone,
+{
+    fn clone_box(&self) -> Box<dyn Block> {
+        Box::new(self.clone())
+    }
+}
+
+pub trait BlockClone {
+    fn clone_box(&self) -> Box<dyn Block>;
+}
+
+impl Clone for Box<dyn Block> {
+    fn clone(&self) -> Box<dyn Block> {
+        self.clone_box()
+    }
+}
+
+#[derive(Clone)]
+pub struct Document {
+    blocks: Vec<Box<dyn Block>>,
+    index: usize,
+}
+
+impl Iterator for Document {
+    type Item = Box<dyn Block>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index >= self.blocks.len() {
+            return None;
+        }
+
+        let block = &self.blocks[self.index];
+        self.index += 1;
+
+        Some(block.clone())
+    }
+}
+
+pub struct Parser<'input> {
+    text: &'input str,
+}
+
+impl<'input> Parser<'input> {
+    pub fn new(text: &'input str) -> Self {
+        Self { text }
+    }
+
+    pub fn parse(self) -> Vec<Document> {
+        let documents = Vec::with_capacity(0);
+
+        documents
+    }
 }
 
 #[cfg(test)]
@@ -7,8 +61,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
+    fn paragraph_block() {
+        let parser = Parser::new("Paragraphs don't require any special markup in AsciiDoc.\nA paragraph is just one or more lines of consecutive text.\n\nTo begin a new paragraph, separate it by at least one empty line from the previous paragraph or block.");
+
+        let documents = parser.parse();
+        assert_eq!(1, documents.len());
+
+        let document = documents[0].clone();
+        assert_eq!(2, document.clone().count());
     }
 }
