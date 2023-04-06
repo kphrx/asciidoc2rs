@@ -25,7 +25,7 @@ impl Document {
         Document { blocks, doctype }
     }
 
-    fn title(self) -> Option<String> {
+    fn title(self) -> Option<&'static str> {
         match self.doctype {
             Doctype::Manpage => panic!("require document title"),
             _ => false,
@@ -73,17 +73,17 @@ pub enum Doctype {
     Manpage,
 }
 
-pub struct Parser<'input> {
-    text: &'input str,
+pub struct Parser {
+    text: &'static str,
     doctype: Doctype,
 }
 
-impl<'input> Parser<'input> {
-    pub fn new(text: &'input str) -> Self {
+impl Parser {
+    pub fn new(text: &'static str) -> Self {
         Self::new_with_doctype(text, Doctype::Article)
     }
 
-    pub fn new_with_doctype(text: &'input str, doctype: Doctype) -> Self {
+    pub fn new_with_doctype(text: &'static str, doctype: Doctype) -> Self {
         Self { text, doctype }
     }
 
@@ -105,7 +105,7 @@ mod tests {
         let parser = Parser::new("// this comment line is ignored\n= Document Title\nKismet R. Lee <kismet@asciidoctor.org>\n:description: The document's description.\n:sectanchors:\n:url-repo: https://my-git-repo.com\n\nThe document body starts here.");
 
         let document = parser.parse();
-        assert_eq!(Some("Document Title".to_string()), document.clone().title());
+        assert_eq!(Some("Document Title"), document.clone().title());
         let authors = document.clone().authors();
         assert_eq!(1, authors.len());
         let author = &authors[0];
@@ -133,10 +133,7 @@ mod tests {
 
         let document = parser.parse();
         assert_eq!(1, document.iter().count());
-        assert_eq!(
-            Some("Document Title (Level 0)".to_string()),
-            document.clone().title()
-        );
+        assert_eq!(Some("Document Title (Level 0)"), document.clone().title());
     }
 
     #[test]
