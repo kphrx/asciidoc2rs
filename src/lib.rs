@@ -86,4 +86,31 @@ mod tests {
         assert_eq!(None, document.clone().title());
 
     }
+
+    #[test]
+    fn section_block() {
+        let parser = Parser::new("= Document Title (Level 0)\n\n== Level 1 Section Title\n\n=== Level 2 Section Title\n\n==== Level 3 Section Title\n\n===== Level 4 Section Title\n\n====== Level 5 Section Title\n\n== Another Level 1 Section Title");
+
+        let document = parser.parse();
+        assert_eq!(1, document.iter().count());
+        assert_eq!(
+            Some("Document Title (Level 0)".to_string()),
+            document.clone().title()
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn illegal_section_block() {
+        Parser::new("= Document Title\n\n= Illegal Level 0 Section (violates rule #1)\n\n== First Section\n\n==== Illegal Nested Section (violates rule #2)");
+    }
+
+    #[test]
+    fn nested_section_block() {
+        let parser = Parser::new("== First Section\n\nContent of first section\n\n=== Nested Section\n\nContent of nested section\n\n== Second Section\n\nContent of second section");
+
+        let document = parser.parse();
+        assert_eq!(2, document.iter().count());
+        assert_eq!(None, document.clone().title());
+    }
 }
