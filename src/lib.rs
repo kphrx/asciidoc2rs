@@ -33,6 +33,18 @@ impl Document {
 
         None
     }
+
+    fn authors(self) -> Vec<Author> {
+        Vec::with_capacity(0)
+    }
+
+    fn revision(self) -> Option<Revision> {
+        None
+    }
+
+    fn description(self) -> Option<String> {
+        None
+    }
 }
 
 impl Block for Document {}
@@ -41,6 +53,17 @@ impl CompoundBlock for Document {
     fn iter(&self) -> Box<dyn Iterator<Item = Box<dyn Block>>> {
         Box::new(self.blocks.clone().into_iter())
     }
+}
+
+pub struct Author {
+    name: String,
+    email: String,
+}
+
+pub struct Revision {
+    number: String,
+    date: String,
+    remark: String,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -76,6 +99,23 @@ impl<'input> Parser<'input> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn document_header() {
+        let parser = Parser::new("// this comment line is ignored\n= Document Title\nKismet R. Lee <kismet@asciidoctor.org>\n:description: The document's description.\n:sectanchors:\n:url-repo: https://my-git-repo.com\n\nThe document body starts here.");
+
+        let document = parser.parse();
+        assert_eq!(Some("Document Title".to_string()), document.clone().title());
+        let authors = document.clone().authors();
+        assert_eq!(1, authors.len());
+        let author = &authors[0];
+        assert_eq!("Kismet R. Lee", author.name);
+        assert_eq!("kismet@asciidoctor.org", author.email);
+        assert_eq!(
+            Some("The document's description.".to_string()),
+            document.clone().description()
+        );
+    }
 
     #[test]
     fn paragraph_block() {
