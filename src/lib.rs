@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use dyn_clone::{clone_trait_object, DynClone};
 
 pub trait CompoundBlock: Block {
@@ -26,8 +28,11 @@ pub struct Document {
 struct DocumentMetadata {
     title: Option<&'static str>,
     implicit_line: bool,
+    current_attr: Option<&'static str>,
+    current_value: Option<&'static str>,
     authors: Option<Vec<Author>>,
     revision: Option<Revision>,
+    custom_attributes: HashMap<&'static str, &'static str>,
 }
 
 impl DocumentMetadata {
@@ -80,6 +85,123 @@ impl DocumentMetadata {
     fn parse_revision_line(&self, text: &'static str) -> bool {
         false
     }
+
+    fn is_attribute_line(&mut self, text: &'static str) -> bool {
+        if !self.implicit_line {
+            if self.current_attr.is_some() {
+                self.parse_wrapped_attr(text);
+                true
+            } else if text.starts_with(':') {
+                self.parse_attr(text)
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    }
+
+    fn parse_attr(&mut self, text: &'static str) -> bool {
+        if let Some(unset_attr) = text.strip_prefix(":!").and_then(|a| a.strip_suffix(":")) {
+            if !unset_attr.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
+                || unset_attr
+                    .find(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-')
+                    .is_some()
+            {
+                panic!("invalid document attribute: :!{}:", unset_attr);
+            }
+
+            self.custom_attributes.remove(unset_attr);
+
+            true
+        } else if let Some((attr_name, attr_value)) =
+            text.strip_prefix(":").and_then(|a| a.split_once(": "))
+        {
+            if !attr_name.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
+                || attr_name
+                    .find(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-')
+                    .is_some()
+            {
+                panic!("invalid document attribute: :{}:", attr_name);
+            }
+
+            if let Some(wrap_value) = attr_value.strip_suffix(" + \\") {
+                wrap_value.to_owned().push_str("\n");
+                self.current_value = Some(wrap_value)
+            } else if let Some(wrap_value) = attr_value.strip_suffix(" \\") {
+                wrap_value.to_owned().push_str(" ");
+                self.current_value = Some(wrap_value)
+            } else {
+                self.custom_attributes.insert(attr_name, attr_value);
+
+                return true
+            }
+
+            self.current_attr = Some(attr_name);
+
+            true
+        } else if let Some(unset_attr) = text.strip_prefix(":").and_then(|a| a.strip_suffix("!:")) {
+            if !unset_attr.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
+                || unset_attr
+                    .find(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-')
+                    .is_some()
+            {
+                panic!("invalid document attribute: :{}!:", unset_attr);
+            }
+
+            self.custom_attributes.remove(unset_attr);
+
+            true
+        } else if let Some(set_bool_attr) = text.strip_prefix(":").and_then(|a| a.strip_suffix(":"))
+        {
+            if !set_bool_attr.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
+                || set_bool_attr
+                    .find(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-')
+                    .is_some()
+            {
+                panic!("invalid document attribute: :{}:", set_bool_attr);
+            }
+
+            self.custom_attributes.insert(set_bool_attr, "");
+
+            true
+        } else {
+            false
+        }
+    }
+
+    fn parse_wrapped_attr(&mut self, text: &'static str) {
+        if let Some(wrap_value) = text.strip_suffix(" + \\") {
+            wrap_value.to_owned().push_str("\n");
+            self.current_value = self.current_value.map(|s| {
+                s.to_owned().push_str(wrap_value);
+
+                s
+            });
+
+            return;
+        }
+
+        if let Some(wrap_value) = text.strip_suffix(" \\") {
+            wrap_value.to_owned().push_str(" ");
+            self.current_value = self.current_value.map(|s| {
+                s.to_owned().push_str(wrap_value);
+
+                s
+            });
+
+            return;
+        }
+
+        let attr_name = self.current_attr.unwrap();
+        let attr_value = self.current_value.unwrap();
+        attr_value.to_owned().push_str(text);
+
+        self.current_attr = None;
+        self.current_value = None;
+
+        self.custom_attributes.insert(attr_name, attr_value);
+    }
 }
 
 impl Default for DocumentMetadata {
@@ -87,8 +209,11 @@ impl Default for DocumentMetadata {
         DocumentMetadata {
             title: None,
             implicit_line: false,
+            current_attr: None,
+            current_value: None,
             authors: None,
             revision: None,
+            custom_attributes: HashMap::new(),
         }
     }
 }
@@ -126,8 +251,11 @@ impl Document {
         self.metadata.revision
     }
 
-    fn description(self) -> Option<String> {
-        None
+    fn description(self) -> Option<&'static str> {
+        self.metadata
+            .custom_attributes
+            .get("description")
+            .map(|s| s.trim())
     }
 }
 
@@ -167,7 +295,17 @@ impl Block for Document {
             if self.metadata.is_implicit_line(text) {
                 return;
             }
+
+            if self.metadata.is_attribute_line(text) {
+                return;
+            }
+
+            if self.metadata.has_title() {
+                panic!("invalid document header: {}", text);
+            }
         }
+
+        self.body_started = true;
     }
 }
 
@@ -277,7 +415,7 @@ mod tests {
         assert_eq!("Kismet R. Lee", author.name);
         assert_eq!(Some("kismet@asciidoctor.org"), author.email);
         assert_eq!(
-            Some("The document's description.".to_string()),
+            Some("The document's description."),
             document.clone().description()
         );
     }
