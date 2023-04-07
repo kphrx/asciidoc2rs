@@ -304,7 +304,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn illegal_section_block() {
-        Parser::new("= Document Title\n\n= Illegal Level 0 Section (violates rule #1)\n\n== First Section\n\n==== Illegal Nested Section (violates rule #2)");
+        Parser::new("= Document Title\n\n= Illegal Level 0 Section (violates rule #1)\n\n== First Section\n\n==== Illegal Nested Section (violates rule #2)").parse();
     }
 
     #[test]
