@@ -45,6 +45,53 @@ impl DocumentMetadata {
         self.title.is_some()
     }
 
+    fn set_value(&mut self, name: &'static str, value: &'static str) -> Option<&'static str> {
+        if name == "author" {
+            let mut authors = self.authors.clone().unwrap_or(Vec::with_capacity(1));
+            if let Some(author) = authors.get_mut(0) {
+                author.name = value;
+                authors[0] = author.clone();
+            } else {
+                authors.push(Author::new_name(value));
+            }
+
+            self.authors = Some(authors);
+
+            return Some(value);
+        }
+
+        if name == "email" {
+            let mut authors = self.authors.clone().unwrap_or(Vec::with_capacity(1));
+            if let Some(author) = authors.get_mut(0) {
+                author.email = Some(value);
+                authors[0] = author.clone();
+            } else {
+                authors.push(Author::new_with_email("", value));
+            }
+
+            self.authors = Some(authors);
+
+            return Some(value);
+        }
+
+        self.custom_attributes.insert(name, value)
+    }
+
+    fn get_value(&self, name: &'static str) -> Option<&'static str> {
+        if name == "author" {
+            return self.authors.clone().and_then(|a| a.get(0).map(|a| a.name));
+        }
+
+        if name == "email" {
+            return self
+                .authors
+                .clone()
+                .and_then(|a| a.get(0).and_then(|a| a.email));
+        }
+
+        self.custom_attributes.get(name).map(|s| s.trim())
+    }
+
     fn is_implicit_line(&mut self, text: &'static str) -> bool {
         if self.implicit_line {
             self.implicit_line = if self.authors.is_none() {
@@ -87,18 +134,20 @@ impl DocumentMetadata {
     }
 
     fn is_attribute_line(&mut self, text: &'static str) -> bool {
-        if !self.implicit_line {
-            if self.current_attr.is_some() {
-                self.parse_wrapped_attr(text);
-                true
-            } else if text.starts_with(':') {
-                self.parse_attr(text)
-            } else {
-                false
-            }
+        let attribute_line = if self.current_attr.is_some() {
+            self.parse_wrapped_attr(text);
+            true
+        } else if text.starts_with(':') {
+            self.parse_attr(text)
         } else {
             false
+        };
+
+        if self.implicit_line && attribute_line {
+            self.implicit_line = false
         }
+
+        attribute_line
     }
 
     fn parse_attr(&mut self, text: &'static str) -> bool {
@@ -132,9 +181,9 @@ impl DocumentMetadata {
                 wrap_value.to_owned().push_str(" ");
                 self.current_value = Some(wrap_value)
             } else {
-                self.custom_attributes.insert(attr_name, attr_value);
+                self.set_value(attr_name, attr_value);
 
-                return true
+                return true;
             }
 
             self.current_attr = Some(attr_name);
@@ -162,7 +211,7 @@ impl DocumentMetadata {
                 panic!("invalid document attribute: :{}:", set_bool_attr);
             }
 
-            self.custom_attributes.insert(set_bool_attr, "");
+            self.set_value(set_bool_attr, "");
 
             true
         } else {
@@ -252,10 +301,7 @@ impl Document {
     }
 
     fn description(self) -> Option<&'static str> {
-        self.metadata
-            .custom_attributes
-            .get("description")
-            .map(|s| s.trim())
+        self.metadata.get_value("description").map(|s| s.trim())
     }
 }
 
@@ -292,11 +338,11 @@ impl Block for Document {
         }
 
         if !self.body_started {
-            if self.metadata.is_implicit_line(text) {
+            if self.metadata.is_attribute_line(text) {
                 return;
             }
 
-            if self.metadata.is_attribute_line(text) {
+            if self.metadata.is_implicit_line(text) {
                 return;
             }
 
@@ -410,14 +456,38 @@ mod tests {
         let document = parser.parse();
         assert_eq!(Some("Document Title"), document.clone().title());
         let authors = document.clone().authors();
+        let metadata = document.clone().metadata;
         assert_eq!(1, authors.len());
         let author = &authors[0];
         assert_eq!("Kismet R. Lee", author.name);
         assert_eq!(Some("kismet@asciidoctor.org"), author.email);
+        assert_eq!(Some("Kismet R. Lee"), metadata.get_value("author"));
+        assert_eq!(Some("kismet@asciidoctor.org"), metadata.get_value("email"));
         assert_eq!(
             Some("The document's description."),
-            document.clone().description()
+            metadata.get_value("description")
         );
+        assert_eq!(Some(""), metadata.get_value("sectanchors"));
+        assert_eq!(
+            Some("https://my-git-repo.com"),
+            metadata.get_value("url-repo")
+        );
+    }
+
+    #[test]
+    fn document_header_author_entry() {
+        let parser = Parser::new("= Document Title\n:email: kismet@asciidoctor.org\n:author: Kismet R. Lee\n\nThe document body starts here.");
+
+        let document = parser.parse();
+        assert_eq!(Some("Document Title"), document.clone().title());
+        let authors = document.clone().authors();
+        let metadata = document.clone().metadata;
+        assert_eq!(1, authors.len());
+        let author = &authors[0];
+        assert_eq!("Kismet R. Lee", author.name);
+        assert_eq!(Some("kismet@asciidoctor.org"), author.email);
+        assert_eq!(Some("Kismet R. Lee"), metadata.get_value("author"));
+        assert_eq!(Some("kismet@asciidoctor.org"), metadata.get_value("email"));
     }
 
     #[test]
