@@ -18,30 +18,112 @@ clone_trait_object!(Inline);
 pub struct Document {
     blocks: Vec<Box<dyn Block>>,
     doctype: Doctype,
+    body_started: bool,
+    metadata: DocumentMetadata,
+}
+
+#[derive(Clone)]
+struct DocumentMetadata {
+    title: Option<&'static str>,
+    implicit_line: bool,
+    authors: Option<Vec<Author>>,
+    revision: Option<Revision>,
+}
+
+impl DocumentMetadata {
+    fn set_title(&mut self, title: &'static str) {
+        self.title = Some(title);
+        self.implicit_line = true;
+    }
+
+    fn has_title(&self) -> bool {
+        self.title.is_some()
+    }
+
+    fn is_implicit_line(&mut self, text: &'static str) -> bool {
+        if self.implicit_line {
+            self.implicit_line = if self.authors.is_none() {
+                self.parse_authors_line(text)
+            } else if self.revision.is_none() {
+                self.parse_revision_line(text)
+            } else {
+                false
+            }
+        }
+
+        self.implicit_line
+    }
+
+    fn parse_authors_line(&mut self, text: &'static str) -> bool {
+        let split_authors: Vec<&str> = text.split_terminator(';').collect();
+        let mut authors: Vec<Author> = Vec::with_capacity(split_authors.len());
+        for author in split_authors {
+            let (name, email) = match author.split_once('<') {
+                None => (author, None),
+                Some((a, e)) => (a, Some(e)),
+            };
+
+            if let Some(e) = email.and_then(|e| e.strip_suffix('>')) {
+                authors.push(Author::new_with_email(name, e))
+            } else if email.is_none() {
+                authors.push(Author::new_name(name))
+            } else {
+                return false;
+            }
+        }
+
+        self.authors = Some(authors);
+
+        true
+    }
+
+    fn parse_revision_line(&self, text: &'static str) -> bool {
+        false
+    }
+}
+
+impl Default for DocumentMetadata {
+    fn default() -> DocumentMetadata {
+        DocumentMetadata {
+            title: None,
+            implicit_line: false,
+            authors: None,
+            revision: None,
+        }
+    }
 }
 
 impl Document {
     fn new(doctype: Doctype) -> Self {
         let blocks = Vec::with_capacity(1);
 
-        Document { blocks, doctype }
+        Self {
+            blocks,
+            doctype,
+            body_started: false,
+            metadata: Default::default(),
+        }
     }
 
     fn title(self) -> Option<&'static str> {
         match self.doctype {
-            Doctype::Manpage => panic!("require document title"),
-            _ => false,
-        };
-
-        None
+            Doctype::Manpage => {
+                if self.metadata.has_title() {
+                    self.metadata.title
+                } else {
+                    panic!("require document title");
+                }
+            }
+            _ => self.metadata.title,
+        }
     }
 
     fn authors(self) -> Vec<Author> {
-        Vec::with_capacity(0)
+        self.metadata.authors.unwrap_or(Vec::with_capacity(0))
     }
 
     fn revision(self) -> Option<Revision> {
-        None
+        self.metadata.revision
     }
 
     fn description(self) -> Option<String> {
@@ -51,6 +133,41 @@ impl Document {
 
 impl Block for Document {
     fn push(&mut self, text: &'static str) {
+        if self.body_started
+            && !self.metadata.has_title()
+            && matches!(self.doctype, Doctype::Manpage)
+        {
+            panic!("require document title for doctype-manpage");
+        }
+
+        if !self.body_started && !self.metadata.has_title() && text == "" {
+            return;
+        }
+
+        if !self.body_started && text == "" {
+            self.body_started = true;
+            return;
+        }
+
+        if let Some(level0_heading) = text.strip_prefix("= ") {
+            if !self.body_started && !self.metadata.has_title() {
+                self.metadata.set_title(level0_heading);
+
+                return;
+            }
+
+            if !self.body_started {
+                panic!("invalid document header: {}", text);
+            }
+
+            panic!("Illegal Level 0 Section");
+        }
+
+        if !self.body_started {
+            if self.metadata.is_implicit_line(text) {
+                return;
+            }
+        }
     }
 }
 
@@ -60,11 +177,30 @@ impl CompoundBlock for Document {
     }
 }
 
+#[derive(Clone)]
 pub struct Author {
-    name: String,
-    email: String,
+    name: &'static str,
+    email: Option<&'static str>,
 }
 
+impl Author {
+    fn new_name(name: &'static str) -> Self {
+        Self::new(name, None)
+    }
+
+    fn new_with_email(name: &'static str, email: &'static str) -> Self {
+        Self::new(name, Some(email))
+    }
+
+    fn new(name: &'static str, email: Option<&'static str>) -> Self {
+        Author {
+            name: name.trim(),
+            email,
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct Revision {
     number: String,
     date: String,
@@ -139,7 +275,7 @@ mod tests {
         assert_eq!(1, authors.len());
         let author = &authors[0];
         assert_eq!("Kismet R. Lee", author.name);
-        assert_eq!("kismet@asciidoctor.org", author.email);
+        assert_eq!(Some("kismet@asciidoctor.org"), author.email);
         assert_eq!(
             Some("The document's description.".to_string()),
             document.clone().description()
