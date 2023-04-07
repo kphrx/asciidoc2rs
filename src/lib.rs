@@ -4,7 +4,9 @@ pub trait CompoundBlock: Block {
     fn iter(&self) -> Box<dyn Iterator<Item = Box<dyn Block>>>;
 }
 
-pub trait Block: DynClone {}
+pub trait Block: DynClone {
+    fn push(&mut self, text: &'static str);
+}
 clone_trait_object!(Block);
 
 pub trait Inline: DynClone {
@@ -47,7 +49,10 @@ impl Document {
     }
 }
 
-impl Block for Document {}
+impl Block for Document {
+    fn push(&mut self, text: &'static str) {
+    }
+}
 
 impl CompoundBlock for Document {
     fn iter(&self) -> Box<dyn Iterator<Item = Box<dyn Block>>> {
@@ -88,7 +93,31 @@ impl Parser {
     }
 
     pub fn parse(self) -> Document {
-        Document::new(self.doctype)
+        let mut document = Document::new(self.doctype);
+
+        let mut is_comment = false;
+
+        for line in self.text.lines() {
+            if line == "////" {
+                if is_comment {
+                    is_comment = false
+                } else {
+                    is_comment = true
+                }
+
+                continue;
+            }
+            if is_comment {
+                continue;
+            }
+            if line.starts_with("//") && !line.starts_with("///") {
+                continue;
+            }
+
+            document.push(line);
+        }
+
+        document
     }
 
     pub fn parse_inline(self) -> Vec<Box<dyn Inline>> {
