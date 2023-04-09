@@ -3,16 +3,16 @@ use std::collections::HashMap;
 use super::{Block, BlockTree, Doctype, Section};
 
 #[derive(Clone)]
-pub(crate) struct Document {
-    blocks: Vec<Box<dyn Block>>,
+pub(crate) struct Document<'line> {
+    blocks: Vec<Box<dyn Block<'line> + 'line>>,
     doctype: Doctype,
     body_started: bool,
-    previous_line: &'static str,
-    opened_block: Option<Box<dyn Block>>,
-    pub(crate) metadata: DocumentMetadata,
+    previous_line: &'line str,
+    opened_block: Option<Box<dyn Block<'line> + 'line>>,
+    pub(crate) metadata: DocumentMetadata<'line>,
 }
 
-impl Document {
+impl<'line> Document<'line> {
     pub(crate) fn new(doctype: Doctype) -> Self {
         Self {
             blocks: Vec::with_capacity(1),
@@ -24,7 +24,7 @@ impl Document {
         }
     }
 
-    pub(crate) fn title(self) -> Option<&'static str> {
+    pub(crate) fn title(self) -> Option<&'line str> {
         match self.doctype {
             Doctype::Manpage => {
                 if self.metadata.has_title() {
@@ -37,7 +37,7 @@ impl Document {
         }
     }
 
-    pub(crate) fn authors(self) -> Vec<Author> {
+    pub(crate) fn authors(self) -> Vec<Author<'line>> {
         self.metadata.authors.unwrap_or(Vec::with_capacity(0))
     }
 
@@ -45,12 +45,12 @@ impl Document {
         self.metadata.revision
     }
 
-    pub(crate) fn description(self) -> Option<&'static str> {
+    pub(crate) fn description(self) -> Option<&'line str> {
         self.metadata.get_value("description").map(|s| s.trim())
     }
 
-    fn parse_header(&mut self, text: &'static str) {
-        if text == "" {
+    fn parse_header(&mut self, line: &'line str) {
+        if line == "" {
             if self.metadata.has_title() {
                 self.body_started = true;
             }
@@ -58,42 +58,42 @@ impl Document {
             return;
         }
 
-        if self.metadata.parse_attribute_line(text) {
+        if self.metadata.parse_attribute_line(line) {
             return;
         }
 
-        if self.metadata.parse_implicit_line(text) {
+        if self.metadata.parse_implicit_line(line) {
             return;
         }
 
-        if let Some(document_title) = text.strip_prefix("= ") {
+        if let Some(document_title) = line.strip_prefix("= ") {
             self.metadata.set_title(document_title);
 
             return;
         }
 
         if self.metadata.has_title() {
-            panic!("invalid document header: {}", text);
+            panic!("invalid document header: {}", line);
         }
 
         self.body_started = true;
 
-        self.parse_body(text)
+        self.parse_body(line)
     }
 
-    fn parse_body(&mut self, text: &'static str) {
+    fn parse_body(&mut self, line: &'line str) {
         if !self.metadata.has_title() && matches!(self.doctype, Doctype::Manpage) {
             panic!("require document title for doctype-manpage");
         }
 
         let previous_line = self.previous_line;
-        self.previous_line = text;
+        self.previous_line = line;
 
         if previous_line == "" {
-            if let Some(level0_heading) = text.strip_prefix("= ") {
+            if let Some(heading) = line.strip_prefix("= ") {
                 if matches!(self.doctype, Doctype::Book) {
                     self.close();
-                    self.opened_block = Some(Box::new(Section::new("=", level0_heading)));
+                    self.opened_block = Some(Box::new(Section::new(0, heading)));
 
                     return;
                 }
@@ -101,9 +101,9 @@ impl Document {
                 panic!("Illegal Level 0 Section");
             }
 
-            if let Some(level1_heading) = text.strip_prefix("== ") {
+            if let Some(heading) = line.strip_prefix("== ") {
                 self.close();
-                self.opened_block = Some(Box::new(Section::new("==", level1_heading)));
+                self.opened_block = Some(Box::new(Section::new(1, heading)));
 
                 return;
             }
@@ -115,41 +115,41 @@ impl Document {
             Some(block) => {
                 self.blocks.push(block);
                 self.opened_block = None
-            },
-            None => {},
+            }
+            None => {}
         }
     }
 }
 
-impl Block for Document {
-    fn children(&self) -> BlockTree {
+impl<'line> Block<'line> for Document<'line> {
+    fn children(&self) -> BlockTree<'line> {
         BlockTree::Compound(self.blocks.clone())
     }
 
-    fn push(&mut self, text: &'static str) {
+    fn push(&mut self, line: &'line str) {
         if !self.body_started {
-            self.parse_header(text);
+            self.parse_header(line);
 
             return;
         }
 
-        self.parse_body(text)
+        self.parse_body(line)
     }
 }
 
 #[derive(Clone)]
-pub(crate) struct DocumentMetadata {
-    title: Option<&'static str>,
+pub(crate) struct DocumentMetadata<'line> {
+    title: Option<&'line str>,
     implicit_line: bool,
-    current_attr: Option<&'static str>,
-    current_value: Option<&'static str>,
-    authors: Option<Vec<Author>>,
+    current_attr: Option<&'line str>,
+    current_value: Option<&'line str>,
+    authors: Option<Vec<Author<'line>>>,
     revision: Option<Revision>,
-    custom_attributes: HashMap<&'static str, &'static str>,
+    custom_attributes: HashMap<&'line str, &'line str>,
 }
 
-impl DocumentMetadata {
-    fn set_title(&mut self, title: &'static str) {
+impl<'line> DocumentMetadata<'line> {
+    fn set_title(&mut self, title: &'line str) {
         self.title = Some(title);
         self.implicit_line = true;
     }
@@ -158,7 +158,7 @@ impl DocumentMetadata {
         self.title.is_some()
     }
 
-    fn set_value(&mut self, name: &'static str, value: &'static str) -> Option<&'static str> {
+    fn set_value(&mut self, name: &'line str, value: &'line str) -> Option<&'line str> {
         if name == "author" {
             let mut authors = self.authors.clone().unwrap_or(Vec::with_capacity(1));
             if let Some(author) = authors.get_mut(0) {
@@ -190,7 +190,7 @@ impl DocumentMetadata {
         self.custom_attributes.insert(name, value)
     }
 
-    pub(crate) fn get_value(&self, name: &'static str) -> Option<&'static str> {
+    pub(crate) fn get_value(&self, name: &'line str) -> Option<&'line str> {
         if name == "author" {
             return self.authors.clone().and_then(|a| a.get(0).map(|a| a.name));
         }
@@ -205,12 +205,12 @@ impl DocumentMetadata {
         self.custom_attributes.get(name).map(|s| s.trim())
     }
 
-    fn parse_implicit_line(&mut self, text: &'static str) -> bool {
+    fn parse_implicit_line(&mut self, line: &'line str) -> bool {
         if self.implicit_line {
             self.implicit_line = if self.authors.is_none() {
-                self.parse_authors_line(text)
+                self.parse_authors_line(line)
             } else if self.revision.is_none() {
-                self.parse_revision_line(text)
+                self.parse_revision_line(line)
             } else {
                 false
             }
@@ -219,8 +219,8 @@ impl DocumentMetadata {
         self.implicit_line
     }
 
-    fn parse_authors_line(&mut self, text: &'static str) -> bool {
-        let split_authors: Vec<&str> = text.split_terminator(';').collect();
+    fn parse_authors_line(&mut self, line: &'line str) -> bool {
+        let split_authors: Vec<&str> = line.split_terminator(';').collect();
         let mut authors: Vec<Author> = Vec::with_capacity(split_authors.len());
         for author in split_authors {
             let (name, email) = match author.split_once('<') {
@@ -242,16 +242,16 @@ impl DocumentMetadata {
         true
     }
 
-    fn parse_revision_line(&self, text: &'static str) -> bool {
+    fn parse_revision_line(&self, line: &'line str) -> bool {
         false
     }
 
-    fn parse_attribute_line(&mut self, text: &'static str) -> bool {
+    fn parse_attribute_line(&mut self, line: &'line str) -> bool {
         let attribute_line = if self.current_attr.is_some() {
-            self.parse_wrapped_attr(text);
+            self.parse_wrapped_attr(line);
             true
-        } else if text.starts_with(':') {
-            self.parse_attr(text)
+        } else if line.starts_with(':') {
+            self.parse_attr(line)
         } else {
             false
         };
@@ -263,8 +263,8 @@ impl DocumentMetadata {
         attribute_line
     }
 
-    fn parse_attr(&mut self, text: &'static str) -> bool {
-        if let Some(unset_attr) = text.strip_prefix(":!").and_then(|a| a.strip_suffix(":")) {
+    fn parse_attr(&mut self, line: &'line str) -> bool {
+        if let Some(unset_attr) = line.strip_prefix(":!").and_then(|a| a.strip_suffix(":")) {
             if !unset_attr.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
                 || unset_attr
                     .find(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-')
@@ -277,7 +277,7 @@ impl DocumentMetadata {
 
             true
         } else if let Some((attr_name, attr_value)) =
-            text.strip_prefix(":").and_then(|a| a.split_once(": "))
+            line.strip_prefix(":").and_then(|a| a.split_once(": "))
         {
             if !attr_name.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
                 || attr_name
@@ -302,7 +302,7 @@ impl DocumentMetadata {
             self.current_attr = Some(attr_name);
 
             true
-        } else if let Some(unset_attr) = text.strip_prefix(":").and_then(|a| a.strip_suffix("!:")) {
+        } else if let Some(unset_attr) = line.strip_prefix(":").and_then(|a| a.strip_suffix("!:")) {
             if !unset_attr.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
                 || unset_attr
                     .find(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-')
@@ -314,7 +314,7 @@ impl DocumentMetadata {
             self.custom_attributes.remove(unset_attr);
 
             true
-        } else if let Some(set_bool_attr) = text.strip_prefix(":").and_then(|a| a.strip_suffix(":"))
+        } else if let Some(set_bool_attr) = line.strip_prefix(":").and_then(|a| a.strip_suffix(":"))
         {
             if !set_bool_attr.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
                 || set_bool_attr
@@ -332,8 +332,8 @@ impl DocumentMetadata {
         }
     }
 
-    fn parse_wrapped_attr(&mut self, text: &'static str) {
-        if let Some(wrap_value) = text.strip_suffix(" + \\") {
+    fn parse_wrapped_attr(&mut self, line: &'line str) {
+        if let Some(wrap_value) = line.strip_suffix(" + \\") {
             wrap_value.to_owned().push_str("\n");
             self.current_value = self.current_value.map(|s| {
                 s.to_owned().push_str(wrap_value);
@@ -344,7 +344,7 @@ impl DocumentMetadata {
             return;
         }
 
-        if let Some(wrap_value) = text.strip_suffix(" \\") {
+        if let Some(wrap_value) = line.strip_suffix(" \\") {
             wrap_value.to_owned().push_str(" ");
             self.current_value = self.current_value.map(|s| {
                 s.to_owned().push_str(wrap_value);
@@ -357,7 +357,7 @@ impl DocumentMetadata {
 
         let attr_name = self.current_attr.unwrap();
         let attr_value = self.current_value.unwrap();
-        attr_value.to_owned().push_str(text);
+        attr_value.to_owned().push_str(line);
 
         self.current_attr = None;
         self.current_value = None;
@@ -366,8 +366,8 @@ impl DocumentMetadata {
     }
 }
 
-impl Default for DocumentMetadata {
-    fn default() -> DocumentMetadata {
+impl<'line> Default for DocumentMetadata<'line> {
+    fn default() -> DocumentMetadata<'line> {
         DocumentMetadata {
             title: None,
             implicit_line: false,
@@ -381,21 +381,21 @@ impl Default for DocumentMetadata {
 }
 
 #[derive(Clone)]
-pub(crate) struct Author {
-    pub(crate) name: &'static str,
-    pub(crate) email: Option<&'static str>,
+pub(crate) struct Author<'line> {
+    pub(crate) name: &'line str,
+    pub(crate) email: Option<&'line str>,
 }
 
-impl Author {
-    fn new_name(name: &'static str) -> Self {
+impl<'line> Author<'line> {
+    fn new_name(name: &'line str) -> Self {
         Self::new(name, None)
     }
 
-    fn new_with_email(name: &'static str, email: &'static str) -> Self {
+    fn new_with_email(name: &'line str, email: &'line str) -> Self {
         Self::new(name, Some(email))
     }
 
-    fn new(name: &'static str, email: Option<&'static str>) -> Self {
+    fn new(name: &'line str, email: Option<&'line str>) -> Self {
         Author {
             name: name.trim(),
             email,

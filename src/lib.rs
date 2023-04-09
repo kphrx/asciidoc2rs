@@ -9,21 +9,21 @@ pub trait Inline: DynClone {
 }
 clone_trait_object!(Inline);
 
-pub struct Parser {
-    text: &'static str,
+pub struct Parser<'input> {
+    text: &'input str,
     doctype: Doctype,
 }
 
-impl Parser {
-    pub fn new(text: &'static str) -> Self {
+impl<'input> Parser<'input> {
+    pub fn new(text: &'input str) -> Self {
         Self::new_with_doctype(text, Doctype::Article)
     }
 
-    pub fn new_with_doctype(text: &'static str, doctype: Doctype) -> Self {
+    pub fn new_with_doctype(text: &'input str, doctype: Doctype) -> Self {
         Self { text, doctype }
     }
 
-    pub(crate) fn parse(self) -> Document {
+    pub(crate) fn parse(self) -> Document<'input> {
         let mut document = Document::new(self.doctype);
 
         let mut is_comment = false;

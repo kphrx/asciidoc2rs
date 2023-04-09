@@ -15,13 +15,13 @@ pub enum Doctype {
     Manpage,
 }
 
-pub(crate) enum BlockTree {
-    Simple(Vec<Box<dyn Inline>>),
-    Compound(Vec<Box<dyn Block>>),
+pub(crate) enum BlockTree<'line> {
+    Simple(Vec<Box<dyn Inline + 'line>>),
+    Compound(Vec<Box<dyn Block<'line> + 'line>>),
 }
 
-pub(crate) trait Block: DynClone {
-    fn children(&self) -> BlockTree;
-    fn push(&mut self, text: &'static str);
+pub(crate) trait Block<'line>: DynClone {
+    fn children(&self) -> BlockTree<'line>;
+    fn push(&mut self, line: &'line str);
 }
-clone_trait_object!(Block);
+clone_trait_object!(Block<'_>);
