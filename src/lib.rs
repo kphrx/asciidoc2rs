@@ -48,6 +48,8 @@ impl Parser {
             document.push(line);
         }
 
+        document.close();
+
         document
     }
 

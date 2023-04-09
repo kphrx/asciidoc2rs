@@ -1,12 +1,14 @@
 use std::collections::HashMap;
 
-use super::{Block, BlockTree, Doctype};
+use super::{Block, BlockTree, Doctype, Section};
 
 #[derive(Clone)]
 pub(crate) struct Document {
     blocks: Vec<Box<dyn Block>>,
     doctype: Doctype,
     body_started: bool,
+    previous_line: &'static str,
+    opened_block: Option<Box<dyn Block>>,
     pub(crate) metadata: DocumentMetadata,
 }
 
@@ -16,6 +18,8 @@ impl Document {
             blocks: Vec::with_capacity(1),
             doctype,
             body_started: false,
+            previous_line: "",
+            opened_block: None,
             metadata: Default::default(),
         }
     }
@@ -82,8 +86,30 @@ impl Document {
             panic!("require document title for doctype-manpage");
         }
 
-        if let Some(level0_heading) = text.strip_prefix("= ") {
-            panic!("Illegal Level 0 Section");
+        let previous_line = self.previous_line;
+        self.previous_line = text;
+
+        if previous_line == "" {
+            if let Some(level0_heading) = text.strip_prefix("= ") {
+                panic!("Illegal Level 0 Section");
+            }
+
+            if let Some(level1_heading) = text.strip_prefix("== ") {
+                self.close();
+                self.opened_block = Some(Box::new(Section::new("==", level1_heading)));
+
+                return;
+            }
+        }
+    }
+
+    pub(crate) fn close(&mut self) {
+        match self.opened_block.clone() {
+            Some(block) => {
+                self.blocks.push(block);
+                self.opened_block = None
+            },
+            None => {},
         }
     }
 }

@@ -1,8 +1,10 @@
 mod document;
+mod section;
 
 use super::Inline;
 
 pub(crate) use document::Document;
+pub(crate) use section::Section;
 
 use dyn_clone::{clone_trait_object, DynClone};
 
