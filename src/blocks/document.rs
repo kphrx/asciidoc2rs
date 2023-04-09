@@ -91,6 +91,13 @@ impl Document {
 
         if previous_line == "" {
             if let Some(level0_heading) = text.strip_prefix("= ") {
+                if matches!(self.doctype, Doctype::Book) {
+                    self.close();
+                    self.opened_block = Some(Box::new(Section::new("=", level0_heading)));
+
+                    return;
+                }
+
                 panic!("Illegal Level 0 Section");
             }
 
