@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::{Doctype, BlockTree, Block};
+use super::{Block, BlockTree, Doctype};
 
 #[derive(Clone)]
 pub(crate) struct Document {
@@ -44,6 +44,48 @@ impl Document {
     pub(crate) fn description(self) -> Option<&'static str> {
         self.metadata.get_value("description").map(|s| s.trim())
     }
+
+    fn parse_header(&mut self, text: &'static str) {
+        if text == "" {
+            if self.metadata.has_title() {
+                self.body_started = true;
+            }
+
+            return;
+        }
+
+        if self.metadata.parse_attribute_line(text) {
+            return;
+        }
+
+        if self.metadata.parse_implicit_line(text) {
+            return;
+        }
+
+        if let Some(document_title) = text.strip_prefix("= ") {
+            self.metadata.set_title(document_title);
+
+            return;
+        }
+
+        if self.metadata.has_title() {
+            panic!("invalid document header: {}", text);
+        }
+
+        self.body_started = true;
+
+        self.parse_body(text)
+    }
+
+    fn parse_body(&mut self, text: &'static str) {
+        if !self.metadata.has_title() && matches!(self.doctype, Doctype::Manpage) {
+            panic!("require document title for doctype-manpage");
+        }
+
+        if let Some(level0_heading) = text.strip_prefix("= ") {
+            panic!("Illegal Level 0 Section");
+        }
+    }
 }
 
 impl Block for Document {
@@ -52,51 +94,13 @@ impl Block for Document {
     }
 
     fn push(&mut self, text: &'static str) {
-        if self.body_started
-            && !self.metadata.has_title()
-            && matches!(self.doctype, Doctype::Manpage)
-        {
-            panic!("require document title for doctype-manpage");
-        }
-
-        if !self.body_started && !self.metadata.has_title() && text == "" {
-            return;
-        }
-
-        if !self.body_started && text == "" {
-            self.body_started = true;
-            return;
-        }
-
-        if let Some(level0_heading) = text.strip_prefix("= ") {
-            if !self.body_started && !self.metadata.has_title() {
-                self.metadata.set_title(level0_heading);
-
-                return;
-            }
-
-            if !self.body_started {
-                panic!("invalid document header: {}", text);
-            }
-
-            panic!("Illegal Level 0 Section");
-        }
-
         if !self.body_started {
-            if self.metadata.is_attribute_line(text) {
-                return;
-            }
+            self.parse_header(text);
 
-            if self.metadata.is_implicit_line(text) {
-                return;
-            }
-
-            if self.metadata.has_title() {
-                panic!("invalid document header: {}", text);
-            }
+            return;
         }
 
-        self.body_started = true;
+        self.parse_body(text)
     }
 }
 
@@ -168,7 +172,7 @@ impl DocumentMetadata {
         self.custom_attributes.get(name).map(|s| s.trim())
     }
 
-    fn is_implicit_line(&mut self, text: &'static str) -> bool {
+    fn parse_implicit_line(&mut self, text: &'static str) -> bool {
         if self.implicit_line {
             self.implicit_line = if self.authors.is_none() {
                 self.parse_authors_line(text)
@@ -209,7 +213,7 @@ impl DocumentMetadata {
         false
     }
 
-    fn is_attribute_line(&mut self, text: &'static str) -> bool {
+    fn parse_attribute_line(&mut self, text: &'static str) -> bool {
         let attribute_line = if self.current_attr.is_some() {
             self.parse_wrapped_attr(text);
             true

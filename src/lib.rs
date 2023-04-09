@@ -1,30 +1,13 @@
 mod blocks;
 
-use blocks::Document;
+use blocks::{Block, BlockTree, Doctype, Document};
 
 use dyn_clone::{clone_trait_object, DynClone};
-
-pub enum BlockTree {
-    Compound(Vec<Box<dyn Block>>),
-}
-
-pub trait Block: DynClone {
-    fn children(&self) -> BlockTree;
-    fn push(&mut self, text: &'static str);
-}
-clone_trait_object!(Block);
 
 pub trait Inline: DynClone {
     fn iter(&self) -> Box<dyn Iterator<Item = Box<dyn Inline>>>;
 }
 clone_trait_object!(Inline);
-
-#[derive(Debug, Clone, Copy)]
-pub enum Doctype {
-    Article,
-    Book,
-    Manpage,
-}
 
 pub struct Parser {
     text: &'static str,
@@ -126,7 +109,6 @@ mod tests {
         let BlockTree::Compound(blocks) = document.children() else { panic!() };
         assert_eq!(2, blocks.len());
         assert_eq!(None, document.clone().title());
-
     }
 
     #[test]
