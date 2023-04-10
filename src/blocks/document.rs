@@ -7,9 +7,10 @@ pub(crate) struct Document<'line> {
     blocks: Vec<Box<dyn Block<'line> + 'line>>,
     doctype: Doctype,
     body_started: bool,
+    is_comment: bool,
     previous_line: &'line str,
     opened_block: Option<Box<dyn Block<'line> + 'line>>,
-    pub(crate) metadata: DocumentMetadata<'line>,
+    metadata: DocumentMetadata<'line>,
 }
 
 impl<'line> Document<'line> {
@@ -18,13 +19,14 @@ impl<'line> Document<'line> {
             blocks: Vec::with_capacity(1),
             doctype,
             body_started: false,
+            is_comment: false,
             previous_line: "",
             opened_block: None,
             metadata: Default::default(),
         }
     }
 
-    pub(crate) fn title(self) -> Option<&'line str> {
+    fn title(self) -> Option<&'line str> {
         match self.doctype {
             Doctype::Manpage => {
                 if self.metadata.has_title() {
@@ -37,15 +39,15 @@ impl<'line> Document<'line> {
         }
     }
 
-    pub(crate) fn authors(self) -> Vec<Author<'line>> {
+    fn authors(self) -> Vec<Author<'line>> {
         self.metadata.authors.unwrap_or(Vec::with_capacity(0))
     }
 
-    pub(crate) fn revision(self) -> Option<Revision> {
+    fn revision(self) -> Option<Revision> {
         self.metadata.revision
     }
 
-    pub(crate) fn description(self) -> Option<&'line str> {
+    fn description(self) -> Option<&'line str> {
         self.metadata.get_value("description").map(|s| s.trim())
     }
 
@@ -56,6 +58,24 @@ impl<'line> Document<'line> {
             }
 
             return;
+        }
+
+        if !self.metadata.has_title() {
+            if line == "////" {
+                if self.is_comment {
+                    self.is_comment = false
+                } else {
+                    self.is_comment = true
+                }
+
+                return;
+            }
+            if self.is_comment {
+                return;
+            }
+            if line.starts_with("//") && !line.starts_with("///") {
+                return;
+            }
         }
 
         if self.metadata.parse_attribute_line(line) {
@@ -109,16 +129,6 @@ impl<'line> Document<'line> {
             }
         }
     }
-
-    pub(crate) fn close(&mut self) {
-        match self.opened_block.clone() {
-            Some(block) => {
-                self.blocks.push(block);
-                self.opened_block = None
-            }
-            None => {}
-        }
-    }
 }
 
 impl<'line> Block<'line> for Document<'line> {
@@ -135,10 +145,20 @@ impl<'line> Block<'line> for Document<'line> {
 
         self.parse_body(line)
     }
+
+    fn close(&mut self) {
+        match self.opened_block.clone() {
+            Some(block) => {
+                self.blocks.push(block);
+                self.opened_block = None
+            }
+            None => {}
+        }
+    }
 }
 
 #[derive(Clone)]
-pub(crate) struct DocumentMetadata<'line> {
+struct DocumentMetadata<'line> {
     title: Option<&'line str>,
     implicit_line: bool,
     current_attr: Option<&'line str>,
@@ -154,7 +174,7 @@ impl<'line> DocumentMetadata<'line> {
         self.implicit_line = true;
     }
 
-    pub(crate) fn has_title(&self) -> bool {
+    fn has_title(&self) -> bool {
         self.title.is_some()
     }
 
@@ -190,7 +210,7 @@ impl<'line> DocumentMetadata<'line> {
         self.custom_attributes.insert(name, value)
     }
 
-    pub(crate) fn get_value(&self, name: &'line str) -> Option<&'line str> {
+    fn get_value(&self, name: &'line str) -> Option<&'line str> {
         if name == "author" {
             return self.authors.clone().and_then(|a| a.get(0).map(|a| a.name));
         }
@@ -381,9 +401,9 @@ impl<'line> Default for DocumentMetadata<'line> {
 }
 
 #[derive(Clone)]
-pub(crate) struct Author<'line> {
-    pub(crate) name: &'line str,
-    pub(crate) email: Option<&'line str>,
+struct Author<'line> {
+    name: &'line str,
+    email: Option<&'line str>,
 }
 
 impl<'line> Author<'line> {
@@ -404,8 +424,76 @@ impl<'line> Author<'line> {
 }
 
 #[derive(Clone)]
-pub(crate) struct Revision {
+struct Revision {
     number: String,
     date: String,
     remark: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn document_header() {
+        let mut document = Document::new(Doctype::Article);
+
+        for line in "// this comment line is ignored\n= Document Title\nKismet R. Lee <kismet@asciidoctor.org>\n:description: The document's description.\n:sectanchors:\n:url-repo: https://my-git-repo.com\n\nThe document body starts here.".lines() {
+            document.push(line);
+        }
+        document.close();
+
+        assert_eq!(Some("Document Title"), document.clone().title());
+        let authors = document.clone().authors();
+        let metadata = document.clone().metadata;
+        assert_eq!(1, authors.len());
+        let author = &authors[0];
+        assert_eq!("Kismet R. Lee", author.name);
+        assert_eq!(Some("kismet@asciidoctor.org"), author.email);
+        assert_eq!(Some("Kismet R. Lee"), metadata.get_value("author"));
+        assert_eq!(Some("kismet@asciidoctor.org"), metadata.get_value("email"));
+        assert_eq!(
+            Some("The document's description."),
+            metadata.get_value("description")
+        );
+        assert_eq!(Some(""), metadata.get_value("sectanchors"));
+        assert_eq!(
+            Some("https://my-git-repo.com"),
+            metadata.get_value("url-repo")
+        );
+    }
+
+    #[test]
+    fn document_header_author_entry() {
+        let mut document = Document::new(Doctype::Article);
+
+        for line in "= Document Title\n:email: kismet@asciidoctor.org\n:author: Kismet R. Lee\n\nThe document body starts here.".lines() {
+            document.push(line);
+        }
+        document.close();
+
+        assert_eq!(Some("Document Title"), document.clone().title());
+        let authors = document.clone().authors();
+        let metadata = document.clone().metadata;
+        assert_eq!(1, authors.len());
+        let author = &authors[0];
+        assert_eq!("Kismet R. Lee", author.name);
+        assert_eq!(Some("kismet@asciidoctor.org"), author.email);
+        assert_eq!(Some("Kismet R. Lee"), metadata.get_value("author"));
+        assert_eq!(Some("kismet@asciidoctor.org"), metadata.get_value("email"));
+    }
+
+    #[test]
+    #[should_panic]
+    fn illegal_level0_section_block() {
+        let mut document = Document::new(Doctype::Article);
+
+        for line in
+            "= Document Title\n\n= Illegal Level 0 Section (violates rule #1)\n\n== First Section"
+                .lines()
+        {
+            document.push(line);
+        }
+        document.close();
+    }
 }
