@@ -1,3 +1,4 @@
+mod asg;
 mod blocks;
 
 use blocks::{Block, Doctype, Document};
