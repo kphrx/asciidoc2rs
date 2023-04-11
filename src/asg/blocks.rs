@@ -1,10 +1,10 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_with_macros::skip_serializing_none;
 
 use crate::asg::{Headline, Inline, Location, NodeType, NonSectionBlockBody};
 
-#[derive(Serialize, Debug)]
-pub(crate) enum Block {
+#[derive(Serialize, Deserialize, Debug)]
+pub enum Block {
     BlockParent(BlockParent),
     BlockLeaf(BlockLeaf),
     BlockMacro(BlockMacro),
@@ -98,9 +98,9 @@ impl Block {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
-pub(crate) enum BlockParent {
+pub enum BlockParent {
     Admonition {
         #[serde(rename = "type")]
         node_type: NodeType,
@@ -115,8 +115,8 @@ pub(crate) enum BlockParent {
     Open(BlockParentBody),
     Quote(BlockParentBody),
 }
-#[derive(Serialize, Debug)]
-pub(crate) enum AdmonitionVariant {
+#[derive(Serialize, Deserialize, Debug)]
+pub enum AdmonitionVariant {
     Caution,
     Important,
     Note,
@@ -153,8 +153,8 @@ impl BlockParent {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
-pub(crate) struct BlockParentBody {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlockParentBody {
     #[serde(rename = "type")]
     node_type: NodeType,
     delimiter: Option<String>,
@@ -174,9 +174,9 @@ impl BlockParentBody {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
-pub(crate) enum BlockLeaf {
+pub enum BlockLeaf {
     Listing(BlockLeafBody),
     Literal(BlockLeafBody),
     Paragraph(BlockLeafBody),
@@ -212,8 +212,8 @@ impl BlockLeaf {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
-pub(crate) struct BlockLeafBody {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlockLeafBody {
     #[serde(rename = "type")]
     node_type: NodeType,
     delimiter: Option<String>,
@@ -234,9 +234,9 @@ impl BlockLeafBody {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
-pub(crate) enum BlockMacro {
+pub enum BlockMacro {
     Audio(BlockMacroBody),
     Video(BlockMacroBody),
     Image(BlockMacroBody),
@@ -261,8 +261,8 @@ impl BlockMacro {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
-pub(crate) struct BlockMacroBody {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlockMacroBody {
     #[serde(rename = "type")]
     node_type: NodeType,
     target: Option<String>,
@@ -281,9 +281,9 @@ impl BlockMacroBody {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
-pub(crate) enum BlockBreak {
+pub enum BlockBreak {
     Break {
         #[serde(rename = "type")]
         node_type: NodeType,
@@ -309,17 +309,17 @@ impl BlockBreak {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) enum BlockBreakVariant {
+pub enum BlockBreakVariant {
     Page,
     Thematic,
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
-pub(crate) enum AnyList {
+pub enum AnyList {
     List {
         #[serde(rename = "type")]
         node_type: NodeType,
@@ -338,9 +338,9 @@ pub(crate) enum AnyList {
         items: Vec<DlistItem>,
     },
 }
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) enum ListVariant {
+pub enum ListVariant {
     Callout,
     Ordered,
     Unordered,
@@ -391,9 +391,9 @@ impl AnyList {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
-pub(crate) enum ListItem {
+pub enum ListItem {
     ListItem {
         #[serde(rename = "type")]
         node_type: NodeType,
@@ -416,9 +416,9 @@ impl ListItem {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
-pub(crate) enum DlistItem {
+pub enum DlistItem {
     DlistItem {
         #[serde(rename = "type")]
         node_type: NodeType,

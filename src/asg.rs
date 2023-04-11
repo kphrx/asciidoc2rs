@@ -6,11 +6,11 @@ use blocks::*;
 use inlines::*;
 pub(crate) use section::*;
 
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_with_macros::skip_serializing_none;
 
-#[derive(Serialize, Debug)]
-pub(crate) enum SectionBody {
+#[derive(Serialize, Deserialize, Debug)]
+pub enum SectionBody {
     Block(Block),
     Section(Section),
 }
@@ -24,8 +24,8 @@ impl SectionBody {
     }
 }
 
-#[derive(Serialize, Debug)]
-pub(crate) enum NonSectionBlockBody {
+#[derive(Serialize, Deserialize, Debug)]
+pub enum NonSectionBlockBody {
     Block(Block),
 }
 impl NonSectionBlockBody {
@@ -34,23 +34,23 @@ impl NonSectionBlockBody {
     }
 }
 
-#[derive(Serialize, Debug)]
-pub(crate) struct Location {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Location {
     start: LocationBoundary,
     end: LocationBoundary,
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 struct LocationBoundary {
     line: usize,
     column: usize,
     source: Option<String>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-pub(crate) enum NodeType {
+pub enum NodeType {
     Block,
     Inline,
     String,

@@ -1,11 +1,11 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_with_macros::skip_serializing_none;
 
 use crate::asg::{Location, NodeType};
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
-pub(crate) struct Headline {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Headline {
     inlines: Vec<Inline>,
     location: Option<Location>,
 }
@@ -18,7 +18,7 @@ impl Headline {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub(crate) enum Inline {
     Span(InlineParent),
@@ -45,7 +45,7 @@ impl Inline {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct InlineParent {
     #[serde(rename = "type")]
     node_type: NodeType,
@@ -63,7 +63,7 @@ impl InlineParent {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub(crate) struct InlineLiteral {
     #[serde(rename = "type")]
     node_type: NodeType,

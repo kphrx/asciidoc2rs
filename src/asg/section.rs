@@ -1,4 +1,4 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use serde_with_macros::skip_serializing_none;
 
 use crate::asg::{Headline, Location, NodeType, SectionBody};
@@ -6,9 +6,9 @@ use crate::asg::{Headline, Location, NodeType, SectionBody};
 use std::collections::HashMap;
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
-pub(crate) enum Document {
+pub enum Document {
     Document {
         #[serde(rename = "type")]
         node_type: NodeType,
@@ -19,8 +19,8 @@ pub(crate) enum Document {
     },
 }
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
-pub(crate) struct DocumentHeader {
+#[derive(Serialize, Deserialize, Debug)]
+pub struct DocumentHeader {
     title: Headline,
     location: Option<Location>,
 }
@@ -37,9 +37,9 @@ impl Document {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
-pub(crate) enum Section {
+pub enum Section {
     Section {
         #[serde(rename = "type")]
         node_type: NodeType,
