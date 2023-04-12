@@ -3,6 +3,7 @@ mod blocks;
 
 use std::error::Error;
 
+use asg::block::Document as ASGDocument;
 use blocks::{Block, Doctype, Document};
 
 use dyn_clone::{clone_trait_object, DynClone};
@@ -60,11 +61,11 @@ impl<'input> Parser<'input> {
         Vec::with_capacity(1)
     }
 
-    pub fn parse_to_asg(self) -> Result<asg::Document, &'static str> {
-        Err("not implemented")
+    pub fn parse_to_asg(self) -> Result<ASGDocument, Box<dyn Error>> {
+        Err("not implemented".into())
     }
 
-    pub fn parse_from_asg(self) -> Result<asg::Document, Box<dyn Error>> {
+    pub fn parse_from_asg(self) -> Result<ASGDocument, Box<dyn Error>> {
         let doc = serde_json::from_str(self.text)?;
 
         Ok(doc)

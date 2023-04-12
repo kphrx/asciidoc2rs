@@ -1,4 +1,4 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use crate::asg::{Location, NodeType};

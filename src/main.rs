@@ -1,10 +1,10 @@
 use asciidoc2rs::Parser;
 
-use std::{env, process};
 use std::error::Error;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
+use std::{env, process};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -40,8 +40,8 @@ fn run_with_arguments(args: &[String]) -> Result<String, Box<dyn Error>> {
             let parser = Parser::new(json.as_str());
             let doc = parser.parse_from_asg()?;
             Ok(format!("{:#?}", doc))
-        },
-        err => err
+        }
+        err => err,
     }
 }
 
@@ -52,7 +52,7 @@ fn run_for_tck() -> Result<String, Box<dyn Error>> {
             let doc = parser.parse_to_asg()?;
             Ok(format!("{:?}", serde_json::to_string(&doc)?))
         }
-        err => err
+        err => err,
     }
 }
 
