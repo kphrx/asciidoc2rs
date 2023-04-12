@@ -1,0 +1,51 @@
+name: Check TCK
+
+on:
+  push:
+    branches: [ "master" ]
+
+concurrency:
+  group: tck
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --verbose
+    - name: Run AsciiDoc TCK
+      continue-on-error: true
+      id: tck
+      env:
+        ASCIIDOC_TCK_ADAPTER: ../target/debug/asciidoc2rs
+      run: |
+        git clone https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck.git asciidoc-tck
+        cd asciidoc-tck
+        npm ci
+        npx asciidoc-tck | grep -A1 passing | awk '{print $2"="$1}' >> $GITHUB_OUTPUT
+
+    - name: Dynamic Badges
+      uses: Schneegans/dynamic-badges-action@v1.6.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistId: e795d8d23466d049a08e03c23301e996
+        filename: asciidoc2rs-passed.json
+        label: TCK passed
+        color: success
+        message: ${{ steps.tck.outputs.passing }}
+    - name: Dynamic Badges
+      uses: Schneegans/dynamic-badges-action@v1.6.0
+      with:
+        auth: ${{ secrets.GIST_SECRET }}
+        gistId: e795d8d23466d049a08e03c23301e996
+        filename: asciidoc2rs-failed.json
+        label: TCK failed
+        color: important
+        message: ${{ steps.tck.outputs.failing }}
