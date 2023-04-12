@@ -10,15 +10,22 @@ pub struct Headline {
     location: Option<Location>,
 }
 impl Headline {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(text: String) -> Self {
+        let mut inlines = Vec::with_capacity(0);
+        inlines.push(Inline::new_text(text.clone()));
+
         Self {
-            inlines: Vec::with_capacity(0),
+            inlines,
             location: None,
         }
     }
+
+    pub(crate) fn heading(self) -> Vec<Inline> {
+        self.inlines
+    }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub(crate) enum Inline {
     Span(InlineParent),
@@ -45,7 +52,7 @@ impl Inline {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct InlineParent {
     #[serde(rename = "type")]
     node_type: NodeType,
@@ -63,7 +70,7 @@ impl InlineParent {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct InlineLiteral {
     #[serde(rename = "type")]
     node_type: NodeType,
@@ -73,7 +80,7 @@ pub(crate) struct InlineLiteral {
 impl InlineLiteral {
     fn new(value: String) -> Self {
         Self {
-            node_type: NodeType::Inline,
+            node_type: NodeType::String,
             value,
             location: None,
         }

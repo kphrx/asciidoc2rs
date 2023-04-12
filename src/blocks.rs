@@ -8,13 +8,6 @@ use super::Inline;
 pub(crate) use document::Document;
 use section::Section;
 
-#[derive(Debug, Clone, Copy)]
-pub(crate) enum Doctype {
-    Article,
-    Book,
-    Manpage,
-}
-
 pub(crate) enum BlockTree<'line> {
     Simple(Vec<Box<dyn Inline + 'line>>),
     Compound(Vec<Box<dyn Block<'line> + 'line>>),

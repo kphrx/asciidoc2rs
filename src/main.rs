@@ -24,7 +24,7 @@ fn main() {
 
     match run_for_tck() {
         Ok(output) => {
-            println!("{:?}", output);
+            println!("{}", output);
             process::exit(0);
         }
         Err(error) => {
@@ -50,7 +50,7 @@ fn run_for_tck() -> Result<String, Box<dyn Error>> {
         Ok(input) => {
             let parser = Parser::new(input.as_str());
             let doc = parser.parse_to_asg()?;
-            Ok(format!("{:?}", serde_json::to_string(&doc)?))
+            Ok(format!("{}", serde_json::to_string(&doc)?))
         }
         err => err,
     }
@@ -67,7 +67,7 @@ fn read_file(filename: String) -> Result<String, Box<dyn Error>> {
 
 fn read_stdin() -> Result<String, Box<dyn Error>> {
     let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
+    io::stdin().read_to_string(&mut input)?;
 
     Ok(input)
 }

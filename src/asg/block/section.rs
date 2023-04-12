@@ -18,11 +18,12 @@ pub enum Section {
     },
 }
 impl Section {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(level: usize, heading: String) -> Self {
+        let title = Headline::new(heading);
         Self::Section {
             node_type: NodeType::Block,
-            title: Headline::new(),
-            level: 1,
+            title,
+            level,
             blocks: Vec::with_capacity(0),
             location: None,
         }

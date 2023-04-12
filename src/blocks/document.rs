@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use super::{Block, BlockTree, Doctype, Section};
+use super::{Block, BlockTree, Section};
+use crate::Doctype;
 
 #[derive(Clone)]
 pub(crate) struct Document<'line> {

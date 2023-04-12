@@ -4,7 +4,7 @@ mod blocks;
 use std::error::Error;
 
 use asg::block::Document as ASGDocument;
-use blocks::{Block, Doctype, Document};
+use blocks::{Block, Document};
 
 use dyn_clone::{clone_trait_object, DynClone};
 
@@ -13,6 +13,18 @@ trait Inline: DynClone {
 }
 clone_trait_object!(Inline);
 
+#[derive(Debug, Clone, Copy)]
+pub(crate) enum Doctype {
+    Article,
+    Book,
+    Manpage,
+}
+impl Default for Doctype {
+    fn default() -> Self {
+        Self::Article
+    }
+}
+
 pub struct Parser<'input> {
     text: &'input str,
     doctype: Doctype,
@@ -20,7 +32,7 @@ pub struct Parser<'input> {
 
 impl<'input> Parser<'input> {
     pub fn new(text: &'input str) -> Self {
-        Self::new_with_doctype(text, Doctype::Article)
+        Self::new_with_doctype(text, Default::default())
     }
 
     fn new_with_doctype(text: &'input str, doctype: Doctype) -> Self {
@@ -62,7 +74,12 @@ impl<'input> Parser<'input> {
     }
 
     pub fn parse_to_asg(self) -> Result<ASGDocument, Box<dyn Error>> {
-        Err("not implemented".into())
+        let mut doc = ASGDocument::new(self.doctype);
+        for line in self.text.lines() {
+            doc.push(line.to_owned())?;
+        }
+
+        Ok(doc)
     }
 
     pub fn parse_from_asg(self) -> Result<ASGDocument, Box<dyn Error>> {
