@@ -1,7 +1,7 @@
 pub(crate) mod block;
 mod inlines;
 
-use inlines::*;
+pub(crate) use inlines::*;
 
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;

@@ -1,19 +1,11 @@
 mod asg;
-mod blocks;
+
+use asg::block::Document;
+use asg::Inline;
 
 use std::error::Error;
 
-use asg::block::Document as ASGDocument;
-use blocks::{Block, Document};
-
-use dyn_clone::{clone_trait_object, DynClone};
-
-trait Inline: DynClone {
-    fn iter(&self) -> Box<dyn Iterator<Item = Box<dyn Inline>>>;
-}
-clone_trait_object!(Inline);
-
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub(crate) enum Doctype {
     Article,
     Book,
@@ -39,42 +31,12 @@ impl<'input> Parser<'input> {
         Self { text, doctype }
     }
 
-    fn parse(self) -> Document<'input> {
-        let mut document = Document::new(self.doctype);
-
-        let mut is_comment = false;
-
-        for line in self.text.lines() {
-            if line == "////" {
-                if is_comment {
-                    is_comment = false
-                } else {
-                    is_comment = true
-                }
-
-                continue;
-            }
-            if is_comment {
-                continue;
-            }
-            if line.starts_with("//") && !line.starts_with("///") {
-                continue;
-            }
-
-            document.push(line);
-        }
-
-        document.close();
-
-        document
+    fn parse_inline(self) -> Vec<Inline> {
+        Inline::new(self.text)
     }
 
-    fn parse_inline(self) -> Vec<Box<dyn Inline>> {
-        Vec::with_capacity(1)
-    }
-
-    pub fn parse_to_asg(self) -> Result<ASGDocument, Box<dyn Error>> {
-        let mut doc = ASGDocument::new(self.doctype);
+    pub fn parse_to_asg(self) -> Result<Document, Box<dyn Error>> {
+        let mut doc = Document::new(self.doctype);
         for line in self.text.lines() {
             doc.push(line)?;
         }
@@ -82,7 +44,7 @@ impl<'input> Parser<'input> {
         Ok(doc)
     }
 
-    pub fn parse_from_asg(self) -> Result<ASGDocument, Box<dyn Error>> {
+    pub fn parse_from_asg(self) -> Result<Document, Box<dyn Error>> {
         let doc = serde_json::from_str(self.text)?;
 
         Ok(doc)
