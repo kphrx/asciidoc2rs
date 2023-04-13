@@ -1,10 +1,12 @@
+use std::error::Error;
+
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use super::Block;
 use crate::asg::{Headline, Inline, Location, NodeType};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub enum BlockLeaf {
     Listing(BlockLeafBody),
@@ -39,10 +41,32 @@ impl BlockLeaf {
     fn new_verse() -> Self {
         Self::Verse(BlockLeafBody::new())
     }
+
+    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+        match self {
+            Self::Paragraph(body) => {
+                body.inlines = Inline::append(body.inlines.clone(), line);
+
+                Ok(())
+            }
+            _ => Err("not implemented".into())
+        }
+    }
+
+    pub(crate) fn delimiter(&self) -> Option<String> {
+        match self {
+            BlockLeaf::Listing(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
+            BlockLeaf::Literal(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
+            BlockLeaf::Paragraph(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
+            BlockLeaf::Pass(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
+            BlockLeaf::Stem(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
+            BlockLeaf::Verse(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
+        }
+    }
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockLeafBody {
     #[serde(rename = "type")]
     node_type: NodeType,

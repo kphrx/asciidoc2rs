@@ -16,6 +16,8 @@ pub(crate) use section::*;
 
 use serde::{Deserialize, Serialize};
 
+use std::error::Error;
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum SectionBody {
@@ -32,7 +34,7 @@ impl SectionBody {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum NonSectionBlockBody {
     Block(Block),
@@ -43,7 +45,7 @@ impl NonSectionBlockBody {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
 pub enum Block {
     BlockParent(BlockParent),
@@ -51,4 +53,31 @@ pub enum Block {
     BlockMacro(BlockMacro),
     BlockBreak(BlockBreak),
     AnyList(AnyList),
+}
+impl Block {
+    fn is_delimited_block(&self) -> bool {
+        match self {
+            Block::BlockParent(parent) => parent.delimiter().is_some(),
+            Block::BlockLeaf(leaf) => leaf.delimiter().is_some(),
+            _ => false,
+        }
+    }
+
+    fn delimiter(&self) -> Option<String> {
+        match self {
+            Block::BlockParent(parent) => parent.delimiter(),
+            Block::BlockLeaf(leaf) => leaf.delimiter(),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn end(&mut self) {
+    }
+
+    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+        match self {
+            Self::BlockLeaf(leaf) => leaf.push(line),
+            _ => Err("not implemented".into()),
+        }
+    }
 }

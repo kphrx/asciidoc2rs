@@ -4,7 +4,7 @@ use serde_with_macros::skip_serializing_none;
 use super::Block;
 use crate::asg::{Headline, Location, NodeType};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub enum BlockMacro {
     Audio(BlockMacroBody),
@@ -31,7 +31,7 @@ impl BlockMacro {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockMacroBody {
     #[serde(rename = "type")]
     node_type: NodeType,

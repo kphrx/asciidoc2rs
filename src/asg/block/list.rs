@@ -5,7 +5,7 @@ use super::{Block, NonSectionBlockBody};
 use crate::asg::{Headline, Location, NodeType};
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub enum AnyList {
     List {
@@ -26,7 +26,7 @@ pub enum AnyList {
         items: Vec<DlistItem>,
     },
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum ListVariant {
     Callout,
@@ -79,7 +79,7 @@ impl AnyList {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub enum ListItem {
     ListItem {
@@ -104,7 +104,7 @@ impl ListItem {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub enum DlistItem {
     DlistItem {

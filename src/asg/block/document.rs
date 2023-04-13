@@ -26,6 +26,8 @@ pub struct Document {
     #[serde(skip)]
     is_started_body: bool,
     #[serde(skip)]
+    current_block: Option<Block>,
+    #[serde(skip)]
     is_preamble: bool,
     #[serde(skip)]
     is_comment: bool,
@@ -50,9 +52,20 @@ impl Document {
             doctype,
             parser: Default::default(),
             is_started_body: false,
+            current_block: None,
             is_preamble: true,
             is_comment: false,
             previous_line: "".to_owned(),
+        }
+    }
+
+    pub(crate) fn end(&mut self) {
+        if let Some(current) = self.current_block.as_mut() {
+            current.end();
+            self.blocks.push(SectionBody::Block(current.clone()));
+            self.current_block = None;
+        } else if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
+            last.end();
         }
     }
 
@@ -119,12 +132,75 @@ impl Document {
                 panic!("require document title for doctype-manpage");
             }
 
-            if let Some(SectionBody::Block(last)) = self.blocks.last_mut() {
-                if self.previous_line != "" {
+            if let Some(current) = self.current_block.as_mut() {
+                if current.is_delimited_block() {
                     self.previous_line = line.to_owned();
+
+                    if Some(line.to_owned()) != current.delimiter() {
+                        current.push(line)?;
+
+                        return Ok(());
+                    }
+
+                    current.end();
+                    self.blocks.push(SectionBody::Block(current.clone()));
+                    self.current_block = None;
 
                     return Ok(());
                 }
+
+                if line == "////" {
+                    self.is_comment = true;
+
+                    current.end();
+                    self.blocks.push(SectionBody::Block(current.clone()));
+                    self.current_block = None;
+
+                    return Ok(());
+                }
+
+                match current {
+                    Block::AnyList(_) => {
+                        if self.previous_line == "//" && line == "" {
+                            self.previous_line = "".to_owned();
+
+                            current.end();
+                            self.blocks.push(SectionBody::Block(current.clone()));
+                            self.current_block = None;
+
+                            return Ok(());
+                        }
+
+                        if line.starts_with("//") && !line.starts_with("///") {
+                            if self.previous_line == "" {
+                                self.previous_line = "//".to_owned();
+                            }
+
+                            return Ok(());
+                        }
+
+                        if line == "" {
+                            self.previous_line = line.to_owned();
+
+                            return Ok(());
+                        }
+                    }
+                    _ => {}
+                }
+
+                if line == "" {
+                    self.previous_line = line.to_owned();
+                    current.end();
+                    self.blocks.push(SectionBody::Block(current.clone()));
+                    self.current_block = None;
+
+                    return Ok(());
+                }
+
+                self.previous_line = line.to_owned();
+                current.push(line)?;
+
+                return Ok(());
             }
 
             if line == "" {
@@ -150,7 +226,7 @@ impl Document {
                     if !matches!(self.doctype, Doctype::Book) {
                         self.previous_line = line.to_owned();
                         let paragraph = Block::new_paragraph(line);
-                        self.blocks.push(SectionBody::Block(paragraph));
+                        self.current_block = Some(paragraph);
                         return Err("level 0 sections can only be used when doctype is book".into());
                     }
 
@@ -174,26 +250,26 @@ impl Document {
 
             self.previous_line = line.to_owned();
             let paragraph = Block::new_paragraph(line);
-            self.blocks.push(SectionBody::Block(paragraph));
+            self.current_block = Some(paragraph);
 
             return Ok(());
         }
 
         if self.previous_line == "" {
             if let Some(heading) = line.strip_prefix("= ") {
-                if !matches!(self.doctype, Doctype::Book) {
+                if matches!(self.doctype, Doctype::Book) {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
-                    self.blocks.push(SectionBody::Block(paragraph));
+                    let section = Section::new(0, heading);
+                    self.blocks.push(SectionBody::Section(section));
 
-                    return Err("level 0 sections can only be used when doctype is book".into());
+                    return Ok(());
                 }
 
-                self.previous_line = line.to_owned();
-                let section = Section::new(0, heading);
-                self.blocks.push(SectionBody::Section(section));
+                if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
+                    last.push(line)?;
+                }
 
-                return Ok(());
+                return Err("level 0 sections can only be used when doctype is book".into());
             }
 
             if !matches!(self.doctype, Doctype::Book) {
@@ -208,6 +284,7 @@ impl Document {
         }
 
         if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
+            self.previous_line = line.to_owned();
             return last.push(line);
         }
 
@@ -485,6 +562,7 @@ mod tests {
         for line in text.lines() {
             document.push(line)?;
         }
+        document.end();
 
         Ok(document)
     }

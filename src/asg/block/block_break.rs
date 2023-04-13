@@ -5,7 +5,7 @@ use super::Block;
 use crate::asg::{Location, NodeType};
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub enum BlockBreak {
     Break {
@@ -33,7 +33,7 @@ impl BlockBreak {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum BlockBreakVariant {
     Page,

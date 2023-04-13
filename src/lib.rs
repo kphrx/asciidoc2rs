@@ -40,6 +40,7 @@ impl<'input> Parser<'input> {
         for line in self.text.lines() {
             doc.push(line)?;
         }
+        doc.end();
 
         Ok(doc)
     }

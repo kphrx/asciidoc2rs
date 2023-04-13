@@ -18,6 +18,8 @@ pub struct Section {
     location: Option<Location>,
 
     #[serde(skip)]
+    current_block: Option<Block>,
+    #[serde(skip)]
     is_comment: bool,
     #[serde(skip)]
     previous_line: String,
@@ -31,8 +33,19 @@ impl Section {
             level,
             blocks: Vec::with_capacity(0),
             location: None,
+            current_block: None,
             is_comment: false,
             previous_line: "".to_owned(),
+        }
+    }
+
+    pub(crate) fn end(&mut self) {
+        if let Some(current) = self.current_block.as_mut() {
+            current.end();
+            self.blocks.push(SectionBody::Block(current.clone()));
+            self.current_block = None;
+        } else if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
+            last.end();
         }
     }
 
@@ -46,12 +59,75 @@ impl Section {
             return Ok(());
         }
 
-        if let Some(SectionBody::Block(last)) = self.blocks.last_mut() {
-            if self.previous_line != "" {
+        if let Some(current) = self.current_block.as_mut() {
+            if current.is_delimited_block() {
                 self.previous_line = line.to_owned();
+
+                if Some(line.to_owned()) != current.delimiter() {
+                    current.push(line)?;
+
+                    return Ok(());
+                }
+
+                current.end();
+                self.blocks.push(SectionBody::Block(current.clone()));
+                self.current_block = None;
 
                 return Ok(());
             }
+
+            if line == "////" {
+                self.is_comment = true;
+
+                current.end();
+                self.blocks.push(SectionBody::Block(current.clone()));
+                self.current_block = None;
+
+                return Ok(());
+            }
+
+            match current {
+                Block::AnyList(_) => {
+                    if self.previous_line == "//" && line == "" {
+                        self.previous_line = "".to_owned();
+
+                        current.end();
+                        self.blocks.push(SectionBody::Block(current.clone()));
+                        self.current_block = None;
+
+                        return Ok(());
+                    }
+
+                    if line.starts_with("//") && !line.starts_with("///") {
+                        if self.previous_line == "" {
+                            self.previous_line = "//".to_owned();
+                        }
+
+                        return Ok(());
+                    }
+
+                    if line == "" {
+                        self.previous_line = line.to_owned();
+
+                        return Ok(());
+                    }
+                }
+                _ => {}
+            }
+
+            if line == "" {
+                self.previous_line = line.to_owned();
+                current.end();
+                self.blocks.push(SectionBody::Block(current.clone()));
+                self.current_block = None;
+
+                return Ok(());
+            }
+
+            self.previous_line = line.to_owned();
+            current.push(line)?;
+
+            return Ok(());
         }
 
         if self.previous_line == "" {
@@ -85,9 +161,10 @@ impl Section {
                     .or(line.strip_prefix(&("===".to_owned() + marker)))
                     .or(line.strip_prefix(&("====".to_owned() + marker)))
                 {
-                    self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
-                    self.blocks.push(SectionBody::Block(paragraph));
+                    if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
+                        self.previous_line = line.to_owned();
+                        last.push(line)?;
+                    }
 
                     return Err("cannot skip section level: {}".into());
                 }
@@ -112,9 +189,15 @@ impl Section {
             return Ok(());
         }
 
+        if line.starts_with("//") && !line.starts_with("///") {
+            self.previous_line = "".to_owned();
+
+            return Ok(());
+        }
+
         self.previous_line = line.to_owned();
         let paragraph = Block::new_paragraph(line);
-        self.blocks.push(SectionBody::Block(paragraph));
+        self.current_block = Some(paragraph);
 
         return Ok(());
     }
@@ -135,6 +218,7 @@ mod tests {
         for line in text.lines() {
             section.push(line)?;
         }
+        section.end();
 
         Ok(section)
     }

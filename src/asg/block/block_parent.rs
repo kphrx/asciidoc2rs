@@ -5,7 +5,7 @@ use super::{Block, NonSectionBlockBody};
 use crate::asg::{Headline, Location, NodeType};
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub enum BlockParent {
     Admonition {
@@ -22,7 +22,7 @@ pub enum BlockParent {
     Open(BlockParentBody),
     Quote(BlockParentBody),
 }
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AdmonitionVariant {
     Caution,
     Important,
@@ -57,10 +57,20 @@ impl BlockParent {
     fn new_quote() -> Self {
         Self::Quote(BlockParentBody::new())
     }
+
+    pub(crate) fn delimiter(&self) -> Option<String> {
+        match self {
+            BlockParent::Admonition { delimiter, .. } => delimiter.to_owned(),
+            BlockParent::Example(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
+            BlockParent::Sidebar(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
+            BlockParent::Open(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
+            BlockParent::Quote(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
+        }
+    }
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockParentBody {
     #[serde(rename = "type")]
     node_type: NodeType,

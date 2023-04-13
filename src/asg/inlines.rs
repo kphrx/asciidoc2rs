@@ -4,7 +4,7 @@ use serde_with_macros::skip_serializing_none;
 use crate::asg::{Location, NodeType};
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Headline {
     inlines: Vec<Inline>,
     location: Option<Location>,
@@ -36,6 +36,16 @@ impl Inline {
         inlines.push(Inline::new_text(line));
 
         inlines
+    }
+
+    pub(crate) fn append(mut inlines: Vec<Self>, line: &str) -> Vec<Self> {
+        if let Some(Self::Text(last)) = inlines.last_mut() {
+            last.value.push_str(line);
+            inlines
+        } else {
+            inlines.push(Self::new_text(line));
+            inlines
+        }
     }
 
     fn new_span() -> Self {
