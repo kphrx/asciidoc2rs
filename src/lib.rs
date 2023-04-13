@@ -76,7 +76,7 @@ impl<'input> Parser<'input> {
     pub fn parse_to_asg(self) -> Result<ASGDocument, Box<dyn Error>> {
         let mut doc = ASGDocument::new(self.doctype);
         for line in self.text.lines() {
-            doc.push(line.to_owned())?;
+            doc.push(line)?;
         }
 
         Ok(doc)

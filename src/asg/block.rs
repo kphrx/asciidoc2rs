@@ -27,7 +27,7 @@ impl SectionBody {
         Self::Block(b)
     }
 
-    fn new_section(level: usize, title: String) -> Self {
+    fn new_section(level: usize, title: &str) -> Self {
         Self::Section(Section::new(level, title))
     }
 }

@@ -10,9 +10,9 @@ pub struct Headline {
     location: Option<Location>,
 }
 impl Headline {
-    pub(crate) fn new(text: String) -> Self {
+    pub(crate) fn new(text: &str) -> Self {
         Self {
-            inlines: Inline::new(text.clone()),
+            inlines: Inline::new(text),
             location: None,
         }
     }
@@ -31,9 +31,9 @@ pub(crate) enum Inline {
     Raw(InlineLiteral),
 }
 impl Inline {
-    pub(crate) fn new(line: String) -> Vec<Self> {
+    pub(crate) fn new(line: &str) -> Vec<Self> {
         let mut inlines = Vec::with_capacity(0);
-        inlines.push(Inline::new_text(line.clone()));
+        inlines.push(Inline::new_text(line));
 
         inlines
     }
@@ -42,16 +42,16 @@ impl Inline {
         Self::Span(InlineParent::new())
     }
 
-    fn new_text(value: String) -> Self {
-        Self::Text(InlineLiteral::new(value))
+    fn new_text(value: &str) -> Self {
+        Self::Text(InlineLiteral::new(value.to_owned()))
     }
 
-    fn new_charref(value: String) -> Self {
-        Self::Charref(InlineLiteral::new(value))
+    fn new_charref(value: &str) -> Self {
+        Self::Charref(InlineLiteral::new(value.to_owned()))
     }
 
-    fn new_raw(value: String) -> Self {
-        Self::Raw(InlineLiteral::new(value))
+    fn new_raw(value: &str) -> Self {
+        Self::Raw(InlineLiteral::new(value.to_owned()))
     }
 }
 

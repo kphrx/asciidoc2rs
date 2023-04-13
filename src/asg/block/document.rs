@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::SectionBody;
+use super::{Block, Section, SectionBody};
 use crate::asg::{Headline, Location, NodeType};
 use crate::Doctype;
 
@@ -18,12 +18,19 @@ pub struct Document {
     header: Option<DocumentHeader>,
     blocks: Vec<SectionBody>,
     location: Option<Location>,
+
     #[serde(skip)]
     doctype: Doctype,
     #[serde(skip)]
     parser: HeaderParser,
     #[serde(skip)]
     is_started_body: bool,
+    #[serde(skip)]
+    is_preamble: bool,
+    #[serde(skip)]
+    is_comment: bool,
+    #[serde(skip)]
+    previous_line: String,
 }
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
@@ -43,10 +50,13 @@ impl Document {
             doctype,
             parser: Default::default(),
             is_started_body: false,
+            is_preamble: true,
+            is_comment: false,
+            previous_line: "".to_owned(),
         }
     }
 
-    pub(crate) fn push(&mut self, line: String) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
         if !self.is_started_body {
             match self.parser.parse_line(line)? {
                 LineKind::NotHeader => {
@@ -69,7 +79,7 @@ impl Document {
                     return Ok(());
                 }
                 LineKind::Title(document_title) => {
-                    let title = Headline::new(document_title);
+                    let title = Headline::new(&document_title);
                     self.header = Some(DocumentHeader {
                         title,
                         location: None,
@@ -95,7 +105,94 @@ impl Document {
             }
         }
 
-        Ok(())
+        if self.is_preamble {
+            if matches!(self.doctype, Doctype::Manpage) && !self.parser.has_title {
+                panic!("require document title for doctype-manpage");
+            }
+
+            if self.is_comment {
+                if line == "////" {
+                    self.previous_line = "".to_owned();
+                    self.is_comment = false
+                }
+
+                return Ok(());
+            }
+
+            if let Some(SectionBody::Block(last)) = self.blocks.last_mut() {
+                if self.previous_line != "" {
+                    self.previous_line = line.to_owned();
+
+                    return Ok(());
+                }
+            }
+
+            if line == "" {
+                self.previous_line = line.to_owned();
+                return Ok(());
+            }
+
+            if line == "////" {
+                self.is_comment = true;
+
+                return Ok(());
+            }
+
+            if line.starts_with("//") && !line.starts_with("///") {
+                self.previous_line = "".to_owned();
+
+                return Ok(());
+            }
+
+            if self.previous_line == "" {
+                if let Some(heading) = line.strip_prefix("= ") {
+                    if !matches!(self.doctype, Doctype::Book) {
+                        return Err("level 0 sections can only be used when doctype is book".into());
+                    }
+
+                    self.previous_line = line.to_owned();
+                    self.is_preamble = false;
+                    let section = Section::new(0, heading);
+                    self.blocks.push(SectionBody::Section(section));
+
+                    return Ok(());
+                }
+
+                if let Some(heading) = line.strip_prefix("== ") {
+                    self.previous_line = line.to_owned();
+                    self.is_preamble = false;
+                    let section = Section::new(1, heading);
+                    self.blocks.push(SectionBody::Section(section));
+
+                    return Ok(());
+                }
+            }
+
+            self.previous_line = line.to_owned();
+
+            return Ok(());
+        }
+
+        if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
+            return last.push(line);
+        }
+
+        panic!("not expected non preamble top level block")
+    }
+
+    fn parse_preamble(&mut self, line: String) -> Result<(), Box<dyn Error>> {
+        if line == "////" {
+            self.previous_line = "".to_owned();
+            self.is_comment = true;
+
+            return Ok(());
+        }
+
+        if line == "" {
+            return Ok(());
+        }
+
+        return Ok(());
     }
 
     fn set_authors(&mut self, authors: Vec<Author>) {
@@ -120,7 +217,7 @@ impl Document {
         }
     }
 
-    fn set_value(&mut self, name: String, value: &String) {
+    fn set_value(&mut self, name: String, value: &str) {
         if let Some(attrs) = self.attributes.as_mut() {
             attrs.insert(name.to_lowercase(), value.to_owned());
         } else {
@@ -170,7 +267,7 @@ impl HeaderParser {
         }
     }
 
-    fn parse_line(&mut self, line: String) -> Result<LineKind, Box<dyn Error>> {
+    fn parse_line(&mut self, line: &str) -> Result<LineKind, Box<dyn Error>> {
         if line == "" {
             if self.has_title || self.has_attr {
                 return Ok(LineKind::End);
@@ -179,7 +276,7 @@ impl HeaderParser {
             return Ok(LineKind::Skip);
         }
 
-        match self.parse_attribute_line(&line)? {
+        match self.parse_attribute_line(line)? {
             LineKind::Attribute(key, value) => {
                 self.has_attr = true;
                 return Ok(LineKind::Attribute(key, value));
@@ -195,7 +292,7 @@ impl HeaderParser {
             return Ok(LineKind::Comment);
         }
 
-        match self.parse_implicit_line(&line)? {
+        match self.parse_implicit_line(line)? {
             LineKind::Authors(a) => {
                 return Ok(LineKind::Authors(a));
             }
@@ -218,26 +315,26 @@ impl HeaderParser {
         Ok(LineKind::NotHeader)
     }
 
-    fn parse_attribute_line(&mut self, line: &String) -> Result<LineKind, Box<dyn Error>> {
+    fn parse_attribute_line(&mut self, line: &str) -> Result<LineKind, Box<dyn Error>> {
         let result = if self.wrapped_attr.is_some() {
             self.parse_wrapped_attr(line)?
         } else if let Some((attr_name, attr_value)) =
             line.strip_prefix(":").and_then(|a| a.split_once(": "))
         {
-            if Self::is_valid_attribute_name(attr_name.to_string()) {
+            if Self::is_valid_attribute_name(attr_name.to_owned()) {
                 self.wrapped_attr = Some((attr_name.to_owned(), "".to_owned()));
-                self.parse_wrapped_attr(&attr_value.to_string())?
+                self.parse_wrapped_attr(&attr_value.to_owned())?
             } else {
                 return Err(format!("invalid document attribute: {}", attr_name).into());
             }
         } else if let Some(attr_name) = line.strip_prefix(":").and_then(|a| a.strip_suffix(":")) {
             if let Some(unset_attr) = attr_name.strip_prefix("!").or(attr_name.strip_suffix("!")) {
-                if !Self::is_valid_attribute_name(unset_attr.to_string()) {
+                if !Self::is_valid_attribute_name(unset_attr.to_owned()) {
                     return Err(format!("invalid document attribute: {}", attr_name).into());
                 }
                 LineKind::UnsetAttribute(unset_attr.to_owned())
             } else {
-                if !Self::is_valid_attribute_name(attr_name.to_string()) {
+                if !Self::is_valid_attribute_name(attr_name.to_owned()) {
                     return Err(format!("invalid document attribute: {}", attr_name).into());
                 }
                 LineKind::Attribute(attr_name.to_owned(), "".to_owned())
@@ -254,7 +351,7 @@ impl HeaderParser {
             && !attr_name.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-')
     }
 
-    fn parse_wrapped_attr(&mut self, line: &String) -> Result<LineKind, Box<dyn Error>> {
+    fn parse_wrapped_attr(&mut self, line: &str) -> Result<LineKind, Box<dyn Error>> {
         let result = if let Some(wrap_value) = line.strip_suffix(" + \\") {
             let mut value = wrap_value.to_owned();
             value.push_str("\n");
@@ -289,7 +386,7 @@ impl HeaderParser {
         Ok(result)
     }
 
-    fn parse_implicit_line(&mut self, line: &String) -> Result<LineKind, Box<dyn Error>> {
+    fn parse_implicit_line(&mut self, line: &str) -> Result<LineKind, Box<dyn Error>> {
         let result = if self.is_authors_line {
             self.is_authors_line = false;
             self.is_revision_line = true;
@@ -307,7 +404,7 @@ impl HeaderParser {
         Ok(result)
     }
 
-    fn parse_authors_line(&mut self, line: &String) -> Result<Vec<Author>, Box<dyn Error>> {
+    fn parse_authors_line(&mut self, line: &str) -> Result<Vec<Author>, Box<dyn Error>> {
         let split_authors: Vec<&str> = line.split_terminator(';').collect();
         let mut authors: Vec<Author> = Vec::with_capacity(split_authors.len());
         for author in split_authors {
@@ -328,7 +425,7 @@ impl HeaderParser {
         Ok(authors)
     }
 
-    fn parse_revision_line(&mut self, line: &String) -> LineKind {
+    fn parse_revision_line(&mut self, line: &str) -> LineKind {
         LineKind::End
     }
 }
@@ -352,7 +449,7 @@ mod tests {
         let mut document = Document::new(Doctype::Article);
 
         for line in text.lines() {
-            document.push(line.to_owned())?;
+            document.push(line)?;
         }
 
         Ok(document)
@@ -363,7 +460,7 @@ mod tests {
         let document = parse("// this comment line is ignored\n= Document Title\nKismet R. Lee <kismet@asciidoctor.org>\n:description: The document's description.\n:sectanchors:\n:url-repo: https://my-git-repo.com\n\nThe document body starts here.").unwrap();
 
         assert_eq!(
-            Some(Headline::new("Document Title".to_owned()).heading()),
+            Some(Headline::new("Document Title").heading()),
             document.header.map(|h| h.title.heading())
         );
         let mut attrs = HashMap::new();
