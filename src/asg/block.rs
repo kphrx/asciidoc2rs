@@ -17,6 +17,7 @@ pub(crate) use section::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum SectionBody {
     Block(Block),
     Section(Section),
@@ -32,6 +33,7 @@ impl SectionBody {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum NonSectionBlockBody {
     Block(Block),
 }
@@ -42,6 +44,7 @@ impl NonSectionBlockBody {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(untagged)]
 pub enum Block {
     BlockParent(BlockParent),
     BlockLeaf(BlockLeaf),

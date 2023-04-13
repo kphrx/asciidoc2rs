@@ -11,11 +11,8 @@ pub struct Headline {
 }
 impl Headline {
     pub(crate) fn new(text: String) -> Self {
-        let mut inlines = Vec::with_capacity(0);
-        inlines.push(Inline::new_text(text.clone()));
-
         Self {
-            inlines,
+            inlines: Inline::new(text.clone()),
             location: None,
         }
     }
@@ -34,6 +31,13 @@ pub(crate) enum Inline {
     Raw(InlineLiteral),
 }
 impl Inline {
+    pub(crate) fn new(line: String) -> Vec<Self> {
+        let mut inlines = Vec::with_capacity(0);
+        inlines.push(Inline::new_text(line.clone()));
+
+        inlines
+    }
+
     fn new_span() -> Self {
         Self::Span(InlineParent::new())
     }
