@@ -51,9 +51,18 @@ impl Document {
             match self.parser.parse_line(line)? {
                 LineKind::NotHeader => {
                     self.is_started_body = true;
+
+                    if matches!(self.doctype, Doctype::Manpage) {
+                        panic!("require document title for doctype-manpage");
+                    }
                 }
                 LineKind::End => {
                     self.is_started_body = true;
+
+                    if matches!(self.doctype, Doctype::Manpage) && !self.parser.has_title {
+                        panic!("require document title for doctype-manpage");
+                    }
+
                     return Ok(());
                 }
                 LineKind::Comment | LineKind::Skip | LineKind::Wrap => {
@@ -139,6 +148,7 @@ enum LineKind {
 struct HeaderParser {
     doctype: Doctype,
     has_title: bool,
+    has_attr: bool,
     is_authors_line: bool,
     is_revision_line: bool,
     wrapped_attr: Option<(String, String)>,
@@ -153,6 +163,7 @@ impl HeaderParser {
         Self {
             doctype,
             has_title: false,
+            has_attr: false,
             is_authors_line: false,
             is_revision_line: false,
             wrapped_attr: None,
@@ -161,7 +172,7 @@ impl HeaderParser {
 
     fn parse_line(&mut self, line: String) -> Result<LineKind, Box<dyn Error>> {
         if line == "" {
-            if self.has_title {
+            if self.has_title || self.has_attr {
                 return Ok(LineKind::End);
             }
 
@@ -170,6 +181,7 @@ impl HeaderParser {
 
         match self.parse_attribute_line(&line)? {
             LineKind::Attribute(key, value) => {
+                self.has_attr = true;
                 return Ok(LineKind::Attribute(key, value));
             }
             LineKind::Wrap => {
@@ -194,13 +206,13 @@ impl HeaderParser {
             _ => panic!("not expected value"),
         }
 
+        if self.has_title {
+            return Err("invalid document header".into());
+        }
+
         if let Some(document_title) = line.strip_prefix("= ") {
             self.has_title = true;
             return Ok(LineKind::Title(document_title.to_owned()));
-        }
-
-        if self.has_title {
-            return Err("invalid document header".into());
         }
 
         Ok(LineKind::NotHeader)
