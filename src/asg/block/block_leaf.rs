@@ -62,6 +62,10 @@ impl BlockLeafBody {
             location: None,
         }
     }
+
+    pub(crate) fn inlines(&self) -> Vec<Inline> {
+        self.inlines.clone()
+    }
 }
 
 impl Block {

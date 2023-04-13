@@ -484,4 +484,11 @@ mod tests {
         )
         .unwrap();
     }
+
+    #[test]
+    fn paragraph_blocks() {
+        let document = parse("Paragraphs don't require any special markup in AsciiDoc.\nA paragraph is just one or more lines of consecutive text.\n\nTo begin a new paragraph, separate it by at least one empty line from the previous paragraph or block.").unwrap();
+
+        assert_eq!(2, document.blocks.len());
+    }
 }

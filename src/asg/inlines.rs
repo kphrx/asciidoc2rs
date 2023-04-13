@@ -17,12 +17,12 @@ impl Headline {
         }
     }
 
-    pub(crate) fn heading(self) -> Vec<Inline> {
-        self.inlines
+    pub(crate) fn heading(&self) -> Vec<Inline> {
+        self.inlines.clone()
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub(crate) enum Inline {
     Span(InlineParent),
@@ -56,7 +56,7 @@ impl Inline {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub(crate) struct InlineParent {
     #[serde(rename = "type")]
     node_type: NodeType,
@@ -74,7 +74,7 @@ impl InlineParent {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub(crate) struct InlineLiteral {
     #[serde(rename = "type")]
     node_type: NodeType,
