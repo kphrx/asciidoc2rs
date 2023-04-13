@@ -105,18 +105,18 @@ impl Document {
             }
         }
 
+        if self.is_comment {
+            if line == "////" {
+                self.previous_line = "".to_owned();
+                self.is_comment = false
+            }
+
+            return Ok(());
+        }
+
         if self.is_preamble {
             if matches!(self.doctype, Doctype::Manpage) && !self.parser.has_title {
                 panic!("require document title for doctype-manpage");
-            }
-
-            if self.is_comment {
-                if line == "////" {
-                    self.previous_line = "".to_owned();
-                    self.is_comment = false
-                }
-
-                return Ok(());
             }
 
             if let Some(SectionBody::Block(last)) = self.blocks.last_mut() {
@@ -129,6 +129,7 @@ impl Document {
 
             if line == "" {
                 self.previous_line = line.to_owned();
+
                 return Ok(());
             }
 
@@ -176,6 +177,34 @@ impl Document {
             self.blocks.push(SectionBody::Block(paragraph));
 
             return Ok(());
+        }
+
+        if self.previous_line == "" {
+            if let Some(heading) = line.strip_prefix("= ") {
+                if !matches!(self.doctype, Doctype::Book) {
+                    self.previous_line = line.to_owned();
+                    let paragraph = Block::new_paragraph(line);
+                    self.blocks.push(SectionBody::Block(paragraph));
+
+                    return Err("level 0 sections can only be used when doctype is book".into());
+                }
+
+                self.previous_line = line.to_owned();
+                let section = Section::new(0, heading);
+                self.blocks.push(SectionBody::Section(section));
+
+                return Ok(());
+            }
+
+            if !matches!(self.doctype, Doctype::Book) {
+                if let Some(heading) = line.strip_prefix("== ") {
+                    self.previous_line = line.to_owned();
+                    let section = Section::new(1, heading);
+                    self.blocks.push(SectionBody::Section(section));
+
+                    return Ok(());
+                }
+            }
         }
 
         if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {

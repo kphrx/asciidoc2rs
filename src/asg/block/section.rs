@@ -16,6 +16,11 @@ pub struct Section {
     level: usize,
     blocks: Vec<SectionBody>,
     location: Option<Location>,
+
+    #[serde(skip)]
+    is_comment: bool,
+    #[serde(skip)]
+    previous_line: String,
 }
 impl Section {
     pub(crate) fn new(level: usize, heading: &str) -> Self {
@@ -26,11 +31,92 @@ impl Section {
             level,
             blocks: Vec::with_capacity(0),
             location: None,
+            is_comment: false,
+            previous_line: "".to_owned(),
         }
     }
 
     pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
-        Err("not implemented".into())
+        if self.is_comment {
+            if line == "////" {
+                self.previous_line = "".to_owned();
+                self.is_comment = false
+            }
+
+            return Ok(());
+        }
+
+        if let Some(SectionBody::Block(last)) = self.blocks.last_mut() {
+            if self.previous_line != "" {
+                self.previous_line = line.to_owned();
+
+                return Ok(());
+            }
+        }
+
+        if self.previous_line == "" {
+            let marker = match self.level {
+                0 => "== ",
+                1 => "=== ",
+                2 => "==== ",
+                3 => "===== ",
+                4 => "====== ",
+                _ => "",
+            };
+
+            if marker != "" {
+                if let Some(heading) = line.strip_prefix(marker) {
+                    self.previous_line = line.to_owned();
+                    let section = Section::new(self.level + 1, heading);
+                    self.blocks.push(SectionBody::Section(section));
+
+                    return Ok(());
+                }
+
+                if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
+                    self.previous_line = line.to_owned();
+
+                    return last.push(line);
+                }
+
+                if let Some(_) = line
+                    .strip_prefix(&("=".to_owned() + marker))
+                    .or(line.strip_prefix(&("==".to_owned() + marker)))
+                    .or(line.strip_prefix(&("===".to_owned() + marker)))
+                    .or(line.strip_prefix(&("====".to_owned() + marker)))
+                {
+                    self.previous_line = line.to_owned();
+                    let paragraph = Block::new_paragraph(line);
+                    self.blocks.push(SectionBody::Block(paragraph));
+
+                    return Err("cannot skip section level: {}".into());
+                }
+            }
+        }
+
+        if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
+            self.previous_line = line.to_owned();
+
+            return last.push(line);
+        }
+
+        if line == "" {
+            self.previous_line = line.to_owned();
+
+            return Ok(());
+        }
+
+        if line == "////" {
+            self.is_comment = true;
+
+            return Ok(());
+        }
+
+        self.previous_line = line.to_owned();
+        let paragraph = Block::new_paragraph(line);
+        self.blocks.push(SectionBody::Block(paragraph));
+
+        return Ok(());
     }
 }
 
@@ -60,49 +146,49 @@ mod tests {
         assert_eq!(2, section.blocks.len());
 
         let Some(SectionBody::Section(level1_section)) = section.blocks.first() else {
-                panic!("cannot call");
-            };
+            panic!("cannot call");
+        };
         assert_eq!(
             Headline::new("Level 1 Section Title").heading(),
             level1_section.title.heading()
         );
         assert_eq!(1, level1_section.blocks.len());
         let Some(SectionBody::Section(level2_section)) = level1_section.blocks.first() else {
-                panic!("cannot call");
-            };
+            panic!("cannot call");
+        };
         assert_eq!(
             Headline::new("Level 2 Section Title").heading(),
-            level1_section.title.heading()
+            level2_section.title.heading()
         );
         assert_eq!(1, level2_section.blocks.len());
         let Some(SectionBody::Section(level3_section)) = level2_section.blocks.first() else {
-                panic!("cannot call");
-            };
+            panic!("cannot call");
+        };
         assert_eq!(
             Headline::new("Level 3 Section Title").heading(),
-            level1_section.title.heading()
+            level3_section.title.heading()
         );
         assert_eq!(1, level3_section.blocks.len());
         let Some(SectionBody::Section(level4_section)) = level3_section.blocks.first() else {
-                panic!("cannot call");
-            };
+            panic!("cannot call");
+        };
         assert_eq!(
             Headline::new("Level 4 Section Title").heading(),
-            level1_section.title.heading()
+            level4_section.title.heading()
         );
         assert_eq!(1, level4_section.blocks.len());
         let Some(SectionBody::Section(level5_section)) = level4_section.blocks.first() else {
-                panic!("cannot call");
-            };
+            panic!("cannot call");
+        };
         assert_eq!(
             Headline::new("Level 5 Section Title").heading(),
-            level1_section.title.heading()
+            level5_section.title.heading()
         );
         assert_eq!(0, level5_section.blocks.len());
 
         let Some(SectionBody::Section(another_level1_section)) = section.blocks.last() else {
-                panic!("cannot call");
-            };
+            panic!("cannot call");
+        };
         assert_eq!(
             Headline::new("Another Level 1 Section Title").heading(),
             another_level1_section.title.heading()
@@ -117,8 +203,8 @@ mod tests {
         assert_eq!(2, section.blocks.len());
 
         let Some(SectionBody::Section(first_section)) = section.blocks.first() else {
-                panic!("cannot call");
-            };
+            panic!("cannot call");
+        };
         assert_eq!(
             Headline::new("First Section").heading(),
             first_section.title.heading()
@@ -134,8 +220,8 @@ mod tests {
         );
 
         let Some(SectionBody::Section(nested_section)) = first_section.blocks.last() else {
-                panic!("cannot call");
-            };
+            panic!("cannot call");
+        };
         assert_eq!(
             Headline::new("Nested Section").heading(),
             nested_section.title.heading()
@@ -151,13 +237,13 @@ mod tests {
         );
 
         let Some(SectionBody::Section(second_section)) = section.blocks.last() else {
-                panic!("cannot call");
-            };
+            panic!("cannot call");
+        };
         assert_eq!(
             Headline::new("Second Section").heading(),
             second_section.title.heading()
         );
-        assert_eq!(2, second_section.blocks.len());
+        assert_eq!(1, second_section.blocks.len());
         let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(content_of_second_section)))) =
             second_section.blocks.first() else {
                 panic!("cannot call");
