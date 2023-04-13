@@ -24,8 +24,8 @@ impl BlockLeaf {
         Self::Literal(BlockLeafBody::new())
     }
 
-    fn new_paragraph() -> Self {
-        Self::Paragraph(BlockLeafBody::new())
+    fn new_paragraph(line: &str) -> Self {
+        Self::Paragraph(BlockLeafBody::new_text(line))
     }
 
     fn new_pass() -> Self {
@@ -63,6 +63,16 @@ impl BlockLeafBody {
         }
     }
 
+    fn new_text(line: &str) -> Self {
+        Self {
+            node_type: NodeType::Block,
+            delimiter: None,
+            title: None,
+            inlines: Inline::new(line),
+            location: None,
+        }
+    }
+
     pub(crate) fn inlines(&self) -> Vec<Inline> {
         self.inlines.clone()
     }
@@ -77,8 +87,8 @@ impl Block {
         Self::BlockLeaf(BlockLeaf::new_literal())
     }
 
-    fn new_paragraph() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_paragraph())
+    pub(crate) fn new_paragraph(line: &str) -> Self {
+        Self::BlockLeaf(BlockLeaf::new_paragraph(line))
     }
 
     fn new_pass() -> Self {

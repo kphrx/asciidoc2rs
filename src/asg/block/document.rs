@@ -147,6 +147,9 @@ impl Document {
             if self.previous_line == "" {
                 if let Some(heading) = line.strip_prefix("= ") {
                     if !matches!(self.doctype, Doctype::Book) {
+                        self.previous_line = line.to_owned();
+                        let paragraph = Block::new_paragraph(line);
+                        self.blocks.push(SectionBody::Block(paragraph));
                         return Err("level 0 sections can only be used when doctype is book".into());
                     }
 
@@ -169,6 +172,8 @@ impl Document {
             }
 
             self.previous_line = line.to_owned();
+            let paragraph = Block::new_paragraph(line);
+            self.blocks.push(SectionBody::Block(paragraph));
 
             return Ok(());
         }
