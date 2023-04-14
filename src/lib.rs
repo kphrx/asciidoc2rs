@@ -12,7 +12,7 @@ use asg::Inline;
 use std::error::Error;
 
 #[derive(Debug)]
-pub(crate) enum Doctype {
+pub enum Doctype {
     Article,
     Book,
     Manpage,
@@ -33,7 +33,7 @@ impl<'input> Parser<'input> {
         Self::new_with_doctype(text, Default::default())
     }
 
-    fn new_with_doctype(text: &'input str, doctype: Doctype) -> Self {
+    pub fn new_with_doctype(text: &'input str, doctype: Doctype) -> Self {
         Self { text, doctype }
     }
 
