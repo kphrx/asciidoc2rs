@@ -104,7 +104,16 @@ impl Document {
                     self.set_authors(authors);
                     return Ok(());
                 }
-                LineKind::Revision => {
+                LineKind::Revision(revnumber, revdate, revremark) => {
+                    self.set_value("revnumber".to_owned(), &revnumber);
+                    if let Some(date) = revdate {
+                        self.set_value("revdate".to_owned(), &date);
+
+                        if let Some(remark) = revremark {
+                            self.set_value("revremark".to_owned(), &remark);
+                        }
+                    }
+
                     return Ok(());
                 }
                 LineKind::UnsetAttribute(key) => {
@@ -315,7 +324,7 @@ impl Document {
                 ("author".to_owned(), "email".to_owned())
             };
 
-            self.set_value(author_key, &author.author);
+            self.set_value(author_key, &author.name);
             if let Some(email) = &author.email {
                 self.set_value(email_key, email);
             }
@@ -346,7 +355,7 @@ enum LineKind {
     End,
     Title(String),
     Authors(Vec<Author>),
-    Revision,
+    Revision(String, Option<String>, Option<String>),
     UnsetAttribute(String),
     Attribute(String, String),
     Wrap,
@@ -407,8 +416,8 @@ impl HeaderParser {
             LineKind::Authors(a) => {
                 return Ok(LineKind::Authors(a));
             }
-            LineKind::Revision => {
-                return Ok(LineKind::Revision);
+            LineKind::Revision(n, d, r) => {
+                return Ok(LineKind::Revision(n, d, r));
             }
             LineKind::End => {}
             _ => panic!("not expected value"),
@@ -507,7 +516,7 @@ impl HeaderParser {
         } else if self.is_revision_line {
             self.is_revision_line = false;
 
-            self.parse_revision_line(line)
+            self.parse_revision_line(line)?
         } else {
             LineKind::End
         };
@@ -536,19 +545,72 @@ impl HeaderParser {
         Ok(authors)
     }
 
-    fn parse_revision_line(&mut self, line: &str) -> LineKind {
-        LineKind::End
+    fn parse_revision_line(&mut self, line: &str) -> Result<LineKind, Box<dyn Error>> {
+        let (revnumber, revdate, revremark) = match line.split_once(", ") {
+            None => {
+                if let Some(revnumber) = line.strip_prefix('v') {
+                    if !revnumber.contains(|c: char| c.is_ascii_digit()) {
+                        return Err("Invalid revision format".into());
+                    }
+
+                    let (number, remark) = match revnumber.split_once(": ") {
+                        None => (revnumber.to_owned(), None),
+                        Some((number, remark)) => (number.to_owned(), Some(remark.to_owned())),
+                    };
+
+                    (number, None, remark)
+                } else {
+                    return Err("Invalid revision format".into());
+                }
+            }
+            Some((revnumber, revdate)) => {
+                if !revnumber.contains(|c: char| c.is_ascii_digit()) {
+                    return Err("Invalid revision format".into());
+                }
+
+                let (date, remark) = match revdate.split_once(": ") {
+                    None => (Some(revdate.to_owned()), None),
+                    Some((date, remark)) => (Some(date.to_owned()), Some(remark.to_owned())),
+                };
+
+                (
+                    revnumber
+                        .trim_start_matches(|c: char| !c.is_ascii_digit())
+                        .to_owned(),
+                    date,
+                    remark,
+                )
+            }
+        };
+
+        Ok(LineKind::Revision(revnumber, revdate, revremark))
     }
 }
 
 #[derive(Debug)]
 struct Author {
-    author: String,
+    name: String,
     email: Option<String>,
 }
 impl Author {
-    fn new(author: String, email: Option<String>) -> Self {
-        Self { author, email }
+    fn new(name: String, email: Option<String>) -> Self {
+        Self { name, email }
+    }
+}
+
+#[derive(Debug)]
+struct Revision {
+    number: String,
+    date: Option<String>,
+    remark: Option<String>,
+}
+impl Revision {
+    fn new(number: String, date: Option<String>, remark: Option<String>) -> Self {
+        Self {
+            number,
+            date,
+            remark,
+        }
     }
 }
 
@@ -595,6 +657,56 @@ mod tests {
             "= Document Title\n\n= Illegal Level 0 Section (violates rule #1)\n\n== First Section",
         )
         .unwrap();
+    }
+
+    #[test]
+    fn revision_line() {
+        let document =
+            parse("= The Intrepid Chronicles\nKismet Lee\n2.9, October 31, 2021: Fall incarnation")
+                .unwrap();
+
+        assert_eq!(
+            Some(Headline::new("The Intrepid Chronicles").heading()),
+            document.header.map(|h| h.title.heading())
+        );
+        let mut attrs = HashMap::new();
+        attrs.insert("author".to_owned(), "Kismet Lee".to_owned());
+        attrs.insert("revnumber".to_owned(), "2.9".to_owned());
+        attrs.insert("revdate".to_owned(), "October 31, 2021".to_owned());
+        attrs.insert("revremark".to_owned(), "Fall incarnation".to_owned());
+        assert_eq!(Some(attrs), document.attributes);
+    }
+
+    #[test]
+    fn number_only_revision_line() {
+        let document = parse("= The Intrepid Chronicles\nKismet Lee\nv7.5").unwrap();
+
+        assert_eq!(
+            Some(Headline::new("The Intrepid Chronicles").heading()),
+            document.header.map(|h| h.title.heading())
+        );
+        let mut attrs = HashMap::new();
+        attrs.insert("author".to_owned(), "Kismet Lee".to_owned());
+        attrs.insert("revnumber".to_owned(), "7.5".to_owned());
+        assert_eq!(Some(attrs), document.attributes);
+    }
+
+    #[test]
+    fn trim_prefix_char_revision_line() {
+        let document =
+            parse("= The Intrepid Chronicles\nKismet Lee\nLPR55, {docdate}: A Special ⚄ Edition")
+                .unwrap();
+
+        assert_eq!(
+            Some(Headline::new("The Intrepid Chronicles").heading()),
+            document.header.map(|h| h.title.heading())
+        );
+        let mut attrs = HashMap::new();
+        attrs.insert("author".to_owned(), "Kismet Lee".to_owned());
+        attrs.insert("revnumber".to_owned(), "55".to_owned());
+        attrs.insert("revdate".to_owned(), "{docdate}".to_owned());
+        attrs.insert("revremark".to_owned(), "A Special ⚄ Edition".to_owned());
+        assert_eq!(Some(attrs), document.attributes);
     }
 
     #[test]
