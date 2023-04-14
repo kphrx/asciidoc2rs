@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
@@ -76,54 +78,76 @@ impl AnyList {
             items: Vec::with_capacity(0),
         }
     }
-}
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
-pub enum ListItem {
-    ListItem {
-        #[serde(rename = "type")]
-        node_type: NodeType,
-        marker: String,
-        principal: Headline,
-        blocks: Option<Vec<NonSectionBlockBody>>,
-        location: Option<Location>,
-    },
-}
-impl ListItem {
-    fn new(marker: String, principal: Headline) -> Self {
-        Self::ListItem {
-            node_type: NodeType::Block,
-            marker,
-            principal,
-            blocks: None,
-            location: None,
+    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+        match self {
+            Self::List { marker, items, .. } => {
+                let prefix = marker.to_owned() + " ";
+                if let Some(principal) = line.clone().strip_prefix(&prefix) {
+                    items.push(ListItem::new(marker.to_owned(), Headline::new(principal)));
+
+                    return Ok(());
+                }
+
+                if let Some(last) = items.last_mut() {
+                    return last.push(line);
+                }
+
+                Err("not expected empty items of list".into())
+            }
+            Self::Dlist { .. } => Err("not implemented".into()),
         }
     }
 }
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
-pub enum DlistItem {
-    DlistItem {
-        #[serde(rename = "type")]
-        node_type: NodeType,
-        marker: String,
-        principal: Headline,
-        blocks: Option<Vec<NonSectionBlockBody>>,
-        location: Option<Location>,
-        terms: Vec<Headline>,
-    },
+pub struct ListItem {
+    name: String,
+    #[serde(rename = "type")]
+    node_type: NodeType,
+    marker: String,
+    principal: Headline,
+    blocks: Option<Vec<NonSectionBlockBody>>,
+    location: Option<Location>,
 }
-impl DlistItem {
+impl ListItem {
     fn new(marker: String, principal: Headline) -> Self {
-        Self::DlistItem {
+        Self {
+            name: "listItem".to_owned(),
             node_type: NodeType::Block,
             marker,
             principal,
-            blocks: None,
+            blocks: Some(Vec::with_capacity(0)),
+            location: None,
+        }
+    }
+
+    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+        Err("not implemented".into())
+    }
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct DlistItem {
+    name: String,
+    #[serde(rename = "type")]
+    node_type: NodeType,
+    marker: String,
+    principal: Headline,
+    blocks: Option<Vec<NonSectionBlockBody>>,
+    location: Option<Location>,
+    terms: Vec<Headline>,
+}
+impl DlistItem {
+    fn new(marker: String, principal: Headline) -> Self {
+        Self {
+            name: "dlistItem".to_owned(),
+            node_type: NodeType::Block,
+            marker,
+            principal,
+            blocks: Some(Vec::with_capacity(0)),
             location: None,
             terms: Vec::with_capacity(0),
         }
@@ -139,7 +163,7 @@ impl Block {
         Self::AnyList(AnyList::new_ordered_list(marker))
     }
 
-    fn new_unordered_list(marker: String) -> Self {
+    pub(crate) fn new_unordered_list(marker: String) -> Self {
         Self::AnyList(AnyList::new_unordered_list(marker))
     }
 

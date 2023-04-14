@@ -257,6 +257,15 @@ impl Document {
                 }
             }
 
+            if line.starts_with("* ") {
+                self.previous_line = "".to_owned();
+                let mut unordered_list = Block::new_unordered_list("*".to_owned());
+                unordered_list.push(line)?;
+                self.current_block = Some(unordered_list);
+
+                return Ok(());
+            }
+
             self.previous_line = line.to_owned();
             let paragraph = Block::new_paragraph(line);
             self.current_block = Some(paragraph);

@@ -87,7 +87,7 @@ impl Section {
             }
 
             match current {
-                Block::AnyList(_) => {
+                Block::AnyList(list) => {
                     if self.previous_line == "//" && line == "" {
                         self.previous_line = "".to_owned();
 
@@ -111,6 +111,8 @@ impl Section {
 
                         return Ok(());
                     }
+
+                    return list.push(line);
                 }
                 _ => {}
             }
@@ -125,9 +127,8 @@ impl Section {
             }
 
             self.previous_line = line.to_owned();
-            current.push(line)?;
 
-            return Ok(());
+            return current.push(line);
         }
 
         if self.previous_line == "" {
@@ -195,6 +196,15 @@ impl Section {
             return Ok(());
         }
 
+        if line.starts_with("* ") {
+            self.previous_line = "".to_owned();
+            let mut unordered_list = Block::new_unordered_list("*".to_owned());
+            unordered_list.push(line)?;
+            self.current_block = Some(unordered_list);
+
+            return Ok(());
+        }
+
         self.previous_line = line.to_owned();
         let paragraph = Block::new_paragraph(line);
         self.current_block = Some(paragraph);
@@ -205,10 +215,7 @@ impl Section {
 
 #[cfg(test)]
 mod tests {
-    use crate::asg::{
-        block::{Block, BlockLeaf},
-        inlines::Inline,
-    };
+    use crate::asg::{block::BlockLeaf, inlines::Inline};
 
     use super::*;
 
