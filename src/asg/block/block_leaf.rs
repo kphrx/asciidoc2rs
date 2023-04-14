@@ -49,7 +49,7 @@ impl BlockLeaf {
 
                 Ok(())
             }
-            _ => Err("not implemented".into())
+            _ => Err("not implemented".into()),
         }
     }
 

@@ -1,0 +1,6 @@
+# asciidoc2rs
+
+image:https://img.shields.io/endpoint?style=for-the-badge&url=https://gist.githubusercontent.com/kphrx/e795d8d23466d049a08e03c23301e996/raw/asciidoc2rs-passed.json[TCK passed count,height=24,format=svg]
+image:https://img.shields.io/endpoint?style=for-the-badge&url=https://gist.githubusercontent.com/kphrx/e795d8d23466d049a08e03c23301e996/raw/asciidoc2rs-failed.json[TCK failed count,height=24,format=svg]
+
+AsciiDoc parser of Rust

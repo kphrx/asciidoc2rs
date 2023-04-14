@@ -71,8 +71,7 @@ impl Block {
         }
     }
 
-    pub(crate) fn end(&mut self) {
-    }
+    pub(crate) fn end(&mut self) {}
 
     pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
         match self {
