@@ -262,6 +262,25 @@ impl Section {
 
                 return Ok(());
             }
+            LineKind::DescriptionListMarker {
+                marker,
+                term,
+                principal,
+            } => {
+                if self.previous_line != "" {
+                    self.previous_line = line.to_owned();
+                    let paragraph = Block::new_paragraph(line);
+                    self.current_block = Some(paragraph);
+
+                    return Ok(());
+                }
+
+                self.previous_line = line.to_owned();
+                let description_list = Block::new_description_list(marker, term, principal);
+                self.current_block = Some(description_list);
+
+                return Ok(());
+            }
             LineKind::Unknown => {
                 self.previous_line = line.to_owned();
                 let paragraph = Block::new_paragraph(line);

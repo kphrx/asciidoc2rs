@@ -3,7 +3,7 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, NonSectionBlockBody};
+use super::{Block, NonSectionBlockBody, TrimIndent};
 use crate::asg::{Headline, Location, NodeType};
 
 #[skip_serializing_none]
@@ -26,6 +26,9 @@ pub enum AnyList {
         title: Option<Headline>,
         location: Option<Location>,
         items: Vec<DlistItem>,
+
+        #[serde(skip)]
+        current_terms: Vec<String>,
     },
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -78,13 +81,25 @@ impl AnyList {
         }
     }
 
-    fn new_description_list(marker: String) -> Self {
+    fn new_description_list(marker: String, term: String, principal: Option<String>) -> Self {
+        let mut items = Vec::with_capacity(1);
+        let mut current_terms = Vec::with_capacity(1);
+        current_terms.push(term.clone());
+        if let Some(principal) = principal {
+            items.push(DlistItem::new(
+                marker.clone(),
+                current_terms.to_owned(),
+                Headline::new(&principal),
+            ));
+        }
+
         Self::Dlist {
             node_type: NodeType::Block,
             marker,
             title: None,
             location: None,
-            items: Vec::with_capacity(0),
+            items,
+            current_terms,
         }
     }
 
@@ -104,7 +119,68 @@ impl AnyList {
 
                 Err("not expected empty items of list".into())
             }
-            Self::Dlist { .. } => Err("not implemented".into()),
+            Self::Dlist {
+                marker,
+                items,
+                current_terms,
+                ..
+            } => {
+                let delimiter = marker.to_owned() + " ";
+
+                if current_terms.len() > 0 {
+                    if let Some((term, principal)) = line.clone().split_once(&delimiter) {
+                        current_terms.push(term.to_owned());
+                        let principal = principal.trim_start_matches(' ');
+                        items.push(DlistItem::new(
+                            marker.clone(),
+                            current_terms.to_owned(),
+                            Headline::new(principal),
+                        ));
+                        current_terms.clear();
+
+                        return Ok(());
+                    }
+
+                    if let Some((term, "")) = line.clone().split_once(&marker.to_owned()) {
+                        current_terms.push(term.to_owned());
+
+                        return Ok(());
+                    }
+
+                    let principal = line.trim_indent();
+                    items.push(DlistItem::new(
+                        marker.clone(),
+                        current_terms.to_owned(),
+                        Headline::new(principal),
+                    ));
+                    current_terms.clear();
+
+                    return Ok(());
+                }
+
+                if let Some((term, principal)) = line.clone().split_once(&delimiter) {
+                    let principal = principal.trim_start_matches(' ');
+                    items.push(DlistItem::new(
+                        marker.clone(),
+                        vec![term.to_owned()],
+                        Headline::new(principal),
+                    ));
+
+                    return Ok(());
+                }
+
+                if let Some((term, "")) = line.clone().split_once(&marker.to_owned()) {
+                    current_terms.push(term.to_owned());
+
+                    return Ok(());
+                }
+
+                if let Some(last) = items.last_mut() {
+                    return last.push(line);
+                }
+
+                Err("not expected empty items of list".into())
+            }
         }
     }
 }
@@ -150,7 +226,7 @@ pub struct DlistItem {
     terms: Vec<Headline>,
 }
 impl DlistItem {
-    fn new(marker: String, principal: Headline) -> Self {
+    fn new(marker: String, terms: Vec<String>, principal: Headline) -> Self {
         Self {
             name: "dlistItem".to_owned(),
             node_type: NodeType::Block,
@@ -160,6 +236,10 @@ impl DlistItem {
             location: None,
             terms: Vec::with_capacity(0),
         }
+    }
+
+    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+        Err("not implemented".into())
     }
 }
 
@@ -176,7 +256,11 @@ impl Block {
         Self::AnyList(AnyList::new_unordered_list(marker, principal))
     }
 
-    fn new_description_list(marker: String) -> Self {
-        Self::AnyList(AnyList::new_description_list(marker))
+    pub(crate) fn new_description_list(
+        marker: String,
+        term: String,
+        principal: Option<String>,
+    ) -> Self {
+        Self::AnyList(AnyList::new_description_list(marker, term, principal))
     }
 }

@@ -40,6 +40,11 @@ enum LineKind {
         marker: String,
         principal: String,
     },
+    DescriptionListMarker {
+        marker: String,
+        term: String,
+        principal: Option<String>,
+    },
 }
 impl LineKind {
     fn parse(line: String) -> Self {
@@ -125,6 +130,33 @@ impl LineKind {
                         principal,
                     };
                 }
+            };
+        }
+
+        if let Some((dlist_term, primary_text)) = line.split_once(":: ") {
+            let dlist_term = dlist_term.trim_indent();
+            let term = dlist_term.trim_end_matches(':').to_owned();
+            let principal = Some(primary_text.trim_start_matches(' ').to_owned());
+            if !term.ends_with(' ') {
+                let marker = ":".repeat(dlist_term.len() - term.len() + 2);
+
+                return Self::DescriptionListMarker {
+                    marker,
+                    term,
+                    principal,
+                };
+            }
+        }
+
+        if line.ends_with("::") {
+            let dlist_term = line.trim_indent();
+            let term = dlist_term.trim_end_matches(':').to_owned();
+            let marker = ":".repeat(dlist_term.len() - term.len() + 2);
+
+            return Self::DescriptionListMarker {
+                marker,
+                term,
+                principal: None,
             };
         }
 
