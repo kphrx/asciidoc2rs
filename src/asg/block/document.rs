@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, Section, SectionBody};
+use super::{Block, LineKind, Section, SectionBody};
 use crate::asg::{Headline, Location, NodeType};
 use crate::Doctype;
 
@@ -28,9 +28,7 @@ pub struct Document {
     #[serde(skip)]
     current_block: Option<Block>,
     #[serde(skip)]
-    is_preamble: bool,
-    #[serde(skip)]
-    is_comment: bool,
+    comment_delimiter: Option<String>,
     #[serde(skip)]
     previous_line: String,
 }
@@ -53,8 +51,7 @@ impl Document {
             parser: Default::default(),
             is_started_body: false,
             current_block: None,
-            is_preamble: true,
-            is_comment: false,
+            comment_delimiter: None,
             previous_line: "".to_owned(),
         }
     }
@@ -72,14 +69,14 @@ impl Document {
     pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
         if !self.is_started_body {
             match self.parser.parse_line(line)? {
-                LineKind::NotHeader => {
+                HeaderLineKind::NotHeader => {
                     self.is_started_body = true;
 
                     if matches!(self.doctype, Doctype::Manpage) {
                         panic!("require document title for doctype-manpage");
                     }
                 }
-                LineKind::End => {
+                HeaderLineKind::End => {
                     self.is_started_body = true;
 
                     if matches!(self.doctype, Doctype::Manpage) && !self.parser.has_title {
@@ -88,10 +85,10 @@ impl Document {
 
                     return Ok(());
                 }
-                LineKind::Comment | LineKind::Skip | LineKind::Wrap => {
+                HeaderLineKind::Comment | HeaderLineKind::Skip | HeaderLineKind::Wrap => {
                     return Ok(());
                 }
-                LineKind::Title(document_title) => {
+                HeaderLineKind::Title(document_title) => {
                     let title = Headline::new(&document_title);
                     self.header = Some(DocumentHeader {
                         title,
@@ -100,11 +97,11 @@ impl Document {
                     self.parser.is_authors_line = true;
                     return Ok(());
                 }
-                LineKind::Authors(authors) => {
+                HeaderLineKind::Authors(authors) => {
                     self.set_authors(authors);
                     return Ok(());
                 }
-                LineKind::Revision(revnumber, revdate, revremark) => {
+                HeaderLineKind::Revision(revnumber, revdate, revremark) => {
                     self.set_value("revnumber".to_owned(), &revnumber);
                     if let Some(date) = revdate {
                         self.set_value("revdate".to_owned(), &date);
@@ -116,63 +113,48 @@ impl Document {
 
                     return Ok(());
                 }
-                LineKind::UnsetAttribute(key) => {
+                HeaderLineKind::UnsetAttribute(key) => {
                     self.unset_value(key);
                     return Ok(());
                 }
-                LineKind::Attribute(key, value) => {
+                HeaderLineKind::Attribute(key, value) => {
                     self.set_value(key, &value);
                     return Ok(());
                 }
             }
         }
 
-        if self.is_comment {
-            if line == "////" {
+        if self.comment_delimiter.is_some() {
+            if Some(line.trim_end_matches(' ').to_owned()) == self.comment_delimiter {
                 self.previous_line = "".to_owned();
-                self.is_comment = false
+                self.comment_delimiter = None;
             }
 
             return Ok(());
         }
 
-        if self.is_preamble {
-            if matches!(self.doctype, Doctype::Manpage) && !self.parser.has_title {
-                panic!("require document title for doctype-manpage");
+        if let Some(current) = self.current_block.as_mut() {
+            if current.is_delimited_block() {
+                self.previous_line = line.to_owned();
+
+                if Some(line.trim_end_matches(' ').to_owned()) != current.delimiter() {
+                    current.push(line)?;
+
+                    return Ok(());
+                }
+
+                current.end();
+                self.blocks.push(SectionBody::Block(current.clone()));
+                self.current_block = None;
+
+                return Ok(());
             }
 
-            if let Some(current) = self.current_block.as_mut() {
-                if current.is_delimited_block() {
-                    self.previous_line = line.to_owned();
-
-                    if Some(line.to_owned()) != current.delimiter() {
-                        current.push(line)?;
-
-                        return Ok(());
-                    }
-
-                    current.end();
-                    self.blocks.push(SectionBody::Block(current.clone()));
-                    self.current_block = None;
-
-                    return Ok(());
-                }
-
-                if line == "////" {
-                    self.is_comment = true;
-
-                    current.end();
-                    self.blocks.push(SectionBody::Block(current.clone()));
-                    self.current_block = None;
-
-                    return Ok(());
-                }
-
-                match current {
-                    Block::AnyList(_) => {
-                        if self.previous_line == "//" && line == "" {
+            if let Block::AnyList(list) = current {
+                match LineKind::parse(line.to_owned()) {
+                    LineKind::Empty => {
+                        if self.previous_line == "//" {
                             self.previous_line = "".to_owned();
-
                             current.end();
                             self.blocks.push(SectionBody::Block(current.clone()));
                             self.current_block = None;
@@ -180,148 +162,204 @@ impl Document {
                             return Ok(());
                         }
 
-                        if line.starts_with("//") && !line.starts_with("///") {
-                            if self.previous_line == "" {
-                                self.previous_line = "//".to_owned();
-                            }
+                        self.previous_line = "".to_owned();
 
-                            return Ok(());
+                        return Ok(());
+                    }
+                    LineKind::CommentMarker => {
+                        if self.previous_line == "" {
+                            self.previous_line = "//".to_owned();
                         }
 
-                        if line == "" {
+                        return Ok(());
+                    }
+                    _ => {
+                        if self.previous_line != "" {
                             self.previous_line = line.to_owned();
+                            current.push(line)?;
 
                             return Ok(());
                         }
+
+                        current.end();
+                        self.blocks.push(SectionBody::Block(current.clone()));
+                        self.current_block = None;
                     }
-                    _ => {}
                 }
+            } else {
+                match LineKind::parse(line.to_owned()) {
+                    LineKind::Empty => {
+                        self.previous_line = "".to_owned();
+                        current.end();
+                        self.blocks.push(SectionBody::Block(current.clone()));
+                        self.current_block = None;
 
-                if line == "" {
-                    self.previous_line = line.to_owned();
-                    current.end();
-                    self.blocks.push(SectionBody::Block(current.clone()));
-                    self.current_block = None;
+                        return Ok(());
+                    }
+                    LineKind::CommentMarker => {
+                        self.previous_line = "".to_owned();
 
-                    return Ok(());
-                }
+                        return Ok(());
+                    }
+                    LineKind::CommentDelimiter(delimiter) => {
+                        self.comment_delimiter = Some(delimiter);
 
-                self.previous_line = line.to_owned();
-                current.push(line)?;
+                        current.end();
+                        self.blocks.push(SectionBody::Block(current.clone()));
+                        self.current_block = None;
 
-                return Ok(());
-            }
-
-            if line == "" {
-                self.previous_line = line.to_owned();
-
-                return Ok(());
-            }
-
-            if line == "////" {
-                self.is_comment = true;
-
-                return Ok(());
-            }
-
-            if line.starts_with("//") && !line.starts_with("///") {
-                self.previous_line = "".to_owned();
-
-                return Ok(());
-            }
-
-            if self.previous_line == "" {
-                if let Some(heading) = line.strip_prefix("= ") {
-                    if !matches!(self.doctype, Doctype::Book) {
+                        return Ok(());
+                    }
+                    _ => {
                         self.previous_line = line.to_owned();
-                        let paragraph = Block::new_paragraph(line);
-                        self.current_block = Some(paragraph);
-                        return Err("level 0 sections can only be used when doctype is book".into());
+
+                        return current.push(line);
                     }
-
-                    self.previous_line = line.to_owned();
-                    self.is_preamble = false;
-                    let section = Section::new(0, heading);
-                    self.blocks.push(SectionBody::Section(section));
-
-                    return Ok(());
-                }
-
-                if let Some(heading) = line.strip_prefix("== ") {
-                    self.previous_line = line.to_owned();
-                    self.is_preamble = false;
-                    let section = Section::new(1, heading);
-                    self.blocks.push(SectionBody::Section(section));
-
-                    return Ok(());
-                }
-            }
-
-            if line.starts_with("* ") {
-                self.previous_line = "".to_owned();
-                let mut unordered_list = Block::new_unordered_list("*".to_owned());
-                unordered_list.push(line)?;
-                self.current_block = Some(unordered_list);
-
-                return Ok(());
-            }
-
-            self.previous_line = line.to_owned();
-            let paragraph = Block::new_paragraph(line);
-            self.current_block = Some(paragraph);
-
-            return Ok(());
-        }
-
-        if self.previous_line == "" {
-            if let Some(heading) = line.strip_prefix("= ") {
-                if matches!(self.doctype, Doctype::Book) {
-                    self.previous_line = line.to_owned();
-                    let section = Section::new(0, heading);
-                    self.blocks.push(SectionBody::Section(section));
-
-                    return Ok(());
-                }
-
-                if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
-                    last.push(line)?;
-                }
-
-                return Err("level 0 sections can only be used when doctype is book".into());
-            }
-
-            if !matches!(self.doctype, Doctype::Book) {
-                if let Some(heading) = line.strip_prefix("== ") {
-                    self.previous_line = line.to_owned();
-                    let section = Section::new(1, heading);
-                    self.blocks.push(SectionBody::Section(section));
-
-                    return Ok(());
                 }
             }
         }
 
         if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
+            match LineKind::parse(line.to_owned()) {
+                LineKind::HeadingMarker { level, title } => {
+                    if self.previous_line != "" {
+                        self.previous_line = line.to_owned();
+
+                        return last.push(line);
+                    }
+
+                    if level == 0 && !matches!(self.doctype, Doctype::Book) {
+                        self.previous_line = line.to_owned();
+                        let section = Section::new(0, &title);
+                        self.blocks.push(SectionBody::Section(section));
+
+                        return Err("level 0 sections can only be used when doctype is book".into());
+                    }
+
+                    if level <= last.level {
+                        self.previous_line = line.to_owned();
+                        let section = Section::new(level, &title);
+                        self.blocks.push(SectionBody::Section(section));
+
+                        return Ok(());
+                    }
+                }
+                _ => {}
+            }
+
             self.previous_line = line.to_owned();
+
             return last.push(line);
         }
 
-        panic!("not expected non preamble top level block")
+        return self.parse_preamble(line);
     }
 
-    fn parse_preamble(&mut self, line: String) -> Result<(), Box<dyn Error>> {
-        if line == "////" {
-            self.previous_line = "".to_owned();
-            self.is_comment = true;
+    fn parse_preamble(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+        match LineKind::parse(line.to_owned()) {
+            LineKind::Empty => {
+                self.previous_line = "".to_owned();
 
-            return Ok(());
+                return Ok(());
+            }
+            LineKind::CommentMarker => {
+                self.previous_line = "".to_owned();
+
+                return Ok(());
+            }
+            LineKind::CommentDelimiter(delimiter) => {
+                self.comment_delimiter = Some(delimiter);
+
+                return Ok(());
+            }
+            LineKind::HeadingMarker { level, title } => {
+                if self.previous_line != "" {
+                    self.previous_line = line.to_owned();
+                    let paragraph = Block::new_paragraph(line);
+                    self.current_block = Some(paragraph);
+
+                    return Ok(());
+                }
+
+                if level > 1 {
+                    self.previous_line = line.to_owned();
+                    let paragraph = Block::new_paragraph(line);
+                    self.current_block = Some(paragraph);
+
+                    return Err("cannot skip section level".into());
+                }
+
+                if level == 0 && !matches!(self.doctype, Doctype::Book) {
+                    self.previous_line = line.to_owned();
+                    let paragraph = Block::new_paragraph(line);
+                    self.current_block = Some(paragraph);
+
+                    return Err("level 0 sections can only be used when doctype is book".into());
+                }
+
+                self.previous_line = line.to_owned();
+                let section = Section::new(level, &title);
+                self.blocks.push(SectionBody::Section(section));
+
+                return Ok(());
+            }
+            LineKind::UnorderedListMarker { marker, principal } => {
+                if self.previous_line != "" {
+                    self.previous_line = line.to_owned();
+                    let paragraph = Block::new_paragraph(line);
+                    self.current_block = Some(paragraph);
+
+                    return Ok(());
+                }
+
+                self.previous_line = line.to_owned();
+                let unordered_list = Block::new_unordered_list(marker, principal);
+                self.current_block = Some(unordered_list);
+
+                return Ok(());
+            }
+            LineKind::OrderedListMarker {
+                offset,
+                marker,
+                principal,
+            } => {
+                if self.previous_line != "" {
+                    self.previous_line = line.to_owned();
+                    let paragraph = Block::new_paragraph(line);
+                    self.current_block = Some(paragraph);
+
+                    return Ok(());
+                }
+
+                self.previous_line = line.to_owned();
+                let ordered_list = Block::new_ordered_list(marker, principal);
+                self.current_block = Some(ordered_list);
+
+                return Ok(());
+            }
+            LineKind::CalloutListMarker { marker, principal } => {
+                if self.previous_line != "" {
+                    self.previous_line = line.to_owned();
+                    let paragraph = Block::new_paragraph(line);
+                    self.current_block = Some(paragraph);
+
+                    return Ok(());
+                }
+
+                self.previous_line = line.to_owned();
+                let callout_list = Block::new_callout_list(marker, principal);
+                self.current_block = Some(callout_list);
+
+                return Ok(());
+            }
+            LineKind::Unknown => {
+                self.previous_line = line.to_owned();
+                let paragraph = Block::new_paragraph(line);
+                self.current_block = Some(paragraph);
+
+                return Ok(());
+            }
         }
-
-        if line == "" {
-            return Ok(());
-        }
-
-        return Ok(());
     }
 
     fn set_authors(&mut self, authors: Vec<Author>) {
@@ -357,7 +395,7 @@ impl Document {
     }
 }
 
-enum LineKind {
+enum HeaderLineKind {
     NotHeader,
     Comment,
     Skip,
@@ -396,39 +434,39 @@ impl HeaderParser {
         }
     }
 
-    fn parse_line(&mut self, line: &str) -> Result<LineKind, Box<dyn Error>> {
+    fn parse_line(&mut self, line: &str) -> Result<HeaderLineKind, Box<dyn Error>> {
         if line == "" {
             if self.has_title || self.has_attr {
-                return Ok(LineKind::End);
+                return Ok(HeaderLineKind::End);
             }
 
-            return Ok(LineKind::Skip);
+            return Ok(HeaderLineKind::Skip);
         }
 
         match self.parse_attribute_line(line)? {
-            LineKind::Attribute(key, value) => {
+            HeaderLineKind::Attribute(key, value) => {
                 self.has_attr = true;
-                return Ok(LineKind::Attribute(key, value));
+                return Ok(HeaderLineKind::Attribute(key, value));
             }
-            LineKind::Wrap => {
-                return Ok(LineKind::Wrap);
+            HeaderLineKind::Wrap => {
+                return Ok(HeaderLineKind::Wrap);
             }
-            LineKind::Skip => {}
+            HeaderLineKind::Skip => {}
             _ => panic!("not expected value"),
         }
 
         if line.starts_with("//") && !line.starts_with("///") {
-            return Ok(LineKind::Comment);
+            return Ok(HeaderLineKind::Comment);
         }
 
         match self.parse_implicit_line(line)? {
-            LineKind::Authors(a) => {
-                return Ok(LineKind::Authors(a));
+            HeaderLineKind::Authors(a) => {
+                return Ok(HeaderLineKind::Authors(a));
             }
-            LineKind::Revision(n, d, r) => {
-                return Ok(LineKind::Revision(n, d, r));
+            HeaderLineKind::Revision(n, d, r) => {
+                return Ok(HeaderLineKind::Revision(n, d, r));
             }
-            LineKind::End => {}
+            HeaderLineKind::End => {}
             _ => panic!("not expected value"),
         }
 
@@ -438,13 +476,13 @@ impl HeaderParser {
 
         if let Some(document_title) = line.strip_prefix("= ") {
             self.has_title = true;
-            return Ok(LineKind::Title(document_title.to_owned()));
+            return Ok(HeaderLineKind::Title(document_title.to_owned()));
         }
 
-        Ok(LineKind::NotHeader)
+        Ok(HeaderLineKind::NotHeader)
     }
 
-    fn parse_attribute_line(&mut self, line: &str) -> Result<LineKind, Box<dyn Error>> {
+    fn parse_attribute_line(&mut self, line: &str) -> Result<HeaderLineKind, Box<dyn Error>> {
         let result = if self.wrapped_attr.is_some() {
             self.parse_wrapped_attr(line)?
         } else if let Some((attr_name, attr_value)) =
@@ -461,15 +499,15 @@ impl HeaderParser {
                 if !Self::is_valid_attribute_name(unset_attr.to_owned()) {
                     return Err(format!("invalid document attribute: {}", attr_name).into());
                 }
-                LineKind::UnsetAttribute(unset_attr.to_owned())
+                HeaderLineKind::UnsetAttribute(unset_attr.to_owned())
             } else {
                 if !Self::is_valid_attribute_name(attr_name.to_owned()) {
                     return Err(format!("invalid document attribute: {}", attr_name).into());
                 }
-                LineKind::Attribute(attr_name.to_owned(), "".to_owned())
+                HeaderLineKind::Attribute(attr_name.to_owned(), "".to_owned())
             }
         } else {
-            LineKind::Skip
+            HeaderLineKind::Skip
         };
 
         Ok(result)
@@ -480,7 +518,7 @@ impl HeaderParser {
             && !attr_name.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-')
     }
 
-    fn parse_wrapped_attr(&mut self, line: &str) -> Result<LineKind, Box<dyn Error>> {
+    fn parse_wrapped_attr(&mut self, line: &str) -> Result<HeaderLineKind, Box<dyn Error>> {
         let result = if let Some(wrap_value) = line.strip_suffix(" + \\") {
             let mut value = wrap_value.to_owned();
             value.push_str("\n");
@@ -490,7 +528,7 @@ impl HeaderParser {
             };
             current_value.push_str(&value);
 
-            LineKind::Wrap
+            HeaderLineKind::Wrap
         } else if let Some(wrap_value) = line.strip_suffix(" \\") {
             let mut value = wrap_value.to_owned();
             value.push_str(" ");
@@ -500,13 +538,13 @@ impl HeaderParser {
             };
             current_value.push_str(&value);
 
-            LineKind::Wrap
+            HeaderLineKind::Wrap
         } else {
             let Some((key, value)) = self.wrapped_attr.as_mut() else {
                 panic!("cannot call");
             };
             value.push_str(&line);
-            let attr = LineKind::Attribute(key.to_owned(), value.to_owned());
+            let attr = HeaderLineKind::Attribute(key.to_owned(), value.to_owned());
             self.wrapped_attr = None;
 
             attr
@@ -515,19 +553,19 @@ impl HeaderParser {
         Ok(result)
     }
 
-    fn parse_implicit_line(&mut self, line: &str) -> Result<LineKind, Box<dyn Error>> {
+    fn parse_implicit_line(&mut self, line: &str) -> Result<HeaderLineKind, Box<dyn Error>> {
         let result = if self.is_authors_line {
             self.is_authors_line = false;
             self.is_revision_line = true;
 
             let authors = self.parse_authors_line(line)?;
-            LineKind::Authors(authors)
+            HeaderLineKind::Authors(authors)
         } else if self.is_revision_line {
             self.is_revision_line = false;
 
             self.parse_revision_line(line)?
         } else {
-            LineKind::End
+            HeaderLineKind::End
         };
 
         Ok(result)
@@ -554,7 +592,7 @@ impl HeaderParser {
         Ok(authors)
     }
 
-    fn parse_revision_line(&mut self, line: &str) -> Result<LineKind, Box<dyn Error>> {
+    fn parse_revision_line(&mut self, line: &str) -> Result<HeaderLineKind, Box<dyn Error>> {
         let (revnumber, revdate, revremark) = match line.split_once(", ") {
             None => {
                 if let Some(revnumber) = line.strip_prefix('v') {
@@ -592,7 +630,7 @@ impl HeaderParser {
             }
         };
 
-        Ok(LineKind::Revision(revnumber, revdate, revremark))
+        Ok(HeaderLineKind::Revision(revnumber, revdate, revremark))
     }
 }
 

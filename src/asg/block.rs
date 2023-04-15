@@ -18,6 +18,129 @@ use serde::{Deserialize, Serialize};
 
 use std::error::Error;
 
+enum LineKind {
+    Unknown,
+    Empty,
+    CommentDelimiter(String),
+    CommentMarker,
+    HeadingMarker {
+        level: usize,
+        title: String,
+    },
+    UnorderedListMarker {
+        marker: String,
+        principal: String,
+    },
+    OrderedListMarker {
+        offset: usize,
+        marker: String,
+        principal: String,
+    },
+    CalloutListMarker {
+        marker: String,
+        principal: String,
+    },
+}
+impl LineKind {
+    fn parse(line: String) -> Self {
+        let line = line.trim_end_matches(' ');
+
+        if line == "" {
+            return Self::Empty;
+        }
+
+        if line.starts_with("//") {
+            if !line.starts_with("///") {
+                return Self::CommentMarker;
+            }
+
+            if line.starts_with("////") && !line.contains(|c: char| c != '/') {
+                return Self::CommentDelimiter(line.to_owned());
+            }
+        }
+
+        if let Some((marker, title)) = line.split_once("= ") {
+            if marker == "" || !marker.contains(|c: char| c != '=') {
+                return Self::HeadingMarker {
+                    level: marker.len(),
+                    title: title.to_owned(),
+                };
+            }
+        }
+
+        if let Some((list_marker, principal)) = line.split_once("* ") {
+            let mut marker = list_marker.trim_indent().to_owned();
+            let principal = principal.trim_start_matches(' ').to_owned();
+            if marker == "" || !marker.contains(|c: char| c != '*') {
+                marker.push_str("*");
+                return Self::UnorderedListMarker { marker, principal };
+            }
+        }
+
+        if let Some((list_marker, principal)) = line.split_once("- ") {
+            let mut marker = list_marker.trim_indent().to_owned();
+            let principal = principal.trim_start_matches(' ').to_owned();
+            // Unknown `-` list marker can be repeated infinitely.
+            if marker == "" {
+                marker.push_str("-");
+                return Self::UnorderedListMarker { marker, principal };
+            }
+        }
+
+        if let Some((list_marker, principal)) = line.split_once(". ") {
+            let mut marker = list_marker.trim_indent().to_owned();
+            let principal = principal.trim_start_matches(' ').to_owned();
+            if marker == "" || !marker.contains(|c: char| c != '.') {
+                marker.push_str(".");
+                return Self::OrderedListMarker {
+                    offset: 0,
+                    marker,
+                    principal,
+                };
+            }
+
+            let offset: usize = marker.parse().unwrap_or(0);
+            if 0 < offset && offset <= 9 {
+                return Self::OrderedListMarker {
+                    offset,
+                    marker: "".to_owned(),
+                    principal,
+                };
+            }
+        }
+
+        if let Some((list_marker, principal)) = line.split_once("> ") {
+            if let Some(marker) = list_marker.trim_indent().strip_prefix('<').to_owned() {
+                let principal = principal.trim_start_matches(' ').to_owned();
+                if marker == "." {
+                    return Self::CalloutListMarker {
+                        marker: "<.>".to_owned(),
+                        principal,
+                    };
+                }
+
+                if let Ok(number) = marker.parse::<usize>() {
+                    return Self::CalloutListMarker {
+                        marker: format!("<{}>", number),
+                        principal,
+                    };
+                }
+            };
+        }
+
+        Self::Unknown
+    }
+}
+
+trait TrimIndent {
+    fn trim_indent<'a>(&'a self) -> &'a str;
+}
+impl TrimIndent for str {
+    fn trim_indent<'a>(&'a self) -> &'a str {
+        self.trim_start_matches('\t').trim_start_matches(' ')
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum SectionBody {

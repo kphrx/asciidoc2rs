@@ -36,36 +36,45 @@ pub enum ListVariant {
     Unordered,
 }
 impl AnyList {
-    fn new_callout_list(marker: String) -> Self {
+    fn new_callout_list(marker: String, principal: String) -> Self {
+        let mut items = Vec::with_capacity(1);
+        items.push(ListItem::new(marker.clone(), Headline::new(&principal)));
+
         Self::List {
             node_type: NodeType::Block,
             variant: ListVariant::Callout,
             marker,
             title: None,
             location: None,
-            items: Vec::with_capacity(0),
+            items,
         }
     }
 
-    fn new_ordered_list(marker: String) -> Self {
+    fn new_ordered_list(marker: String, principal: String) -> Self {
+        let mut items = Vec::with_capacity(1);
+        items.push(ListItem::new(marker.clone(), Headline::new(&principal)));
+
         Self::List {
             node_type: NodeType::Block,
             variant: ListVariant::Ordered,
             marker,
             title: None,
             location: None,
-            items: Vec::with_capacity(0),
+            items,
         }
     }
 
-    fn new_unordered_list(marker: String) -> Self {
+    fn new_unordered_list(marker: String, principal: String) -> Self {
+        let mut items = Vec::with_capacity(1);
+        items.push(ListItem::new(marker.clone(), Headline::new(&principal)));
+
         Self::List {
             node_type: NodeType::Block,
             variant: ListVariant::Unordered,
             marker,
             title: None,
             location: None,
-            items: Vec::with_capacity(0),
+            items,
         }
     }
 
@@ -155,16 +164,16 @@ impl DlistItem {
 }
 
 impl Block {
-    fn new_callout_list(marker: String) -> Self {
-        Self::AnyList(AnyList::new_callout_list(marker))
+    pub(crate) fn new_callout_list(marker: String, principal: String) -> Self {
+        Self::AnyList(AnyList::new_callout_list(marker, principal))
     }
 
-    fn new_ordered_list(marker: String) -> Self {
-        Self::AnyList(AnyList::new_ordered_list(marker))
+    pub(crate) fn new_ordered_list(marker: String, principal: String) -> Self {
+        Self::AnyList(AnyList::new_ordered_list(marker, principal))
     }
 
-    pub(crate) fn new_unordered_list(marker: String) -> Self {
-        Self::AnyList(AnyList::new_unordered_list(marker))
+    pub(crate) fn new_unordered_list(marker: String, principal: String) -> Self {
+        Self::AnyList(AnyList::new_unordered_list(marker, principal))
     }
 
     fn new_description_list(marker: String) -> Self {
