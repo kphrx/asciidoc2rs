@@ -24,7 +24,23 @@ jobs:
     - uses: actions/checkout@v3
     - name: Setup Rust ${{ matrix.toolchain }}
       run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
+    - name: Install cargo-llvm-cov
+      if: matrix.toolchain == 'stable'
+      uses: taiki-e/install-action@cargo-llvm-cov
+
     - name: Build
       run: cargo build --verbose
+
     - name: Run tests
+      if: matrix.toolchain != 'stable'
       run: cargo test --verbose
+    - name: Run tests & Generate code coverage
+      if: matrix.toolchain == 'stable'
+      run: cargo llvm-cov --all-features --workspace --codecov --output-path codecov.json
+    - name: Upload coverage to Codecov
+      if: matrix.toolchain == 'stable'
+      uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: codecov.json
+        fail_ci_if_error: true
