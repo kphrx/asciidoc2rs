@@ -31,7 +31,7 @@ pub enum AnyList {
         current_terms: Vec<String>,
     },
 }
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub enum ListVariant {
     Callout,
@@ -262,5 +262,57 @@ impl Block {
         principal: Option<String>,
     ) -> Self {
         Self::AnyList(AnyList::new_description_list(marker, term, principal))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn unordered_list() {
+        let mut list = Block::new_unordered_list("*".to_owned(), "item 1".to_owned());
+
+        list.push("* item 2");
+        list.push("  * item 3");
+
+        let Block::AnyList(AnyList::List { variant, marker, items, .. }) = list else { panic!("not expected") };
+        let mut items = items.to_owned();
+
+        assert_eq!(ListVariant::Unordered, variant);
+        assert_eq!("*", marker);
+        assert_eq!(3, items.len());
+
+        let item_3 = items.pop().unwrap();
+        let item_2 = items.pop().unwrap();
+        let item_1 = items.pop().unwrap();
+
+        assert_eq!(Headline::new("item 1").heading(), item_1.principal.heading());
+        assert_eq!(Headline::new("item 2").heading(), item_2.principal.heading());
+        assert_eq!(Headline::new("item 3").heading(), item_3.principal.heading());
+    }
+
+    #[test]
+    fn description_list() {
+        let mut list = Block::new_description_list("::".to_owned(), "term 1".to_owned(), Some("description 1".to_owned()));
+
+        list.push("term 2::");
+        list.push("  description 2");
+        list.push("term 3::");
+        list.push("    term 4:: description 3-4");
+
+        let Block::AnyList(AnyList::Dlist { marker, items, .. }) = list else { panic!("not expected") };
+        let mut items = items.to_owned();
+
+        assert_eq!("::", marker);
+        assert_eq!(3, items.len());
+
+        let item_3 = items.pop().unwrap();
+        let item_2 = items.pop().unwrap();
+        let item_1 = items.pop().unwrap();
+
+        assert_eq!(Headline::new("description 1").heading(), item_1.principal.heading());
+        assert_eq!(Headline::new("description 2").heading(), item_2.principal.heading());
+        assert_eq!(Headline::new("description 3-4").heading(), item_3.principal.heading());
     }
 }
