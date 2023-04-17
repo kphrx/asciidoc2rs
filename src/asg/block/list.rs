@@ -107,7 +107,7 @@ impl AnyList {
         match self {
             Self::List { marker, items, .. } => {
                 let prefix = marker.to_owned() + " ";
-                if let Some(principal) = line.clone().strip_prefix(&prefix) {
+                if let Some(principal) = line.clone().trim_indent().strip_prefix(&prefix) {
                     items.push(ListItem::new(marker.to_owned(), Headline::new(principal)));
 
                     return Ok(());
@@ -287,14 +287,27 @@ mod tests {
         let item_2 = items.pop().unwrap();
         let item_1 = items.pop().unwrap();
 
-        assert_eq!(Headline::new("item 1").heading(), item_1.principal.heading());
-        assert_eq!(Headline::new("item 2").heading(), item_2.principal.heading());
-        assert_eq!(Headline::new("item 3").heading(), item_3.principal.heading());
+        assert_eq!(
+            Headline::new("item 1").heading(),
+            item_1.principal.heading()
+        );
+        assert_eq!(
+            Headline::new("item 2").heading(),
+            item_2.principal.heading()
+        );
+        assert_eq!(
+            Headline::new("item 3").heading(),
+            item_3.principal.heading()
+        );
     }
 
     #[test]
     fn description_list() {
-        let mut list = Block::new_description_list("::".to_owned(), "term 1".to_owned(), Some("description 1".to_owned()));
+        let mut list = Block::new_description_list(
+            "::".to_owned(),
+            "term 1".to_owned(),
+            Some("description 1".to_owned()),
+        );
 
         list.push("term 2::");
         list.push("  description 2");
@@ -311,8 +324,17 @@ mod tests {
         let item_2 = items.pop().unwrap();
         let item_1 = items.pop().unwrap();
 
-        assert_eq!(Headline::new("description 1").heading(), item_1.principal.heading());
-        assert_eq!(Headline::new("description 2").heading(), item_2.principal.heading());
-        assert_eq!(Headline::new("description 3-4").heading(), item_3.principal.heading());
+        assert_eq!(
+            Headline::new("description 1").heading(),
+            item_1.principal.heading()
+        );
+        assert_eq!(
+            Headline::new("description 2").heading(),
+            item_2.principal.heading()
+        );
+        assert_eq!(
+            Headline::new("description 3-4").heading(),
+            item_3.principal.heading()
+        );
     }
 }
