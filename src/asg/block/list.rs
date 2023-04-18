@@ -31,7 +31,7 @@ pub enum AnyList {
         current_terms: Vec<String>,
     },
 }
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum ListVariant {
     Callout,
@@ -279,7 +279,7 @@ mod tests {
         let Block::AnyList(AnyList::List { variant, marker, items, .. }) = list else { panic!("not expected") };
         let mut items = items.to_owned();
 
-        assert_eq!(ListVariant::Unordered, variant);
+        assert!(matches!(variant, ListVariant::Unordered));
         assert_eq!("*", marker);
         assert_eq!(3, items.len());
 

@@ -236,3 +236,13 @@ impl Block {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn line_kind() {
+        assert!(matches!(LineKind::parse("".to_owned()), LineKind::Empty))
+    }
+}
