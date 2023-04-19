@@ -151,7 +151,7 @@ impl LineKind {
         if line.ends_with("::") {
             let dlist_term = line.trim_indent();
             let term = dlist_term.trim_end_matches(':').to_owned();
-            let marker = ":".repeat(dlist_term.len() - term.len() + 2);
+            let marker = ":".repeat(dlist_term.len() - term.len());
 
             return Self::DescriptionListMarker {
                 marker,
