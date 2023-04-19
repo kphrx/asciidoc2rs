@@ -242,7 +242,69 @@ mod tests {
     use super::*;
 
     #[test]
-    fn line_kind() {
-        assert!(matches!(LineKind::parse("".to_owned()), LineKind::Empty))
+    fn empty_or_comment_line_kind() {
+        assert!(matches!(LineKind::parse("".to_owned()), LineKind::Empty));
+        assert!(matches!(
+            LineKind::parse("// inline comment".to_owned()),
+            LineKind::CommentMarker
+        ));
+        assert!(
+            matches!(LineKind::parse("/////".to_owned()), LineKind::CommentDelimiter(x) if x == "/////")
+        );
+    }
+
+    #[test]
+    fn section_line_kind() {
+        assert!(
+            matches!(LineKind::parse("= heading level 0".to_owned()), LineKind::HeadingMarker { level, title } if level == 0 && title == "heading level 0")
+        );
+        assert!(
+            matches!(LineKind::parse("== heading level 1".to_owned()), LineKind::HeadingMarker { level, title } if level == 1 && title == "heading level 1")
+        );
+        assert!(
+            matches!(LineKind::parse("=== heading level 2".to_owned()), LineKind::HeadingMarker { level, title } if level == 2 && title == "heading level 2")
+        );
+        assert!(
+            matches!(LineKind::parse("==== heading level 3".to_owned()), LineKind::HeadingMarker { level, title } if level == 3 && title == "heading level 3")
+        );
+        assert!(
+            matches!(LineKind::parse("===== heading level 4".to_owned()), LineKind::HeadingMarker { level, title } if level == 4 && title == "heading level 4")
+        );
+        assert!(
+            matches!(LineKind::parse("====== heading level 5".to_owned()), LineKind::HeadingMarker { level, title } if level == 5 && title == "heading level 5")
+        );
+        assert!(
+            matches!(LineKind::parse("======= heading level 6".to_owned()), LineKind::HeadingMarker { level, title } if level == 6 && title == "heading level 6")
+        );
+    }
+
+    #[test]
+    fn list_line_kind() {
+        assert!(
+            matches!(LineKind::parse("** unordered list".to_owned()), LineKind::UnorderedListMarker { marker, principal } if marker == "**" && principal == "unordered list")
+        );
+        assert!(
+            matches!(LineKind::parse("\t\t... ordered list".to_owned()), LineKind::OrderedListMarker { offset, marker, principal } if offset == 0 && marker == "..." && principal == "ordered list")
+        );
+        assert!(
+            matches!(LineKind::parse("  5. ordered list".to_owned()), LineKind::OrderedListMarker { offset, marker, principal } if offset == 5 && marker == "." && principal == "ordered list")
+        );
+    }
+
+    #[test]
+    fn dlist_line_kind() {
+        assert!(
+            matches!(LineKind::parse(" term::".to_owned()), LineKind::DescriptionListMarker { marker, term, principal } if marker == "::" && term == "term" && principal.is_none())
+        );
+        assert!(
+            matches!(LineKind::parse("term:: description list".to_owned()), LineKind::DescriptionListMarker { marker, term, principal } if marker == "::" && term == "term" && principal == Some("description list".to_owned()))
+        );
+    }
+
+    #[test]
+    fn callout_line_kind() {
+        assert!(
+            matches!(LineKind::parse("<3> callout list".to_owned()), LineKind::CalloutListMarker { marker, principal } if marker == "<3>" && principal == "callout list")
+        );
     }
 }
