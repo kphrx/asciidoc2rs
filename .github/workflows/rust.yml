@@ -13,32 +13,36 @@ jobs:
   build:
 
     runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.unstable }}
     strategy:
       matrix:
-        toolchain:
-          - stable
-          - beta
-          - nightly
+        include:
+        - toolchain: stable
+          unstable: false
+        - toolchain: beta
+          unstable: true
+        - toolchain: nightly
+          unstable: true
 
     steps:
     - uses: actions/checkout@v3
     - name: Setup Rust ${{ matrix.toolchain }}
       run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
     - name: Install cargo-llvm-cov
-      if: matrix.toolchain == 'stable'
+      if: ${{ !matrix.unstable }}
       uses: taiki-e/install-action@cargo-llvm-cov
 
     - name: Build
       run: cargo build --verbose
 
     - name: Run tests
-      if: matrix.toolchain != 'stable'
+      if: matrix.unstable
       run: cargo test --verbose
     - name: Run tests & Generate code coverage
-      if: matrix.toolchain == 'stable'
+      if: ${{ !matrix.unstable }}
       run: cargo llvm-cov --all-features --workspace --codecov --output-path codecov.json
     - name: Upload coverage to Codecov
-      if: matrix.toolchain == 'stable'
+      if: ${{ !matrix.unstable }}
       uses: codecov/codecov-action@v3
       with:
         token: ${{ secrets.CODECOV_TOKEN }}
