@@ -32,8 +32,11 @@ enum LineKind {
         principal: String,
     },
     OrderedListMarker {
-        offset: usize,
         marker: String,
+        principal: String,
+    },
+    OffsetOrderedListMarker {
+        offset: usize,
         principal: String,
     },
     CalloutListMarker {
@@ -97,20 +100,12 @@ impl LineKind {
             let principal = principal.trim_start_matches(' ').to_owned();
             if marker == "" || !marker.contains(|c: char| c != '.') {
                 marker.push_str(".");
-                return Self::OrderedListMarker {
-                    offset: 0,
-                    marker,
-                    principal,
-                };
+                return Self::OrderedListMarker { marker, principal };
             }
 
             let offset: usize = marker.parse().unwrap_or(0);
             if 0 < offset && offset <= 9 {
-                return Self::OrderedListMarker {
-                    offset,
-                    marker: "".to_owned(),
-                    principal,
-                };
+                return Self::OffsetOrderedListMarker { offset, principal };
             }
         }
 
@@ -284,10 +279,10 @@ mod tests {
             matches!(LineKind::parse("** unordered list".to_owned()), LineKind::UnorderedListMarker { marker, principal } if marker == "**" && principal == "unordered list")
         );
         assert!(
-            matches!(LineKind::parse("\t\t... ordered list".to_owned()), LineKind::OrderedListMarker { offset, marker, principal } if offset == 0 && marker == "..." && principal == "ordered list")
+            matches!(LineKind::parse("\t\t... ordered list".to_owned()), LineKind::OrderedListMarker { marker, principal } if marker == "..." && principal == "ordered list")
         );
         assert!(
-            matches!(LineKind::parse("  5. ordered list".to_owned()), LineKind::OrderedListMarker { offset, marker, principal } if offset == 5 && marker == "." && principal == "ordered list")
+            matches!(LineKind::parse("  5. ordered list".to_owned()), LineKind::OffsetOrderedListMarker { offset, principal } if offset == 5 && principal == "ordered list")
         );
     }
 

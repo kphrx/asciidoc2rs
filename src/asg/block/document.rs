@@ -318,11 +318,7 @@ impl Document {
 
                 return Ok(());
             }
-            LineKind::OrderedListMarker {
-                offset,
-                marker,
-                principal,
-            } => {
+            LineKind::OrderedListMarker { marker, principal } => {
                 if self.previous_line != "" {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
@@ -333,6 +329,21 @@ impl Document {
 
                 self.previous_line = line.to_owned();
                 let ordered_list = Block::new_ordered_list(marker, principal);
+                self.current_block = Some(ordered_list);
+
+                return Ok(());
+            }
+            LineKind::OffsetOrderedListMarker { offset, principal } => {
+                if self.previous_line != "" {
+                    self.previous_line = line.to_owned();
+                    let paragraph = Block::new_paragraph(line);
+                    self.current_block = Some(paragraph);
+
+                    return Ok(());
+                }
+
+                self.previous_line = line.to_owned();
+                let ordered_list = Block::new_ordered_list(format!("{}.", offset), principal);
                 self.current_block = Some(ordered_list);
 
                 return Ok(());
