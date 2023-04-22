@@ -21,8 +21,15 @@ use std::error::Error;
 enum LineKind {
     Unknown,
     Empty,
-    CommentDelimiter(String),
     CommentMarker,
+    CommentDelimiter(String),
+    ExampleDelimiter(String),
+    SidebarDelimiter(String),
+    QuoteDelimiter(String),
+    ListingDelimiter(String),
+    LiteralDelimiter(String),
+    PassthroughDelimiter(String),
+    OpenDelimiter(String),
     HeadingMarker {
         level: usize,
         title: String,
@@ -65,6 +72,34 @@ impl LineKind {
             if line.starts_with("////") && !line.contains(|c: char| c != '/') {
                 return Self::CommentDelimiter(line.to_owned());
             }
+        }
+
+        if line.starts_with("====") && !line.contains(|c: char| c != '=') {
+            return Self::ExampleDelimiter(line.to_owned());
+        }
+
+        if line.starts_with("****") && !line.contains(|c: char| c != '*') {
+            return Self::SidebarDelimiter(line.to_owned());
+        }
+
+        if line.starts_with("____") && !line.contains(|c: char| c != '_') {
+            return Self::QuoteDelimiter(line.to_owned());
+        }
+
+        if line.starts_with("----") && !line.contains(|c: char| c != '-') {
+            return Self::ListingDelimiter(line.to_owned());
+        }
+
+        if line.starts_with("....") && !line.contains(|c: char| c != '.') {
+            return Self::LiteralDelimiter(line.to_owned());
+        }
+
+        if line.starts_with("++++") && !line.contains(|c: char| c != '+') {
+            return Self::PassthroughDelimiter(line.to_owned());
+        }
+
+        if line == "--" || (line.starts_with("~~~~") && !line.contains(|c: char| c != '~')) {
+            return Self::OpenDelimiter(line.to_owned());
         }
 
         if let Some((marker, title)) = line.split_once("= ") {
@@ -156,6 +191,19 @@ impl LineKind {
         }
 
         Self::Unknown
+    }
+
+    fn block_delimiter(&self) -> Option<String> {
+        match self {
+            Self::ExampleDelimiter(x) => Some(x.to_owned()),
+            Self::SidebarDelimiter(x) => Some(x.to_owned()),
+            Self::QuoteDelimiter(x) => Some(x.to_owned()),
+            Self::ListingDelimiter(x) => Some(x.to_owned()),
+            Self::LiteralDelimiter(x) => Some(x.to_owned()),
+            Self::PassthroughDelimiter(x) => Some(x.to_owned()),
+            Self::OpenDelimiter(x) => Some(x.to_owned()),
+            _ => None,
+        }
     }
 }
 
@@ -292,6 +340,40 @@ mod tests {
         );
         assert!(
             matches!(LineKind::parse("<3> callout list".to_owned()), LineKind::CalloutListMarker { marker, principal } if marker == "<3>" && principal == "callout list")
+        );
+    }
+
+    #[test]
+    fn block_delimiter_line_kind() {
+        assert!(
+            matches!(LineKind::parse("====".to_owned()), LineKind::ExampleDelimiter(x) if x == "====")
+        );
+
+        assert!(
+            matches!(LineKind::parse("****".to_owned()), LineKind::SidebarDelimiter(x) if x == "****")
+        );
+
+        assert!(
+            matches!(LineKind::parse("____".to_owned()), LineKind::QuoteDelimiter(x) if x == "____")
+        );
+
+        assert!(
+            matches!(LineKind::parse("----".to_owned()), LineKind::ListingDelimiter(x) if x == "----")
+        );
+
+        assert!(
+            matches!(LineKind::parse("....".to_owned()), LineKind::LiteralDelimiter(x) if x == "....")
+        );
+
+        assert!(
+            matches!(LineKind::parse("++++".to_owned()), LineKind::PassthroughDelimiter(x) if x == "++++")
+        );
+
+        assert!(
+            matches!(LineKind::parse("~~~~".to_owned()), LineKind::OpenDelimiter(x) if x == "~~~~")
+        );
+        assert!(
+            matches!(LineKind::parse("--".to_owned()), LineKind::OpenDelimiter(x) if x == "--")
         );
     }
 }

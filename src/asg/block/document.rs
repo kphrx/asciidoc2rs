@@ -125,7 +125,8 @@ impl Document {
         }
 
         if self.comment_delimiter.is_some() {
-            if Some(line.trim_end_matches(' ').to_owned()) == self.comment_delimiter {
+            if matches!(LineKind::parse(line.to_owned()), LineKind::CommentDelimiter(x) if matches!(&self.comment_delimiter, Some(y) if x == y.to_owned()))
+            {
                 self.previous_line = "".to_owned();
                 self.comment_delimiter = None;
             }
@@ -137,7 +138,7 @@ impl Document {
             if current.is_delimited_block() {
                 self.previous_line = line.to_owned();
 
-                if Some(line.trim_end_matches(' ').to_owned()) != current.delimiter() {
+                if LineKind::parse(line.to_owned()).block_delimiter() != current.delimiter() {
                     current.push(line)?;
 
                     return Ok(());
@@ -383,6 +384,13 @@ impl Document {
                 return Ok(());
             }
             LineKind::Unknown => {
+                self.previous_line = line.to_owned();
+                let paragraph = Block::new_paragraph(line);
+                self.current_block = Some(paragraph);
+
+                return Ok(());
+            }
+            _ => {
                 self.previous_line = line.to_owned();
                 let paragraph = Block::new_paragraph(line);
                 self.current_block = Some(paragraph);
