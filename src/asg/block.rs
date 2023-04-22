@@ -184,16 +184,7 @@ impl SectionBody {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(untagged)]
-pub enum NonSectionBlockBody {
-    Block(Block),
-}
-impl NonSectionBlockBody {
-    fn new(b: Block) -> Self {
-        Self::Block(b)
-    }
-}
+type NonSectionBlockBody = Block;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
@@ -274,10 +265,17 @@ mod tests {
     }
 
     #[test]
-    fn list_line_kind() {
+    fn unordered_list_line_kind() {
         assert!(
             matches!(LineKind::parse("** unordered list".to_owned()), LineKind::UnorderedListMarker { marker, principal } if marker == "**" && principal == "unordered list")
         );
+        assert!(
+            matches!(LineKind::parse("- unordered list".to_owned()), LineKind::UnorderedListMarker { marker, principal } if marker == "-" && principal == "unordered list")
+        );
+    }
+
+    #[test]
+    fn ordered_list_line_kind() {
         assert!(
             matches!(LineKind::parse("\t\t... ordered list".to_owned()), LineKind::OrderedListMarker { marker, principal } if marker == "..." && principal == "ordered list")
         );
@@ -298,6 +296,9 @@ mod tests {
 
     #[test]
     fn callout_line_kind() {
+        assert!(
+            matches!(LineKind::parse("<.> callout list".to_owned()), LineKind::CalloutListMarker { marker, principal } if marker == "<.>" && principal == "callout list")
+        );
         assert!(
             matches!(LineKind::parse("<3> callout list".to_owned()), LineKind::CalloutListMarker { marker, principal } if marker == "<3>" && principal == "callout list")
         );
