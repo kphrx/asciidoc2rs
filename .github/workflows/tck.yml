@@ -3,6 +3,7 @@ name: Check TCK
 on:
   push:
     branches: [ "master" ]
+  workflow_dispatch:
 
 concurrency:
   group: tck
