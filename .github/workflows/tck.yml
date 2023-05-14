@@ -30,7 +30,11 @@ jobs:
         git clone https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck.git asciidoc-tck
         cd asciidoc-tck
         npm ci
-        npx asciidoc-tck | grep -A1 passing | awk '{print $2"="$1}' >> $GITHUB_OUTPUT
+        npx asciidoc-tck | awk -v RS= '{f="output-" NR ".txt"; print > f; close(f)}'
+        awk '{print $2"="$1}' output-3.txt >> $GITHUB_OUTPUT
+        echo "## TCK result" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        sed -E 's/  ([^ ])/- \1/;s/✔/[x]/;s/[0-9]+\)/[ ]/' output-{1,2}.txt >> $GITHUB_STEP_SUMMARY
 
     - name: Dynamic Badges
       uses: Schneegans/dynamic-badges-action@v1.6.0
