@@ -32,9 +32,22 @@ jobs:
         npm ci
         npx asciidoc-tck | awk -v RS= '{f="output-" NR ".txt"; print > f; close(f)}'
         awk '{print $2"="$1}' output-3.txt >> $GITHUB_OUTPUT
-        echo "## TCK result" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
+        echo '## TCK result' >> $GITHUB_STEP_SUMMARY
+        echo '' >> $GITHUB_STEP_SUMMARY
         sed -E 's/  ([^ ])/- \1/;s/✔/[x]/;s/[0-9]+\)/[ ]/' output-{1,2}.txt >> $GITHUB_STEP_SUMMARY
+        echo '' >> $GITHUB_STEP_SUMMARY
+        for i in $(seq 4 $(find . -type f -name 'output-*.txt' -exec echo -n x \; | wc -c))
+        do
+          [ $(($i % 3)) -eq 1 ] && cat output-$i.txt | xargs -I{} echo -n '__{}' | sed -E 's/.*\)/###/;s/__/ > /g;s/:$//' >> $GITHUB_STEP_SUMMARY
+          [ $(($i % 3)) -eq 2 ] && echo '' >> $GITHUB_STEP_SUMMARY
+          [ $(($i % 3)) -eq 2 ] && echo '```diff' >> $GITHUB_STEP_SUMMARY
+          [ $(($i % 3)) -eq 2 ] && echo '+++ expected' >> $GITHUB_STEP_SUMMARY
+          [ $(($i % 3)) -eq 2 ] && echo '--- actual' >> $GITHUB_STEP_SUMMARY
+          [ $(($i % 3)) -eq 2 ] && echo '' >> $GITHUB_STEP_SUMMARY
+          [ $(($i % 3)) -eq 0 ] && cat output-$i.txt | sed 's/^      //;/^$/,$d;s/^--$/# .../' >> $GITHUB_STEP_SUMMARY
+          [ $(($i % 3)) -eq 0 ] && echo '```' >> $GITHUB_STEP_SUMMARY
+          [ $(($i % 3)) -eq 0 ] && echo '' >> $GITHUB_STEP_SUMMARY
+        done
 
     - name: Dynamic Badges
       uses: Schneegans/dynamic-badges-action@v1.6.0
