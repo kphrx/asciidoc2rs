@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use super::{Block, NonSectionBlockBody};
-use crate::asg::{Headline, Location, NodeType};
+use crate::asg::{Inline, Location, NodeType};
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -12,7 +12,7 @@ pub enum BlockParent {
         #[serde(rename = "type")]
         node_type: NodeType,
         delimiter: Option<String>,
-        title: Option<Headline>,
+        title: Option<Vec<Inline>>,
         blocks: Vec<NonSectionBlockBody>,
         location: Option<Location>,
         variant: AdmonitionVariant,
@@ -75,7 +75,7 @@ pub struct BlockParentBody {
     #[serde(rename = "type")]
     node_type: NodeType,
     delimiter: Option<String>,
-    title: Option<Headline>,
+    title: Option<Vec<Inline>>,
     blocks: Vec<NonSectionBlockBody>,
     location: Option<Location>,
 }

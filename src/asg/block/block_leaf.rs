@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use super::Block;
-use crate::asg::{Headline, Inline, Location, NodeType};
+use crate::asg::{Inline, Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
@@ -71,7 +71,7 @@ pub struct BlockLeafBody {
     #[serde(rename = "type")]
     node_type: NodeType,
     delimiter: Option<String>,
-    title: Option<Headline>,
+    title: Option<Vec<Inline>>,
     inlines: Vec<Inline>,
     location: Option<Location>,
 }

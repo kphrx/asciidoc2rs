@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use super::{Block, NonSectionBlockBody, TrimIndent};
-use crate::asg::{Headline, Location, NodeType};
+use crate::asg::{Inline, Location, NodeType};
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -15,7 +15,7 @@ pub enum AnyList {
         node_type: NodeType,
         variant: ListVariant,
         marker: String,
-        title: Option<Headline>,
+        title: Option<Vec<Inline>>,
         location: Option<Location>,
         items: Vec<ListItem>,
     },
@@ -23,7 +23,7 @@ pub enum AnyList {
         #[serde(rename = "type")]
         node_type: NodeType,
         marker: String,
-        title: Option<Headline>,
+        title: Option<Vec<Inline>>,
         location: Option<Location>,
         items: Vec<DlistItem>,
 
@@ -41,7 +41,7 @@ pub enum ListVariant {
 impl AnyList {
     fn new_callout_list(marker: String, principal: String) -> Self {
         let mut items = Vec::with_capacity(1);
-        items.push(ListItem::new(marker.clone(), Headline::new(&principal)));
+        items.push(ListItem::new(marker.clone(), Inline::new(&principal)));
 
         Self::List {
             node_type: NodeType::Block,
@@ -55,7 +55,7 @@ impl AnyList {
 
     fn new_ordered_list(marker: String, principal: String) -> Self {
         let mut items = Vec::with_capacity(1);
-        items.push(ListItem::new(marker.clone(), Headline::new(&principal)));
+        items.push(ListItem::new(marker.clone(), Inline::new(&principal)));
 
         Self::List {
             node_type: NodeType::Block,
@@ -69,7 +69,7 @@ impl AnyList {
 
     fn new_unordered_list(marker: String, principal: String) -> Self {
         let mut items = Vec::with_capacity(1);
-        items.push(ListItem::new(marker.clone(), Headline::new(&principal)));
+        items.push(ListItem::new(marker.clone(), Inline::new(&principal)));
 
         Self::List {
             node_type: NodeType::Block,
@@ -89,7 +89,7 @@ impl AnyList {
             items.push(DlistItem::new(
                 marker.clone(),
                 current_terms.to_owned(),
-                Headline::new(&principal),
+                Inline::new(&principal),
             ));
         }
 
@@ -108,7 +108,7 @@ impl AnyList {
             Self::List { marker, items, .. } => {
                 let prefix = marker.to_owned() + " ";
                 if let Some(principal) = line.clone().trim_indent().strip_prefix(&prefix) {
-                    items.push(ListItem::new(marker.to_owned(), Headline::new(principal)));
+                    items.push(ListItem::new(marker.to_owned(), Inline::new(principal)));
 
                     return Ok(());
                 }
@@ -134,7 +134,7 @@ impl AnyList {
                         items.push(DlistItem::new(
                             marker.clone(),
                             current_terms.to_owned(),
-                            Headline::new(principal),
+                            Inline::new(principal),
                         ));
                         current_terms.clear();
 
@@ -151,7 +151,7 @@ impl AnyList {
                     items.push(DlistItem::new(
                         marker.clone(),
                         current_terms.to_owned(),
-                        Headline::new(principal),
+                        Inline::new(principal),
                     ));
                     current_terms.clear();
 
@@ -163,7 +163,7 @@ impl AnyList {
                     items.push(DlistItem::new(
                         marker.clone(),
                         vec![term.to_owned()],
-                        Headline::new(principal),
+                        Inline::new(principal),
                     ));
 
                     return Ok(());
@@ -192,12 +192,12 @@ pub struct ListItem {
     #[serde(rename = "type")]
     node_type: NodeType,
     marker: String,
-    principal: Headline,
+    principal: Vec<Inline>,
     blocks: Option<Vec<NonSectionBlockBody>>,
     location: Option<Location>,
 }
 impl ListItem {
-    fn new(marker: String, principal: Headline) -> Self {
+    fn new(marker: String, principal: Vec<Inline>) -> Self {
         Self {
             name: "listItem".to_owned(),
             node_type: NodeType::Block,
@@ -220,13 +220,13 @@ pub struct DlistItem {
     #[serde(rename = "type")]
     node_type: NodeType,
     marker: String,
-    principal: Headline,
+    principal: Vec<Inline>,
     blocks: Option<Vec<NonSectionBlockBody>>,
     location: Option<Location>,
-    terms: Vec<Headline>,
+    terms: Vec<Vec<Inline>>,
 }
 impl DlistItem {
-    fn new(marker: String, terms: Vec<String>, principal: Headline) -> Self {
+    fn new(marker: String, terms: Vec<String>, principal: Vec<Inline>) -> Self {
         Self {
             name: "dlistItem".to_owned(),
             node_type: NodeType::Block,
@@ -288,16 +288,16 @@ mod tests {
         let item_1 = items.pop().unwrap();
 
         assert_eq!(
-            Headline::new("item 1").heading(),
-            item_1.principal.heading()
+            Inline::new("item 1"),
+            item_1.principal
         );
         assert_eq!(
-            Headline::new("item 2").heading(),
-            item_2.principal.heading()
+            Inline::new("item 2"),
+            item_2.principal
         );
         assert_eq!(
-            Headline::new("item 3").heading(),
-            item_3.principal.heading()
+            Inline::new("item 3"),
+            item_3.principal
         );
     }
 
@@ -325,16 +325,16 @@ mod tests {
         let item_1 = items.pop().unwrap();
 
         assert_eq!(
-            Headline::new("description 1").heading(),
-            item_1.principal.heading()
+            Inline::new("description 1"),
+            item_1.principal
         );
         assert_eq!(
-            Headline::new("description 2").heading(),
-            item_2.principal.heading()
+            Inline::new("description 2"),
+            item_2.principal
         );
         assert_eq!(
-            Headline::new("description 3-4").heading(),
-            item_3.principal.heading()
+            Inline::new("description 3-4"),
+            item_3.principal
         );
     }
 }

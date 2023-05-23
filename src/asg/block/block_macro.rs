@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use super::Block;
-use crate::asg::{Headline, Location, NodeType};
+use crate::asg::{Inline, Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
@@ -36,7 +36,7 @@ pub struct BlockMacroBody {
     #[serde(rename = "type")]
     node_type: NodeType,
     target: Option<String>,
-    title: Option<Headline>,
+    title: Option<Vec<Inline>>,
     location: Option<Location>,
 }
 impl BlockMacroBody {

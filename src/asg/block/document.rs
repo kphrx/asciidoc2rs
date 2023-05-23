@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use super::{Block, LineKind, Section, SectionBody};
-use crate::asg::{Headline, Location, NodeType};
+use crate::asg::{Inline, Location, NodeType};
 use crate::Doctype;
 
 use std::collections::HashMap;
@@ -35,7 +35,7 @@ pub struct Document {
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DocumentHeader {
-    title: Headline,
+    title: Vec<Inline>,
     location: Option<Location>,
 }
 impl Document {
@@ -89,7 +89,7 @@ impl Document {
                     return Ok(());
                 }
                 HeaderLineKind::Title(document_title) => {
-                    let title = Headline::new(&document_title);
+                    let title = Inline::new(&document_title);
                     self.header = Some(DocumentHeader {
                         title,
                         location: None,
@@ -719,8 +719,8 @@ mod tests {
         let document = parse("// this comment line is ignored\n= Document Title\nKismet R. Lee <kismet@asciidoctor.org>\n:description: The document's description.\n:sectanchors:\n:url-repo: https://my-git-repo.com\n\nThe document body starts here.").unwrap();
 
         assert_eq!(
-            Some(Headline::new("Document Title").heading()),
-            document.header.map(|h| h.title.heading())
+            Some(Inline::new("Document Title")),
+            document.header.map(|h| h.title)
         );
         let mut attrs = HashMap::new();
         attrs.insert("author".to_owned(), "Kismet R. Lee".to_owned());
@@ -751,8 +751,8 @@ mod tests {
                 .unwrap();
 
         assert_eq!(
-            Some(Headline::new("The Intrepid Chronicles").heading()),
-            document.header.map(|h| h.title.heading())
+            Some(Inline::new("The Intrepid Chronicles")),
+            document.header.map(|h| h.title)
         );
         let mut attrs = HashMap::new();
         attrs.insert("author".to_owned(), "Kismet Lee".to_owned());
@@ -767,8 +767,8 @@ mod tests {
         let document = parse("= The Intrepid Chronicles\nKismet Lee\nv7.5").unwrap();
 
         assert_eq!(
-            Some(Headline::new("The Intrepid Chronicles").heading()),
-            document.header.map(|h| h.title.heading())
+            Some(Inline::new("The Intrepid Chronicles")),
+            document.header.map(|h| h.title)
         );
         let mut attrs = HashMap::new();
         attrs.insert("author".to_owned(), "Kismet Lee".to_owned());
@@ -783,8 +783,8 @@ mod tests {
                 .unwrap();
 
         assert_eq!(
-            Some(Headline::new("The Intrepid Chronicles").heading()),
-            document.header.map(|h| h.title.heading())
+            Some(Inline::new("The Intrepid Chronicles")),
+            document.header.map(|h| h.title)
         );
         let mut attrs = HashMap::new();
         attrs.insert("author".to_owned(), "Kismet Lee".to_owned());
