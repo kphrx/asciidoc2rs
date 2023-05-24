@@ -6,13 +6,13 @@ use crate::asg::{Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "variant", rename_all = "camelCase")]
-pub(crate) enum Break {
+pub enum Break {
     Page(BreakBody),
     Thematic(BreakBody),
 }
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct BreakBody {
+pub struct BreakBody {
     metadata: Option<Metadata>,
     location: Option<Location>,
 }

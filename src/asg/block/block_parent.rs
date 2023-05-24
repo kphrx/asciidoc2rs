@@ -6,7 +6,7 @@ use crate::asg::{inline::Inline, Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "variant", rename_all = "camelCase")]
-pub(crate) enum ParentWithVariant {
+pub enum ParentWithVariant {
     Caution(Parent),
     Important(Parent),
     Note(Parent),
@@ -16,7 +16,7 @@ pub(crate) enum ParentWithVariant {
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct Parent {
+pub struct Parent {
     delimiter: Option<String>,
     title: Option<Vec<Inline>>,
     metadata: Option<Metadata>,

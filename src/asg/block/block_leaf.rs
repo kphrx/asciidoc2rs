@@ -9,7 +9,7 @@ use crate::asg::{inline::Inline, Location, NodeType};
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "form", rename_all = "camelCase")]
-pub(crate) enum Leaf {
+pub enum Leaf {
     Delimited {
         title: Option<Vec<Inline>>,
         metadata: Option<Metadata>,
@@ -22,7 +22,7 @@ pub(crate) enum Leaf {
 }
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct LeafBody {
+pub struct LeafBody {
     title: Option<Vec<Inline>>,
     metadata: Option<Metadata>,
     inlines: Vec<Inline>,

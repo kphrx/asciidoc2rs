@@ -1,12 +1,14 @@
 #![doc = include_str!("../README.md")]
 
 mod asg;
+mod document;
 
-use asg::block::document::Document;
+use asg::ASG;
+use document::Document;
 
 use std::error::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Doctype {
     Article,
     Book,
@@ -32,18 +34,12 @@ impl<'input> Parser<'input> {
         Self { text, doctype }
     }
 
-    pub fn parse_to_asg(self) -> Result<Document, Box<dyn Error>> {
+    pub fn parse(self) -> Result<Document, Box<dyn Error>> {
         let mut doc = Document::new(self.doctype);
         for line in self.text.lines() {
             doc.push(line)?;
         }
         doc.end();
-
-        Ok(doc)
-    }
-
-    pub fn parse_from_asg(self) -> Result<Document, Box<dyn Error>> {
-        let doc = serde_json::from_str(self.text)?;
 
         Ok(doc)
     }

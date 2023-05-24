@@ -7,7 +7,7 @@ use crate::asg::{inline::Inline, Location, NodeType};
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "form", rename_all = "camelCase")]
-pub(crate) enum Macro {
+pub enum Macro {
     Macro {
         target: Option<String>,
         title: Option<Vec<Inline>>,

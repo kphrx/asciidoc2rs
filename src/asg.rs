@@ -8,7 +8,7 @@ use serde_with_macros::skip_serializing_none;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "type", rename_all = "camelCase")]
-enum ASG {
+pub enum ASG {
     Block(block::Block),
     Inline(inline::Parent),
     String(inline::String),

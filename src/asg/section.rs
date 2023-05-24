@@ -9,8 +9,7 @@ use super::ASG;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(from = "ASG", into = "ASG")]
-pub(crate) struct Section {
+pub struct Section {
     title: Vec<Inline>,
     level: usize,
     metadata: Option<Metadata>,

@@ -25,7 +25,7 @@ use std::error::Error;
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(tag = "name", rename_all = "camelCase")]
-pub(crate) enum Block {
+pub enum Block {
     Document(Document),
     Section(Section),
     Admonition(ParentWithVariant),
@@ -52,7 +52,7 @@ pub(crate) enum Block {
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct Metadata {
+pub struct Metadata {
     attributes: HashMap<String, String>,
     options: Vec<String>,
     location: Option<Location>,
