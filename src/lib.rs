@@ -7,8 +7,7 @@
 
 mod asg;
 
-use asg::block::Document;
-use asg::Inline;
+use asg::block::document::Document;
 
 use std::error::Error;
 
@@ -36,10 +35,6 @@ impl<'input> Parser<'input> {
 
     pub fn new_with_doctype(text: &'input str, doctype: Doctype) -> Self {
         Self { text, doctype }
-    }
-
-    fn parse_inline(self) -> Vec<Inline> {
-        Inline::new(self.text)
     }
 
     pub fn parse_to_asg(self) -> Result<Document, Box<dyn Error>> {

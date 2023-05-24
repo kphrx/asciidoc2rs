@@ -3,8 +3,35 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, NonSectionBlockBody, TrimIndent};
-use crate::asg::{Inline, Location, NodeType};
+use super::{BlockTrait as Block, Body as NonSectionBlockBody, Metadata, TrimIndent};
+use crate::asg::{inline::Inline, Location, NodeType};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "variant", rename_all = "camelCase")]
+pub(crate) enum List {
+    Callout(ListBody),
+    Ordered(ListBody),
+    Unordered(ListBody),
+}
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct ListBody {
+    marker: String,
+    title: Option<Vec<Inline>>,
+    metadata: Option<Metadata>,
+    location: Option<Location>,
+    items: Vec<ListItem>,
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct Dlist {
+    marker: String,
+    title: Option<Vec<Inline>>,
+    metadata: Option<Metadata>,
+    location: Option<Location>,
+    items: Vec<DlistItem>,
+}
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -39,7 +66,7 @@ pub enum ListVariant {
     Unordered,
 }
 impl AnyList {
-    fn new_callout_list(marker: String, principal: String) -> Self {
+    pub(crate) fn new_callout_list(marker: String, principal: String) -> Self {
         let mut items = Vec::with_capacity(1);
         items.push(ListItem::new(marker.clone(), Inline::new(&principal)));
 
@@ -53,7 +80,7 @@ impl AnyList {
         }
     }
 
-    fn new_ordered_list(marker: String, principal: String) -> Self {
+    pub(crate) fn new_ordered_list(marker: String, principal: String) -> Self {
         let mut items = Vec::with_capacity(1);
         items.push(ListItem::new(marker.clone(), Inline::new(&principal)));
 
@@ -67,7 +94,7 @@ impl AnyList {
         }
     }
 
-    fn new_unordered_list(marker: String, principal: String) -> Self {
+    pub(crate) fn new_unordered_list(marker: String, principal: String) -> Self {
         let mut items = Vec::with_capacity(1);
         items.push(ListItem::new(marker.clone(), Inline::new(&principal)));
 
@@ -81,7 +108,11 @@ impl AnyList {
         }
     }
 
-    fn new_description_list(marker: String, term: String, principal: Option<String>) -> Self {
+    pub(crate) fn new_description_list(
+        marker: String,
+        term: String,
+        principal: Option<String>,
+    ) -> Self {
         let mut items = Vec::with_capacity(1);
         let mut current_terms = Vec::with_capacity(1);
         current_terms.push(term.clone());

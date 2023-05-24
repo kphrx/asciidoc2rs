@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, LineKind, Section, SectionBody};
-use crate::asg::{Inline, Location, NodeType};
+use super::{section::Section, AnyList, BlockLeaf, BlockTrait as Block, LineKind, SectionBody};
+use crate::asg::{inline::Inline, Location, NodeType};
 use crate::Doctype;
 
 use std::collections::HashMap;
@@ -276,7 +276,7 @@ impl Document {
             LineKind::HeadingMarker { level, title } => {
                 if self.previous_line != "" {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
@@ -284,7 +284,7 @@ impl Document {
 
                 if level > 1 {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Err("cannot skip section level".into());
@@ -292,7 +292,7 @@ impl Document {
 
                 if level == 0 && !matches!(self.doctype, Doctype::Book) {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Err("level 0 sections can only be used when doctype is book".into());
@@ -307,14 +307,14 @@ impl Document {
             LineKind::UnorderedListMarker { marker, principal } => {
                 if self.previous_line != "" {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
                 }
 
                 self.previous_line = line.to_owned();
-                let unordered_list = Block::new_unordered_list(marker, principal);
+                let unordered_list = Block::AnyList(AnyList::new_unordered_list(marker, principal));
                 self.current_block = Some(unordered_list);
 
                 return Ok(());
@@ -322,14 +322,14 @@ impl Document {
             LineKind::OrderedListMarker { marker, principal } => {
                 if self.previous_line != "" {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
                 }
 
                 self.previous_line = line.to_owned();
-                let ordered_list = Block::new_ordered_list(marker, principal);
+                let ordered_list = Block::AnyList(AnyList::new_ordered_list(marker, principal));
                 self.current_block = Some(ordered_list);
 
                 return Ok(());
@@ -337,14 +337,15 @@ impl Document {
             LineKind::OffsetOrderedListMarker { offset, principal } => {
                 if self.previous_line != "" {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
                 }
 
                 self.previous_line = line.to_owned();
-                let ordered_list = Block::new_ordered_list(format!("{}.", offset), principal);
+                let ordered_list =
+                    Block::AnyList(AnyList::new_ordered_list(format!("{}.", offset), principal));
                 self.current_block = Some(ordered_list);
 
                 return Ok(());
@@ -352,14 +353,14 @@ impl Document {
             LineKind::CalloutListMarker { marker, principal } => {
                 if self.previous_line != "" {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
                 }
 
                 self.previous_line = line.to_owned();
-                let callout_list = Block::new_callout_list(marker, principal);
+                let callout_list = Block::AnyList(AnyList::new_callout_list(marker, principal));
                 self.current_block = Some(callout_list);
 
                 return Ok(());
@@ -371,28 +372,29 @@ impl Document {
             } => {
                 if self.previous_line != "" {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
                 }
 
                 self.previous_line = line.to_owned();
-                let description_list = Block::new_description_list(marker, term, principal);
+                let description_list =
+                    Block::AnyList(AnyList::new_description_list(marker, term, principal));
                 self.current_block = Some(description_list);
 
                 return Ok(());
             }
             LineKind::Unknown => {
                 self.previous_line = line.to_owned();
-                let paragraph = Block::new_paragraph(line);
+                let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                 self.current_block = Some(paragraph);
 
                 return Ok(());
             }
             _ => {
                 self.previous_line = line.to_owned();
-                let paragraph = Block::new_paragraph(line);
+                let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                 self.current_block = Some(paragraph);
 
                 return Ok(());
