@@ -1,8 +1,20 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::Block;
-use crate::asg::{Inline, Location, NodeType};
+use super::Metadata;
+use crate::asg::{inline::Inline, Location, NodeType};
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "form", rename_all = "camelCase")]
+pub(crate) enum Macro {
+    Macro {
+        target: Option<String>,
+        title: Option<Vec<Inline>>,
+        metadata: Option<Metadata>,
+        location: Option<Location>,
+    },
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
@@ -47,23 +59,5 @@ impl BlockMacroBody {
             title: None,
             location: None,
         }
-    }
-}
-
-impl Block {
-    fn new_audio() -> Self {
-        Self::BlockMacro(BlockMacro::new_audio())
-    }
-
-    fn new_video() -> Self {
-        Self::BlockMacro(BlockMacro::new_video())
-    }
-
-    fn new_image() -> Self {
-        Self::BlockMacro(BlockMacro::new_image())
-    }
-
-    fn new_toc() -> Self {
-        Self::BlockMacro(BlockMacro::new_toc())
     }
 }

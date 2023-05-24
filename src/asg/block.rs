@@ -2,7 +2,7 @@ mod block_break;
 mod block_leaf;
 mod block_macro;
 mod block_parent;
-mod document;
+pub mod document;
 mod list;
 mod section;
 
@@ -10,13 +10,76 @@ pub(crate) use block_break::*;
 pub(crate) use block_leaf::*;
 pub(crate) use block_macro::*;
 pub(crate) use block_parent::*;
-pub(crate) use document::*;
 pub(crate) use list::*;
-pub(crate) use section::*;
+use section::Section as OldSection;
 
 use serde::{Deserialize, Serialize};
+use serde_with_macros::skip_serializing_none;
 
+use super::document::Document;
+use super::section::Section;
+use super::Location;
+
+use std::collections::HashMap;
 use std::error::Error;
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "name", rename_all = "camelCase")]
+pub(crate) enum Block {
+    Document(Document),
+    Section(Section),
+    Admonition(ParentWithVariant),
+    Example(Parent),
+    Sidebar(Parent),
+    Open(Parent),
+    Quote(Parent),
+    Listing(Leaf),
+    Literal(Leaf),
+    Paragraph(Leaf),
+    Pass(Leaf),
+    Stem(Leaf),
+    Verse(Leaf),
+    Audio(Macro),
+    Video(Macro),
+    Image(Macro),
+    Toc(Macro),
+    Break(Break),
+    List(List),
+    Dlist(Dlist),
+    ListItem(ListItem),
+    DlistItem(DlistItem),
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct Metadata {
+    attributes: HashMap<String, String>,
+    options: Vec<String>,
+    location: Option<Location>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub(crate) enum Body {
+    Admonition(ParentWithVariant),
+    Example(Parent),
+    Sidebar(Parent),
+    Open(Parent),
+    Quote(Parent),
+    Listing(Leaf),
+    Literal(Leaf),
+    Paragraph(Leaf),
+    Pass(Leaf),
+    Stem(Leaf),
+    Verse(Leaf),
+    Audio(Macro),
+    Video(Macro),
+    Image(Macro),
+    Toc(Macro),
+    Break(Break),
+    List(List),
+    Dlist(Dlist),
+}
 
 enum LineKind {
     Unknown,
@@ -219,34 +282,34 @@ impl TrimIndent for str {
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum SectionBody {
-    Block(Block),
-    Section(Section),
+    Block(BlockTrait),
+    Section(OldSection),
 }
 
-type NonSectionBlockBody = Block;
+type NonSectionBlockBody = BlockTrait;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(untagged)]
-pub enum Block {
+pub enum BlockTrait {
     BlockParent(BlockParent),
     BlockLeaf(BlockLeaf),
     BlockMacro(BlockMacro),
     BlockBreak(BlockBreak),
     AnyList(AnyList),
 }
-impl Block {
+impl BlockTrait {
     fn is_delimited_block(&self) -> bool {
         match self {
-            Block::BlockParent(parent) => parent.delimiter().is_some(),
-            Block::BlockLeaf(leaf) => leaf.delimiter().is_some(),
+            BlockTrait::BlockParent(parent) => parent.delimiter().is_some(),
+            BlockTrait::BlockLeaf(leaf) => leaf.delimiter().is_some(),
             _ => false,
         }
     }
 
     fn delimiter(&self) -> Option<String> {
         match self {
-            Block::BlockParent(parent) => parent.delimiter(),
-            Block::BlockLeaf(leaf) => leaf.delimiter(),
+            BlockTrait::BlockParent(parent) => parent.delimiter(),
+            BlockTrait::BlockLeaf(leaf) => leaf.delimiter(),
             _ => None,
         }
     }

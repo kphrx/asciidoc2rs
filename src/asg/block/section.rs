@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, LineKind, SectionBody};
-use crate::asg::{Inline, Location, NodeType};
+use super::{BlockLeaf, BlockTrait as Block, LineKind, SectionBody};
+use crate::asg::{inline::Inline, Location, NodeType};
 
 use std::error::Error;
 
@@ -194,7 +194,7 @@ impl Section {
             LineKind::HeadingMarker { level, title } => {
                 if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
@@ -209,7 +209,7 @@ impl Section {
                 }
 
                 self.previous_line = line.to_owned();
-                let paragraph = Block::new_paragraph(line);
+                let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                 self.current_block = Some(paragraph);
 
                 Err("cannot skip section level".into())
@@ -217,7 +217,7 @@ impl Section {
             LineKind::UnorderedListMarker { marker, principal } => {
                 if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
@@ -232,7 +232,7 @@ impl Section {
             LineKind::OrderedListMarker { marker, principal } => {
                 if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
@@ -247,7 +247,7 @@ impl Section {
             LineKind::OffsetOrderedListMarker { offset, principal } => {
                 if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
@@ -262,7 +262,7 @@ impl Section {
             LineKind::CalloutListMarker { marker, principal } => {
                 if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
@@ -281,7 +281,7 @@ impl Section {
             } => {
                 if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
-                    let paragraph = Block::new_paragraph(line);
+                    let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                     self.current_block = Some(paragraph);
 
                     return Ok(());
@@ -295,14 +295,14 @@ impl Section {
             }
             LineKind::Unknown => {
                 self.previous_line = line.to_owned();
-                let paragraph = Block::new_paragraph(line);
+                let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                 self.current_block = Some(paragraph);
 
                 Ok(())
             }
             _ => {
                 self.previous_line = line.to_owned();
-                let paragraph = Block::new_paragraph(line);
+                let paragraph = Block::BlockLeaf(BlockLeaf::new_paragraph(line));
                 self.current_block = Some(paragraph);
 
                 Ok(())
@@ -313,7 +313,7 @@ impl Section {
 
 #[cfg(test)]
 mod tests {
-    use crate::asg::{block::BlockLeaf, inlines::Inline};
+    use crate::asg::{block::BlockLeaf, inline::Inline};
 
     use super::*;
 

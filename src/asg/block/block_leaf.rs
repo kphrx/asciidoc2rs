@@ -3,8 +3,31 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::Block;
-use crate::asg::{Inline, Location, NodeType};
+use super::Metadata;
+use crate::asg::{inline::Inline, Location, NodeType};
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "form", rename_all = "camelCase")]
+pub(crate) enum Leaf {
+    Delimited {
+        title: Option<Vec<Inline>>,
+        metadata: Option<Metadata>,
+        inlines: Vec<Inline>,
+        location: Option<Location>,
+        delimiter: String,
+    },
+    LiteralParagraph(LeafBody),
+    Paragraph(LeafBody),
+}
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct LeafBody {
+    title: Option<Vec<Inline>>,
+    metadata: Option<Metadata>,
+    inlines: Vec<Inline>,
+    location: Option<Location>,
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
@@ -26,7 +49,7 @@ impl BlockLeaf {
         Self::Literal(BlockLeafBody::new())
     }
 
-    fn new_paragraph(line: &str) -> Self {
+    pub(crate) fn new_paragraph(line: &str) -> Self {
         Self::Paragraph(BlockLeafBody::new_text(line))
     }
 
@@ -99,31 +122,5 @@ impl BlockLeafBody {
 
     pub(crate) fn inlines(&self) -> Vec<Inline> {
         self.inlines.clone()
-    }
-}
-
-impl Block {
-    fn new_listing() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_listing())
-    }
-
-    fn new_literal() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_literal())
-    }
-
-    pub(crate) fn new_paragraph(line: &str) -> Self {
-        Self::BlockLeaf(BlockLeaf::new_paragraph(line))
-    }
-
-    fn new_pass() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_pass())
-    }
-
-    fn new_stem() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_stem())
-    }
-
-    fn new_verse() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_verse())
     }
 }
