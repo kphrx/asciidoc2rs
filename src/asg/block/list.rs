@@ -8,14 +8,14 @@ use crate::asg::{inline::Inline, Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "variant", rename_all = "camelCase")]
-pub(crate) enum List {
+pub enum List {
     Callout(ListBody),
     Ordered(ListBody),
     Unordered(ListBody),
 }
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct ListBody {
+pub struct ListBody {
     marker: String,
     title: Option<Vec<Inline>>,
     metadata: Option<Metadata>,
@@ -25,7 +25,7 @@ pub(crate) struct ListBody {
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub(crate) struct Dlist {
+pub struct Dlist {
     marker: String,
     title: Option<Vec<Inline>>,
     metadata: Option<Metadata>,

@@ -11,18 +11,37 @@ use super::ASG;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(from = "ASG", into = "ASG")]
-pub(crate) struct Document {
+pub struct Document {
     attributes: Option<HashMap<String, String>>,
     header: Option<Header>,
     blocks: Vec<SectionBody>,
     location: Option<Location>,
 }
+impl Document {
+    pub(crate) fn new(
+        attributes: Option<HashMap<String, String>>,
+        header: Option<Header>,
+        blocks: Vec<SectionBody>,
+        location: Option<Location>,
+    ) -> Self {
+        Self {
+            attributes,
+            header,
+            blocks,
+            location,
+        }
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct Header {
+pub(crate) struct Header {
     title: Vec<Inline>,
     location: Option<Location>,
+}
+impl Header {
+    pub(crate) fn new(title: Vec<Inline>, location: Option<Location>) -> Self {
+        Self { title, location }
+    }
 }
 
 impl From<ASG> for Document {
