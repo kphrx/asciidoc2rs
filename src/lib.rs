@@ -13,7 +13,7 @@ use document::Document;
 
 use std::error::Error;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub enum Doctype {
     Article,
     Book,
