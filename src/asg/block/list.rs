@@ -287,18 +287,9 @@ mod tests {
         let item_2 = items.pop().unwrap();
         let item_1 = items.pop().unwrap();
 
-        assert_eq!(
-            Inline::new("item 1"),
-            item_1.principal
-        );
-        assert_eq!(
-            Inline::new("item 2"),
-            item_2.principal
-        );
-        assert_eq!(
-            Inline::new("item 3"),
-            item_3.principal
-        );
+        assert_eq!(Inline::new("item 1"), item_1.principal);
+        assert_eq!(Inline::new("item 2"), item_2.principal);
+        assert_eq!(Inline::new("item 3"), item_3.principal);
     }
 
     #[test]
@@ -324,17 +315,8 @@ mod tests {
         let item_2 = items.pop().unwrap();
         let item_1 = items.pop().unwrap();
 
-        assert_eq!(
-            Inline::new("description 1"),
-            item_1.principal
-        );
-        assert_eq!(
-            Inline::new("description 2"),
-            item_2.principal
-        );
-        assert_eq!(
-            Inline::new("description 3-4"),
-            item_3.principal
-        );
+        assert_eq!(Inline::new("description 1"), item_1.principal);
+        assert_eq!(Inline::new("description 2"), item_2.principal);
+        assert_eq!(Inline::new("description 3-4"), item_3.principal);
     }
 }
