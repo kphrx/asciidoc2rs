@@ -151,7 +151,7 @@ impl Document {
                 return Ok(());
             }
 
-            if let Block::AnyList(list) = current {
+            if let Block::AnyList(_list) = current {
                 match LineKind::parse(line.to_owned()) {
                     LineKind::Empty => {
                         if self.previous_line == "//" {

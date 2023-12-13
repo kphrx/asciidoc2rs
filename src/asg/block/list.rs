@@ -107,7 +107,7 @@ impl AnyList {
         match self {
             Self::List { marker, items, .. } => {
                 let prefix = marker.to_owned() + " ";
-                if let Some(principal) = line.clone().trim_indent().strip_prefix(&prefix) {
+                if let Some(principal) = line.trim_indent().strip_prefix(&prefix) {
                     items.push(ListItem::new(marker.to_owned(), Inline::new(principal)));
 
                     return Ok(());
@@ -128,7 +128,7 @@ impl AnyList {
                 let delimiter = marker.to_owned() + " ";
 
                 if current_terms.len() > 0 {
-                    if let Some((term, principal)) = line.clone().split_once(&delimiter) {
+                    if let Some((term, principal)) = line.split_once(&delimiter) {
                         current_terms.push(term.to_owned());
                         let principal = principal.trim_start_matches(' ');
                         items.push(DlistItem::new(
@@ -141,7 +141,7 @@ impl AnyList {
                         return Ok(());
                     }
 
-                    if let Some((term, "")) = line.clone().split_once(&marker.to_owned()) {
+                    if let Some((term, "")) = line.split_once(&marker.to_owned()) {
                         current_terms.push(term.to_owned());
 
                         return Ok(());
@@ -158,7 +158,7 @@ impl AnyList {
                     return Ok(());
                 }
 
-                if let Some((term, principal)) = line.clone().split_once(&delimiter) {
+                if let Some((term, principal)) = line.split_once(&delimiter) {
                     let principal = principal.trim_start_matches(' ');
                     items.push(DlistItem::new(
                         marker.clone(),
@@ -169,7 +169,7 @@ impl AnyList {
                     return Ok(());
                 }
 
-                if let Some((term, "")) = line.clone().split_once(&marker.to_owned()) {
+                if let Some((term, "")) = line.split_once(&marker.to_owned()) {
                     current_terms.push(term.to_owned());
 
                     return Ok(());
@@ -208,7 +208,7 @@ impl ListItem {
         }
     }
 
-    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn push(&mut self, _line: &str) -> Result<(), Box<dyn Error>> {
         Err("not implemented".into())
     }
 }
@@ -226,7 +226,7 @@ pub struct DlistItem {
     terms: Vec<Vec<Inline>>,
 }
 impl DlistItem {
-    fn new(marker: String, terms: Vec<String>, principal: Vec<Inline>) -> Self {
+    fn new(marker: String, _terms: Vec<String>, principal: Vec<Inline>) -> Self {
         Self {
             name: "dlistItem".to_owned(),
             node_type: NodeType::Block,
@@ -238,7 +238,7 @@ impl DlistItem {
         }
     }
 
-    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn push(&mut self, _line: &str) -> Result<(), Box<dyn Error>> {
         Err("not implemented".into())
     }
 }
@@ -276,7 +276,15 @@ mod tests {
         list.push("* item 2");
         list.push("  * item 3");
 
-        let Block::AnyList(AnyList::List { variant, marker, items, .. }) = list else { panic!("not expected") };
+        let Block::AnyList(AnyList::List {
+            variant,
+            marker,
+            items,
+            ..
+        }) = list
+        else {
+            panic!("not expected")
+        };
         let mut items = items.to_owned();
 
         assert!(matches!(variant, ListVariant::Unordered));
@@ -305,7 +313,9 @@ mod tests {
         list.push("term 3::");
         list.push("    term 4:: description 3-4");
 
-        let Block::AnyList(AnyList::Dlist { marker, items, .. }) = list else { panic!("not expected") };
+        let Block::AnyList(AnyList::Dlist { marker, items, .. }) = list else {
+            panic!("not expected")
+        };
         let mut items = items.to_owned();
 
         assert_eq!("::", marker);

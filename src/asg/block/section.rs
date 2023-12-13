@@ -77,7 +77,7 @@ impl Section {
                 return Ok(());
             }
 
-            if let Block::AnyList(list) = current {
+            if let Block::AnyList(_list) = current {
                 match LineKind::parse(line.to_owned()) {
                     LineKind::Empty => {
                         if self.previous_line == "//" {
@@ -381,10 +381,12 @@ mod tests {
         };
         assert_eq!(Inline::new("First Section"), first_section.title);
         assert_eq!(2, first_section.blocks.len());
-        let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(content_of_first_section)))) =
-            first_section.blocks.first() else {
-                panic!("cannot call");
-            };
+        let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(
+            content_of_first_section,
+        )))) = first_section.blocks.first()
+        else {
+            panic!("cannot call");
+        };
         assert_eq!(
             Inline::new("Content of first section"),
             content_of_first_section.inlines()
@@ -395,10 +397,12 @@ mod tests {
         };
         assert_eq!(Inline::new("Nested Section"), nested_section.title);
         assert_eq!(1, nested_section.blocks.len());
-        let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(content_of_nested_section)))) =
-            nested_section.blocks.first() else {
-                panic!("cannot call");
-            };
+        let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(
+            content_of_nested_section,
+        )))) = nested_section.blocks.first()
+        else {
+            panic!("cannot call");
+        };
         assert_eq!(
             Inline::new("Content of nested section"),
             content_of_nested_section.inlines()
@@ -409,10 +413,12 @@ mod tests {
         };
         assert_eq!(Inline::new("Second Section"), second_section.title);
         assert_eq!(1, second_section.blocks.len());
-        let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(content_of_second_section)))) =
-            second_section.blocks.first() else {
-                panic!("cannot call");
-            };
+        let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(
+            content_of_second_section,
+        )))) = second_section.blocks.first()
+        else {
+            panic!("cannot call");
+        };
         assert_eq!(
             Inline::new("Content of second section"),
             content_of_second_section.inlines()
