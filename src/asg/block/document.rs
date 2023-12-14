@@ -94,6 +94,9 @@ impl Document {
                         title,
                         location: None,
                     });
+                    if self.attributes.is_none() {
+                        self.attributes = Some(HashMap::new());
+                    }
                     self.parser.is_authors_line = true;
                     return Ok(());
                 }
