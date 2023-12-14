@@ -11,6 +11,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
+  BADGE_GIST_ID: e795d8d23466d049a08e03c23301e996
 
 jobs:
   build:
@@ -18,17 +19,19 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
+
+    - name: Checkout https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck
+      run: git clone --depth=1 https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck.git asciidoc-tck
     - name: Run AsciiDoc TCK
       continue-on-error: true
       id: tck
+      working-directory: asciidoc-tck
       env:
         ASCIIDOC_TCK_ADAPTER: ../target/debug/asciidoc2rs
       run: |
-        git clone https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck.git asciidoc-tck
-        cd asciidoc-tck
         npm ci
         npx asciidoc-tck | awk -v RS= '{f="output-" NR ".txt"; print > f; close(f)}'
         awk '{print $2"="$1}' output-3.txt >> $GITHUB_OUTPUT
@@ -50,19 +53,19 @@ jobs:
         done
 
     - name: Dynamic Badges
-      uses: Schneegans/dynamic-badges-action@v1.6.0
+      uses: Schneegans/dynamic-badges-action@v1.7.0
       with:
-        auth: ${{ secrets.GIST_SECRET }}
-        gistId: e795d8d23466d049a08e03c23301e996
+        auth: ${{ secrets.GIST_TOKEN }}
+        gistId: ${{ env.BADGE_GIST_ID }}
         filename: asciidoc2rs-passed.json
         label: TCK passed
         color: success
         message: ${{ steps.tck.outputs.passing }}
     - name: Dynamic Badges
-      uses: Schneegans/dynamic-badges-action@v1.6.0
+      uses: Schneegans/dynamic-badges-action@v1.7.0
       with:
-        auth: ${{ secrets.GIST_SECRET }}
-        gistId: e795d8d23466d049a08e03c23301e996
+        auth: ${{ secrets.GIST_TOKEN }}
+        gistId: ${{ env.BADGE_GIST_ID }}
         filename: asciidoc2rs-failed.json
         label: TCK failed
         color: important
