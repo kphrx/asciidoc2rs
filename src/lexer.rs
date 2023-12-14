@@ -18,6 +18,10 @@ pub enum Token {
     SuperscriptClose,
 }
 
+fn is_constrainable_char(c: &char) -> bool {
+    matches!(Some(c), Some(' ' | ',' | ';' | '"' | '.' | '?' | '!'))
+}
+
 pub fn lex(input: &str) -> Vec<Token> {
     let mut tokens = Vec::<Token>::new();
 
@@ -36,36 +40,149 @@ pub fn lex(input: &str) -> Vec<Token> {
 fn lex_line(line: &str, tokens: &mut Vec<Token>) {
     let line = line.trim_end_matches(' ');
     let mut buffer = String::new();
+    let mut col = 0;
+    let mut is_constrainable = true;
     let mut chars = line.chars().peekable();
 
     while let Some(c) = chars.next() {
-        match c {
-            '=' => {
-                let mut level = 1;
+        col += 1;
+        match (c, col, is_constrainable) {
+            ('=', 1, _) => {
                 while let Some('=') = chars.peek() {
                     chars.next();
-                    level += 1;
+                    col += 1;
                 }
 
-                if chars.peek().is_none() && level >= 4 {
-                    tokens.push(Token::Delimiter("=".repeat(level)));
+                if chars.peek().is_none() {
+                    if col >= 4 {
+                        tokens.push(Token::Delimiter("=".repeat(col)));
+                    } else {
+                        tokens.push(Token::Text("=".repeat(col)));
+                    }
 
                     break;
                 }
 
                 if chars.peek() != Some(&' ') {
-                    buffer += &"=".repeat(level);
+                    buffer += &"=".repeat(col);
+                    is_constrainable = false;
 
-                    break;
+                    continue;
                 }
+
+                tokens.push(Token::Heading(col));
 
                 while let Some(' ') = chars.peek() {
                     chars.next();
+                    col += 1;
                 }
-
-                tokens.push(Token::Heading(level));
+            }
+            ('*', _, true) => {
+                if !buffer.is_empty() {
+                    tokens.push(Token::Text(buffer.clone()));
+                    buffer.clear();
+                }
+                tokens.push(Token::StrongOpen);
+            }
+            ('*', _, _) => match chars.peek() {
+                Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
+                _ => {
+                    if !buffer.is_empty() {
+                        tokens.push(Token::Text(buffer.clone()));
+                        buffer.clear();
+                    }
+                    tokens.push(Token::StrongClose);
+                }
             },
-            _ => buffer.push(c),
+            ('_', _, true) => {
+                if !buffer.is_empty() {
+                    tokens.push(Token::Text(buffer.clone()));
+                    buffer.clear();
+                }
+                tokens.push(Token::EmphasisOpen);
+            }
+            ('_', _, _) => match chars.peek() {
+                Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
+                _ => {
+                    if !buffer.is_empty() {
+                        tokens.push(Token::Text(buffer.clone()));
+                        buffer.clear();
+                    }
+                    tokens.push(Token::EmphasisClose);
+                }
+            },
+            ('`', _, true) => {
+                if !buffer.is_empty() {
+                    tokens.push(Token::Text(buffer.clone()));
+                    buffer.clear();
+                }
+                tokens.push(Token::CodeOpen);
+            }
+            ('`', _, _) => match chars.peek() {
+                Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
+                _ => {
+                    if !buffer.is_empty() {
+                        tokens.push(Token::Text(buffer.clone()));
+                        buffer.clear();
+                    }
+                    tokens.push(Token::CodeClose);
+                }
+            },
+            ('#', _, true) => {
+                if !buffer.is_empty() {
+                    tokens.push(Token::Text(buffer.clone()));
+                    buffer.clear();
+                }
+                tokens.push(Token::MarkOpen);
+            }
+            ('#', _, _) => match chars.peek() {
+                Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
+                _ => {
+                    if !buffer.is_empty() {
+                        tokens.push(Token::Text(buffer.clone()));
+                        buffer.clear();
+                    }
+                    tokens.push(Token::MarkClose);
+                }
+            },
+            ('~', _, true) => {
+                if !buffer.is_empty() {
+                    tokens.push(Token::Text(buffer.clone()));
+                    buffer.clear();
+                }
+                tokens.push(Token::SubscriptOpen);
+            }
+            ('~', _, _) => match chars.peek() {
+                Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
+                _ => {
+                    if !buffer.is_empty() {
+                        tokens.push(Token::Text(buffer.clone()));
+                        buffer.clear();
+                    }
+                    tokens.push(Token::SubscriptClose);
+                }
+            },
+            ('^', _, true) => {
+                if !buffer.is_empty() {
+                    tokens.push(Token::Text(buffer.clone()));
+                    buffer.clear();
+                }
+                tokens.push(Token::SuperscriptOpen);
+            }
+            ('^', _, _) => match chars.peek() {
+                Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
+                _ => {
+                    if !buffer.is_empty() {
+                        tokens.push(Token::Text(buffer.clone()));
+                        buffer.clear();
+                    }
+                    tokens.push(Token::SuperscriptClose);
+                }
+            },
+            (_, _, _) => {
+                buffer.push(c);
+                is_constrainable = is_constrainable_char(&c);
+            }
         }
     }
 
