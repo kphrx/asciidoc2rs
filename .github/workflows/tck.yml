@@ -25,15 +25,25 @@ jobs:
 
     - name: Checkout https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck
       run: git clone --depth=1 https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck.git asciidoc-tck
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+    - name: Install dependencies
+      working-directory: asciidoc-tck
+      run: |
+        npm ci
+        {
+          echo 'import {inspect} from "node:util";'
+          echo 'inspect.defaultOptions.depth = null;'
+        } >> depth.js
     - name: Run AsciiDoc TCK
       continue-on-error: true
       id: tck
       working-directory: asciidoc-tck
       env:
-        ASCIIDOC_TCK_ADAPTER: ../target/debug/asciidoc2rs
+        NODE_OPTIONS: --import ./depth.js
       run: |
-        npm ci
-        npx asciidoc-tck | awk -v RS= '{f="output-" NR ".txt"; print > f; close(f)}'
+        npx asciidoc-tck cli -c ${GITHUB_WORKSPACE}/target/debug/asciidoc2rs # | awk -v RS= '{f="output-" NR ".txt"; print > f; close(f)}'
         awk '{print $2"="$1}' output-3.txt >> $GITHUB_OUTPUT
         echo '## TCK result' >> $GITHUB_STEP_SUMMARY
         echo '' >> $GITHUB_STEP_SUMMARY
