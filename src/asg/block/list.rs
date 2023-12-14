@@ -127,7 +127,7 @@ impl AnyList {
             } => {
                 let delimiter = marker.to_owned() + " ";
 
-                if current_terms.len() > 0 {
+                if !current_terms.is_empty() {
                     if let Some((term, principal)) = line.split_once(&delimiter) {
                         current_terms.push(term.to_owned());
                         let principal = principal.trim_start_matches(' ');

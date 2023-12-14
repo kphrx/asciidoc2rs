@@ -125,7 +125,7 @@ impl Document {
         }
 
         if self.comment_delimiter.is_some() {
-            if matches!(LineKind::parse(line.to_owned()), LineKind::CommentDelimiter(x) if matches!(&self.comment_delimiter, Some(y) if x == y.to_owned()))
+            if matches!(LineKind::parse(line.to_owned()), LineKind::CommentDelimiter(x) if matches!(&self.comment_delimiter, Some(y) if x == *y))
             {
                 self.previous_line = "".to_owned();
                 self.comment_delimiter = None;
@@ -168,14 +168,14 @@ impl Document {
                         return Ok(());
                     }
                     LineKind::CommentMarker => {
-                        if self.previous_line == "" {
+                        if self.previous_line.is_empty() {
                             self.previous_line = "//".to_owned();
                         }
 
                         return Ok(());
                     }
                     _ => {
-                        if self.previous_line != "" {
+                        if !self.previous_line.is_empty() {
                             self.previous_line = line.to_owned();
                             current.push(line)?;
 
@@ -223,7 +223,7 @@ impl Document {
         if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
             match LineKind::parse(line.to_owned()) {
                 LineKind::HeadingMarker { level, title } => {
-                    if self.previous_line != "" {
+                    if !self.previous_line.is_empty() {
                         self.previous_line = line.to_owned();
 
                         return last.push(line);
@@ -253,7 +253,7 @@ impl Document {
             return last.push(line);
         }
 
-        return self.parse_preamble(line);
+        self.parse_preamble(line)
     }
 
     fn parse_preamble(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
@@ -261,20 +261,20 @@ impl Document {
             LineKind::Empty => {
                 self.previous_line = "".to_owned();
 
-                return Ok(());
+                Ok(())
             }
             LineKind::CommentMarker => {
                 self.previous_line = "".to_owned();
 
-                return Ok(());
+                Ok(())
             }
             LineKind::CommentDelimiter(delimiter) => {
                 self.comment_delimiter = Some(delimiter);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::HeadingMarker { level, title } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -302,10 +302,10 @@ impl Document {
                 let section = Section::new(level, &title);
                 self.blocks.push(SectionBody::Section(section));
 
-                return Ok(());
+                Ok(())
             }
             LineKind::UnorderedListMarker { marker, principal } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -317,10 +317,10 @@ impl Document {
                 let unordered_list = Block::new_unordered_list(marker, principal);
                 self.current_block = Some(unordered_list);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::OrderedListMarker { marker, principal } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -332,10 +332,10 @@ impl Document {
                 let ordered_list = Block::new_ordered_list(marker, principal);
                 self.current_block = Some(ordered_list);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::OffsetOrderedListMarker { offset, principal } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -347,10 +347,10 @@ impl Document {
                 let ordered_list = Block::new_ordered_list(format!("{}.", offset), principal);
                 self.current_block = Some(ordered_list);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::CalloutListMarker { marker, principal } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -362,14 +362,14 @@ impl Document {
                 let callout_list = Block::new_callout_list(marker, principal);
                 self.current_block = Some(callout_list);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::DescriptionListMarker {
                 marker,
                 term,
                 principal,
             } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -381,21 +381,21 @@ impl Document {
                 let description_list = Block::new_description_list(marker, term, principal);
                 self.current_block = Some(description_list);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::Unknown => {
                 self.previous_line = line.to_owned();
                 let paragraph = Block::new_paragraph(line);
                 self.current_block = Some(paragraph);
 
-                return Ok(());
+                Ok(())
             }
             _ => {
                 self.previous_line = line.to_owned();
                 let paragraph = Block::new_paragraph(line);
                 self.current_block = Some(paragraph);
 
-                return Ok(());
+                Ok(())
             }
         }
     }
@@ -473,7 +473,7 @@ impl HeaderParser {
     }
 
     fn parse_line(&mut self, line: &str) -> Result<HeaderLineKind, Box<dyn Error>> {
-        if line == "" {
+        if line.is_empty() {
             if self.has_title || self.has_attr {
                 return Ok(HeaderLineKind::End);
             }
@@ -524,16 +524,16 @@ impl HeaderParser {
         let result = if self.wrapped_attr.is_some() {
             self.parse_wrapped_attr(line)?
         } else if let Some((attr_name, attr_value)) =
-            line.strip_prefix(":").and_then(|a| a.split_once(": "))
+            line.strip_prefix(':').and_then(|a| a.split_once(": "))
         {
             if Self::is_valid_attribute_name(attr_name.to_owned()) {
                 self.wrapped_attr = Some((attr_name.to_owned(), "".to_owned()));
-                self.parse_wrapped_attr(&attr_value.to_owned())?
+                self.parse_wrapped_attr(attr_value)?
             } else {
                 return Err(format!("invalid document attribute: {}", attr_name).into());
             }
-        } else if let Some(attr_name) = line.strip_prefix(":").and_then(|a| a.strip_suffix(":")) {
-            if let Some(unset_attr) = attr_name.strip_prefix("!").or(attr_name.strip_suffix("!")) {
+        } else if let Some(attr_name) = line.strip_prefix(':').and_then(|a| a.strip_suffix(':')) {
+            if let Some(unset_attr) = attr_name.strip_prefix('!').or(attr_name.strip_suffix('!')) {
                 if !Self::is_valid_attribute_name(unset_attr.to_owned()) {
                     return Err(format!("invalid document attribute: {}", attr_name).into());
                 }
@@ -559,7 +559,7 @@ impl HeaderParser {
     fn parse_wrapped_attr(&mut self, line: &str) -> Result<HeaderLineKind, Box<dyn Error>> {
         let result = if let Some(wrap_value) = line.strip_suffix(" + \\") {
             let mut value = wrap_value.to_owned();
-            value.push_str("\n");
+            value.push('\n');
 
             let Some((_, current_value)) = self.wrapped_attr.as_mut() else {
                 panic!("cannot call");
@@ -569,7 +569,7 @@ impl HeaderParser {
             HeaderLineKind::Wrap
         } else if let Some(wrap_value) = line.strip_suffix(" \\") {
             let mut value = wrap_value.to_owned();
-            value.push_str(" ");
+            value.push(' ');
 
             let Some((_, current_value)) = self.wrapped_attr.as_mut() else {
                 panic!("cannot call");
@@ -581,7 +581,7 @@ impl HeaderParser {
             let Some((key, value)) = self.wrapped_attr.as_mut() else {
                 panic!("cannot call");
             };
-            value.push_str(&line);
+            value.push_str(line);
             let attr = HeaderLineKind::Attribute(key.to_owned(), value.to_owned());
             self.wrapped_attr = None;
 

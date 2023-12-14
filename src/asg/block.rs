@@ -60,7 +60,7 @@ impl LineKind {
     fn parse(line: String) -> Self {
         let line = line.trim_end_matches(' ');
 
-        if line == "" {
+        if line.is_empty() {
             return Self::Empty;
         }
 
@@ -103,7 +103,7 @@ impl LineKind {
         }
 
         if let Some((marker, title)) = line.split_once("= ") {
-            if marker == "" || !marker.contains(|c: char| c != '=') {
+            if marker.is_empty() || !marker.contains(|c: char| c != '=') {
                 return Self::HeadingMarker {
                     level: marker.len(),
                     title: title.to_owned(),
@@ -114,8 +114,8 @@ impl LineKind {
         if let Some((list_marker, principal)) = line.split_once("* ") {
             let mut marker = list_marker.trim_indent().to_owned();
             let principal = principal.trim_start_matches(' ').to_owned();
-            if marker == "" || !marker.contains(|c: char| c != '*') {
-                marker.push_str("*");
+            if marker.is_empty() || !marker.contains(|c: char| c != '*') {
+                marker.push('*');
                 return Self::UnorderedListMarker { marker, principal };
             }
         }
@@ -124,8 +124,8 @@ impl LineKind {
             let mut marker = list_marker.trim_indent().to_owned();
             let principal = principal.trim_start_matches(' ').to_owned();
             // Unknown `-` list marker can be repeated infinitely.
-            if marker == "" {
-                marker.push_str("-");
+            if marker.is_empty() {
+                marker.push('-');
                 return Self::UnorderedListMarker { marker, principal };
             }
         }
@@ -133,8 +133,8 @@ impl LineKind {
         if let Some((list_marker, principal)) = line.split_once(". ") {
             let mut marker = list_marker.trim_indent().to_owned();
             let principal = principal.trim_start_matches(' ').to_owned();
-            if marker == "" || !marker.contains(|c: char| c != '.') {
-                marker.push_str(".");
+            if marker.is_empty() || !marker.contains(|c: char| c != '.') {
+                marker.push('.');
                 return Self::OrderedListMarker { marker, principal };
             }
 
@@ -208,10 +208,10 @@ impl LineKind {
 }
 
 trait TrimIndent {
-    fn trim_indent<'a>(&'a self) -> &'a str;
+    fn trim_indent(&self) -> &str;
 }
 impl TrimIndent for str {
-    fn trim_indent<'a>(&'a self) -> &'a str {
+    fn trim_indent(&self) -> &str {
         self.trim_start_matches('\t').trim_start_matches(' ')
     }
 }

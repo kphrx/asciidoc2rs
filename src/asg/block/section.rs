@@ -51,7 +51,7 @@ impl Section {
 
     pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
         if self.comment_delimiter.is_some() {
-            if matches!(LineKind::parse(line.to_owned()), LineKind::CommentDelimiter(x) if matches!(&self.comment_delimiter, Some(y) if x == y.to_owned()))
+            if matches!(LineKind::parse(line.to_owned()), LineKind::CommentDelimiter(x) if matches!(&self.comment_delimiter, Some(y) if x == *y))
             {
                 self.previous_line = "".to_owned();
                 self.comment_delimiter = None;
@@ -94,14 +94,14 @@ impl Section {
                         return Ok(());
                     }
                     LineKind::CommentMarker => {
-                        if self.previous_line == "" {
+                        if self.previous_line.is_empty() {
                             self.previous_line = "//".to_owned();
                         }
 
                         return Ok(());
                     }
                     _ => {
-                        if self.previous_line != "" {
+                        if !self.previous_line.is_empty() {
                             self.previous_line = line.to_owned();
                             current.push(line)?;
 
@@ -149,7 +149,7 @@ impl Section {
         if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
             match LineKind::parse(line.to_owned()) {
                 LineKind::HeadingMarker { level, title } => {
-                    if self.previous_line != "" {
+                    if !self.previous_line.is_empty() {
                         self.previous_line = line.to_owned();
 
                         return last.push(line);
@@ -171,7 +171,7 @@ impl Section {
             return last.push(line);
         }
 
-        return self.parse_content(line);
+        self.parse_content(line)
     }
 
     fn parse_content(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
@@ -179,20 +179,20 @@ impl Section {
             LineKind::Empty => {
                 self.previous_line = "".to_owned();
 
-                return Ok(());
+                Ok(())
             }
             LineKind::CommentMarker => {
                 self.previous_line = "".to_owned();
 
-                return Ok(());
+                Ok(())
             }
             LineKind::CommentDelimiter(delimiter) => {
                 self.comment_delimiter = Some(delimiter);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::HeadingMarker { level, title } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -212,10 +212,10 @@ impl Section {
                 let paragraph = Block::new_paragraph(line);
                 self.current_block = Some(paragraph);
 
-                return Err("cannot skip section level".into());
+                Err("cannot skip section level".into())
             }
             LineKind::UnorderedListMarker { marker, principal } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -227,10 +227,10 @@ impl Section {
                 let unordered_list = Block::new_unordered_list(marker, principal);
                 self.current_block = Some(unordered_list);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::OrderedListMarker { marker, principal } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -242,10 +242,10 @@ impl Section {
                 let ordered_list = Block::new_ordered_list(marker, principal);
                 self.current_block = Some(ordered_list);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::OffsetOrderedListMarker { offset, principal } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -257,10 +257,10 @@ impl Section {
                 let ordered_list = Block::new_ordered_list(format!("{}.", offset), principal);
                 self.current_block = Some(ordered_list);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::CalloutListMarker { marker, principal } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -272,14 +272,14 @@ impl Section {
                 let callout_list = Block::new_callout_list(marker, principal);
                 self.current_block = Some(callout_list);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::DescriptionListMarker {
                 marker,
                 term,
                 principal,
             } => {
-                if self.previous_line != "" {
+                if !self.previous_line.is_empty() {
                     self.previous_line = line.to_owned();
                     let paragraph = Block::new_paragraph(line);
                     self.current_block = Some(paragraph);
@@ -291,21 +291,21 @@ impl Section {
                 let description_list = Block::new_description_list(marker, term, principal);
                 self.current_block = Some(description_list);
 
-                return Ok(());
+                Ok(())
             }
             LineKind::Unknown => {
                 self.previous_line = line.to_owned();
                 let paragraph = Block::new_paragraph(line);
                 self.current_block = Some(paragraph);
 
-                return Ok(());
+                Ok(())
             }
             _ => {
                 self.previous_line = line.to_owned();
                 let paragraph = Block::new_paragraph(line);
                 self.current_block = Some(paragraph);
 
-                return Ok(());
+                Ok(())
             }
         }
     }

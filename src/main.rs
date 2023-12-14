@@ -50,7 +50,7 @@ fn run_for_tck() -> Result<String, Box<dyn Error>> {
         Ok(input) => {
             let parser = Parser::new(input.as_str());
             let doc = parser.parse_to_asg()?;
-            Ok(format!("{}", serde_json::to_string(&doc)?))
+            Ok((serde_json::to_string(&doc)?).to_string())
         }
         err => err,
     }
