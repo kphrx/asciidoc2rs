@@ -55,6 +55,7 @@ jobs:
       with:
         app_id: ${{ secrets.ACTION_AUTOMATION_APP_ID }}
         private_key: ${{ secrets.ACTION_AUTOMATION_PRIVATE_KEY }}
+        installation_retrieval_mode: user
     - name: Dynamic Badges
       uses: Schneegans/dynamic-badges-action@v1.6.0
       with:
