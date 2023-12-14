@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 use asciidoc2rs::Parser;
 
 use std::error::Error;
@@ -5,6 +7,19 @@ use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 use std::{env, process};
+
+#[derive(Serialize, Deserialize)]
+#[serde(tag = "type", rename_all = "lowercase")]
+pub enum Stdin {
+    Block(InputBody),
+    Inline(InputBody),
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct InputBody {
+    contents: String,
+    path: String,
+}
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -48,7 +63,10 @@ fn run_with_arguments(args: &[String]) -> Result<String, Box<dyn Error>> {
 fn run_for_tck() -> Result<String, Box<dyn Error>> {
     match read_stdin() {
         Ok(input) => {
-            let parser = Parser::new(input.as_str());
+            let (Stdin::Block(content) | Stdin::Inline(content)) =
+                serde_json::from_str(input.as_str())?;
+            let InputBody { contents: text, .. } = content;
+            let parser = Parser::new(text.as_str());
             let doc = parser.parse_to_asg()?;
             Ok((serde_json::to_string(&doc)?).to_string())
         }
