@@ -50,14 +50,137 @@ jobs:
 
     - name: Generate summary
       continue-on-error: true
-      working-directory: asciidoc-tck
-      run: |
-        {
-          echo '## TCK result'
-          echo ''
-          sed -E 's/▶/-/;s/✔/- [x]/;s/✖/- [ ]/' output.txt
-          echo ''
-        } >> $GITHUB_STEP_SUMMARY
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('node:fs');
+          const readline = require('node:readline');
+
+          const chunkStream = fs.createReadStream('asciidoc-tck/output.txt', {encoding: 'utf8'});
+          const lineStream = readline.createInterface({
+            input: chunkStream,
+            crlfDelay: Infinity,
+          });
+
+          const currentDescribes = [];
+          const sections = [];
+          const listBuffers = [];
+          let tableBuffers = [];
+          let codeBuffer = '';
+          let codeIndend = 0;
+          for await (const line of lineStream) {
+            if (line.length === 0) {
+              continue;
+            }
+
+            const lastDescribe = currentDescribes.toReversed()[0];
+            const lastDescribePosition = line.indexOf(`▶ ${lastDescribe} (`);
+            if (lastDescribePosition !== -1 && currentDescribes.length > 2) {
+              currentDescribes.pop();
+              const name = line.slice(lastDescribePosition + 2);
+              const child = listBuffers.pop();
+              let el;
+              if (child.length > 0) {
+                el = core.summary.addRaw(`<p>${name}</p>`, true).addList(child).stringify();
+              } else {
+                if (codeIndend > 0) {
+                  const label = core.summary.stringify();
+                  core.summary.emptyBuffer();
+                  const content = core.summary.addCodeBlock(codeBuffer, 'js').stringify();
+                  core.summary.emptyBuffer();
+                  tableBuffers.toReversed()[0].push(core.summary.addDetails(label, content).stringify());
+                  core.summary.emptyBuffer();
+                  codeIndend = 0;
+                  codeBuffer = '';
+                }
+                core.summary.addTable(tableBuffers);
+                tableBuffers = [];
+                const child = core.summary.stringify();
+                core.summary.emptyBuffer();
+                el = core.summary.addRaw(`<p>${name}</p>`, true).addRaw(child).stringify();
+              }
+              core.summary.emptyBuffer();
+              listBuffers.toReversed()[0].push(el);
+              continue;
+            }
+            if (lastDescribePosition !== -1 && currentDescribes.length === 2) {
+              sections.push([currentDescribes.pop(), listBuffers.pop()]);
+              continue;
+            }
+            if (lastDescribePosition !== -1) {
+              currentDescribes.pop();
+              continue;
+            }
+
+            const describePosition = line.indexOf('▶');
+            if (describePosition !== -1 && currentDescribes.length < 1) {
+              const name = line.slice(describePosition + 2);
+              currentDescribes.push(name);
+              continue;
+            }
+            if (describePosition !== -1) {
+              const name = line.slice(describePosition + 2);
+              currentDescribes.push(name);
+              listBuffers.push([]);
+              continue;
+            }
+
+            if (tableBuffers.length === 0) {
+              tableBuffers.push([{data: 'Status', header: true}, {data: 'Test Case', header: true}, {data: 'Message', header: true}]);
+            }
+
+            const passedItPosition = line.indexOf('✔');
+            if (passedItPosition !== -1) {
+              if (codeIndend > 0) {
+                const label = core.summary.stringify();
+                core.summary.emptyBuffer();
+                const content = core.summary.addCodeBlock(codeBuffer, 'js').stringify();
+                core.summary.emptyBuffer();
+                tableBuffers.toReversed()[0].push(core.summary.addDetails(label, content).stringify());
+                core.summary.emptyBuffer();
+                codeIndend = 0;
+                codeBuffer = '';
+              }
+              const name = line.slice(passedItPosition + 2);
+              tableBuffers.push(['Pass&nbsp;✅', name, ''])
+              continue;
+            }
+
+            const failedItPosition = line.indexOf('✖');
+            if (failedItPosition !== -1) {
+              if (codeIndend > 0) {
+                const label = core.summary.stringify();
+                core.summary.emptyBuffer();
+                const content = core.summary.addCodeBlock(codeBuffer, 'js').stringify();
+                core.summary.emptyBuffer();
+                tableBuffers.toReversed()[0].push(core.summary.addDetails(label, content).stringify());
+                core.summary.emptyBuffer();
+                codeBuffer = '';
+              }
+              codeIndend = failedItPosition + 2;
+              const name = line.slice(codeIndend);
+              tableBuffers.push(['Fail&nbsp;❌', name])
+              continue;
+            }
+
+            const failedMessagePosition = line.indexOf('AssertionError');
+            if (failedMessagePosition !== -1) {
+              const message = line.slice(failedMessagePosition, -3);
+              const [msg, name] = message.split('for');
+              core.summary.addRaw(`${msg.trim()} for <code>${name.trim()}</code>`);
+              codeBuffer += '{\n';
+              continue;
+            }
+
+            const code = line.slice(codeIndend);
+            codeBuffer += `${code}\n`;
+          }
+
+          core.summary.addHeading('TCK result');
+          for (const [section, bodyList] of sections) {
+            core.summary.addHeading(section, 2).addList(bodyList);
+          }
+          await core.summary.write();
 
     - name: Dynamic Badges
       uses: Schneegans/dynamic-badges-action@v1.7.0
