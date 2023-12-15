@@ -1,6 +1,8 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
     Heading(usize),
+    CommentDelimiter,
+    Comment,
     Delimiter(String),
     NewLine,
     Text(String),
@@ -24,9 +26,10 @@ fn is_constrainable_char(c: &char) -> bool {
 
 pub fn lex(input: &str) -> Vec<Token> {
     let mut tokens = Vec::<Token>::new();
+    let mut comment_delimiter = 0;
 
     for line in input.lines() {
-        lex_line(line, &mut tokens);
+        lex_line(line, &mut tokens, &mut comment_delimiter);
         tokens.push(Token::NewLine);
     }
 
@@ -37,7 +40,7 @@ pub fn lex(input: &str) -> Vec<Token> {
     tokens
 }
 
-fn lex_line(line: &str, tokens: &mut Vec<Token>) {
+fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) {
     let line = line.trim_end_matches(' ');
     let mut buffer = String::new();
     let mut col = 0;
@@ -46,8 +49,8 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>) {
 
     while let Some(c) = chars.next() {
         col += 1;
-        match (c, col, is_constrainable) {
-            ('=', 1, _) => {
+        match (c, col, is_constrainable, *comment_delimiter) {
+            ('=', 1, _, 0) => {
                 while let Some('=') = chars.peek() {
                     chars.next();
                     col += 1;
@@ -77,14 +80,46 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>) {
                     col += 1;
                 }
             }
-            ('*', _, true) => {
+            ('/', 1, _, 0) => {
+                while let Some('/') = chars.peek() {
+                    chars.next();
+                    col += 1;
+                }
+
+                if chars.peek().is_none() && col >= 4 {
+                    tokens.push(Token::CommentDelimiter);
+                    *comment_delimiter = col;
+
+                    break;
+                }
+
+                if col >= 2 {
+                    tokens.push(Token::Comment);
+
+                    break;
+                }
+
+                buffer.push(c);
+            }
+            ('/', 1, _, cd) => {
+                while let Some('/') = chars.peek() {
+                    chars.next();
+                    col += 1;
+                }
+
+                if chars.peek().is_none() && col == cd {
+                    tokens.push(Token::CommentDelimiter);
+                    *comment_delimiter = 0;
+                }
+            }
+            ('*', _, true, 0) => {
                 if !buffer.is_empty() {
                     tokens.push(Token::Text(buffer.clone()));
                     buffer.clear();
                 }
                 tokens.push(Token::StrongOpen);
             }
-            ('*', _, _) => match chars.peek() {
+            ('*', _, _, 0) => match chars.peek() {
                 Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
                 _ => {
                     if !buffer.is_empty() {
@@ -94,14 +129,14 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>) {
                     tokens.push(Token::StrongClose);
                 }
             },
-            ('_', _, true) => {
+            ('_', _, true, 0) => {
                 if !buffer.is_empty() {
                     tokens.push(Token::Text(buffer.clone()));
                     buffer.clear();
                 }
                 tokens.push(Token::EmphasisOpen);
             }
-            ('_', _, _) => match chars.peek() {
+            ('_', _, _, 0) => match chars.peek() {
                 Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
                 _ => {
                     if !buffer.is_empty() {
@@ -111,14 +146,14 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>) {
                     tokens.push(Token::EmphasisClose);
                 }
             },
-            ('`', _, true) => {
+            ('`', _, true, 0) => {
                 if !buffer.is_empty() {
                     tokens.push(Token::Text(buffer.clone()));
                     buffer.clear();
                 }
                 tokens.push(Token::CodeOpen);
             }
-            ('`', _, _) => match chars.peek() {
+            ('`', _, _, 0) => match chars.peek() {
                 Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
                 _ => {
                     if !buffer.is_empty() {
@@ -128,14 +163,14 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>) {
                     tokens.push(Token::CodeClose);
                 }
             },
-            ('#', _, true) => {
+            ('#', _, true, 0) => {
                 if !buffer.is_empty() {
                     tokens.push(Token::Text(buffer.clone()));
                     buffer.clear();
                 }
                 tokens.push(Token::MarkOpen);
             }
-            ('#', _, _) => match chars.peek() {
+            ('#', _, _, 0) => match chars.peek() {
                 Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
                 _ => {
                     if !buffer.is_empty() {
@@ -145,14 +180,14 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>) {
                     tokens.push(Token::MarkClose);
                 }
             },
-            ('~', _, true) => {
+            ('~', _, true, 0) => {
                 if !buffer.is_empty() {
                     tokens.push(Token::Text(buffer.clone()));
                     buffer.clear();
                 }
                 tokens.push(Token::SubscriptOpen);
             }
-            ('~', _, _) => match chars.peek() {
+            ('~', _, _, 0) => match chars.peek() {
                 Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
                 _ => {
                     if !buffer.is_empty() {
@@ -162,14 +197,14 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>) {
                     tokens.push(Token::SubscriptClose);
                 }
             },
-            ('^', _, true) => {
+            ('^', _, true, 0) => {
                 if !buffer.is_empty() {
                     tokens.push(Token::Text(buffer.clone()));
                     buffer.clear();
                 }
                 tokens.push(Token::SuperscriptOpen);
             }
-            ('^', _, _) => match chars.peek() {
+            ('^', _, _, 0) => match chars.peek() {
                 Some(nc) if !is_constrainable_char(nc) => buffer.push(c),
                 _ => {
                     if !buffer.is_empty() {
@@ -179,10 +214,11 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>) {
                     tokens.push(Token::SuperscriptClose);
                 }
             },
-            (_, _, _) => {
+            (_, _, _, 0) => {
                 buffer.push(c);
                 is_constrainable = is_constrainable_char(&c);
             }
+            (_, _, _, _) => {}
         }
     }
 
@@ -198,8 +234,10 @@ mod tests {
 
     #[test]
     fn test_lex() {
-        let input = "== Heading 2\n\n====\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.\n====";
+        let input = "// comment\n== Heading 2\n\n====\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.\n\n/////\n====\n////\n/////";
         let expected_output = vec![
+            Token::Comment,
+            Token::NewLine,
             Token::Heading(2),
             Token::Text("Heading 2".to_string()),
             Token::NewLine,
@@ -232,7 +270,12 @@ mod tests {
             Token::SuperscriptClose,
             Token::Text(" text.".to_string()),
             Token::NewLine,
-            Token::Delimiter("====".to_string()),
+            Token::NewLine,
+            Token::CommentDelimiter,
+            Token::NewLine,
+            Token::NewLine,
+            Token::NewLine,
+            Token::CommentDelimiter,
         ];
 
         assert_eq!(lex(input), expected_output);
