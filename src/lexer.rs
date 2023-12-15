@@ -19,10 +19,10 @@ pub enum Token {
 }
 
 pub fn lex(input: &str) -> Vec<Token> {
-    let mut tokens = Vec::new();
+    let mut tokens = Vec::<Token>::new();
 
     for line in input.lines() {
-        tokens.append(&mut lex_line(line));
+        lex_line(line, &mut tokens);
         tokens.push(Token::NewLine);
     }
 
@@ -33,9 +33,8 @@ pub fn lex(input: &str) -> Vec<Token> {
     tokens
 }
 
-fn lex_line(line: &str) -> Vec<Token> {
+fn lex_line(line: &str, tokens: &mut Vec<Token>) {
     let line = line.trim_end_matches(' ');
-    let mut tokens = Vec::new();
     let mut buffer = String::new();
     let mut chars = line.chars().peekable();
 
@@ -74,8 +73,6 @@ fn lex_line(line: &str) -> Vec<Token> {
         tokens.push(Token::Text(buffer.clone()));
         buffer.clear();
     }
-
-    tokens
 }
 
 #[cfg(test)]
