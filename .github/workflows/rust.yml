@@ -19,7 +19,7 @@ jobs:
       pull-requests: write
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup Rust stable
       run: rustup update stable && rustup default stable
 
@@ -39,7 +39,7 @@ jobs:
       pull-requests: write
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup Rust stable
       run: rustup update stable && rustup default stable && rustup component add clippy
 
@@ -70,7 +70,7 @@ jobs:
         - toolchain: nightly
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Setup Rust ${{ matrix.toolchain }}
       run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
 
