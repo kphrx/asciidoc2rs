@@ -10,6 +10,54 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  format:
+
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Rust stable
+      run: rustup update stable && rustup default stable
+
+    - name: Reviewdog suggester (cargo-fmt)
+      uses: reviewdog/action-suggester@v1
+      with:
+        tool_name: cargo-fmt
+        filter_mode: file
+        fail_on_error: true
+
+
+  lint:
+
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Setup Rust stable
+      run: rustup update stable && rustup default stable && rustup component add clippy
+
+    - uses: reviewdog/action-setup@v1
+      with:
+        reviewdog_version: latest
+    - name: reviewdog (cargo-check, clippy)
+      if: github.event_name != 'pull_request'
+      env:
+        REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+      run: reviewdog -runners=cargo-check,clippy -reporter=github-check -filter-mode=nofilter -fail-on-error
+    - name: reviewdog (cargo-check, clippy)
+      if: github.event_name == 'pull_request'
+      env:
+        REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
+      run: reviewdog -runners=cargo-check,clippy -reporter=github-pr-review -filter-mode=file -fail-on-error
+
+
   build:
 
     runs-on: ubuntu-latest

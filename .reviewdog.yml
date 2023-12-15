@@ -1,0 +1,9 @@
+runner:
+  cargo-check:
+    cmd: cargo check -q --message-format=short
+    format: cargo-check
+    level: warning
+  clippy:
+    cmd: cargo clippy -q --message-format=short
+    format: clippy
+    level: warning
