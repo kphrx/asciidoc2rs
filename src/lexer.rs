@@ -213,16 +213,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_lex() {
-        let input = "// comment\n== Heading 2\n\n====\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.\n\n/////\n====\n////\n/////";
+    fn test_lex_inlines() {
+        let input = "== Heading 2\n\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.";
         let expected_output = vec![
-            Token::Comment,
-            Token::NewLine,
             Token::Heading(2),
             Token::Text("Heading 2".to_string()),
             Token::NewLine,
-            Token::NewLine,
-            Token::Delimiter("====".to_string()),
             Token::NewLine,
             Token::Text("More ".to_string()),
             Token::StrongOpen,
@@ -249,6 +245,50 @@ mod tests {
             Token::Text("superscript".to_string()),
             Token::SuperscriptClose,
             Token::Text(" text.".to_string()),
+        ];
+
+        assert_eq!(lex(input), expected_output);
+    }
+
+    #[test]
+    fn test_lex_examples_block_delimiter() {
+        let input =
+            "== Heading 2\n\n====\n= Block heading 1\n\nMore *bold* and _italic_ text.\n====";
+        let expected_output = vec![
+            Token::Heading(2),
+            Token::Text("Heading 2".to_string()),
+            Token::NewLine,
+            Token::NewLine,
+            Token::Delimiter("====".to_string()),
+            Token::NewLine,
+            Token::Heading(1),
+            Token::Text("Block heading 1".to_string()),
+            Token::NewLine,
+            Token::NewLine,
+            Token::Text("More ".to_string()),
+            Token::StrongOpen,
+            Token::Text("bold".to_string()),
+            Token::StrongClose,
+            Token::Text(" and ".to_string()),
+            Token::EmphasisOpen,
+            Token::Text("italic".to_string()),
+            Token::EmphasisClose,
+            Token::Text(" text.".to_string()),
+            Token::NewLine,
+            Token::Delimiter("====".to_string()),
+        ];
+
+        assert_eq!(lex(input), expected_output);
+    }
+
+    #[test]
+    fn test_lex_comment_out() {
+        let input = "// comment\n== Heading 2\n\n/////\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.\n////\n/////";
+        let expected_output = vec![
+            Token::Comment,
+            Token::NewLine,
+            Token::Heading(2),
+            Token::Text("Heading 2".to_string()),
             Token::NewLine,
             Token::NewLine,
             Token::CommentDelimiter,
