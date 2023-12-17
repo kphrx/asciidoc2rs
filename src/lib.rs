@@ -2,6 +2,7 @@
 
 mod asg;
 mod lexer;
+mod token;
 
 use asg::block::Document;
 use asg::Inline;

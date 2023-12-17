@@ -1,0 +1,21 @@
+#[derive(Debug, Clone, PartialEq)]
+pub enum Token {
+    CommentDelimiter,
+    Comment,
+    NewLine,
+    Heading(usize),
+    Delimiter(String),
+    Text(String),
+    StrongOpen,
+    StrongClose,
+    EmphasisOpen,
+    EmphasisClose,
+    CodeOpen,
+    CodeClose,
+    MarkOpen,
+    MarkClose,
+    SubscriptOpen,
+    SubscriptClose,
+    SuperscriptOpen,
+    SuperscriptClose,
+}

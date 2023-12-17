@@ -1,24 +1,4 @@
-#[derive(Debug, Clone, PartialEq)]
-pub enum Token {
-    Heading(usize),
-    CommentDelimiter,
-    Comment,
-    Delimiter(String),
-    NewLine,
-    Text(String),
-    StrongOpen,
-    StrongClose,
-    EmphasisOpen,
-    EmphasisClose,
-    CodeOpen,
-    CodeClose,
-    MarkOpen,
-    MarkClose,
-    SubscriptOpen,
-    SubscriptClose,
-    SuperscriptOpen,
-    SuperscriptClose,
-}
+use crate::token::Token;
 
 fn is_constrainable_char(c: &char) -> bool {
     matches!(Some(c), Some(' ' | ',' | ';' | '"' | '.' | '?' | '!'))
@@ -50,36 +30,6 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
     while let Some(c) = chars.next() {
         col += 1;
         match (c, col, is_constrainable, *comment_delimiter) {
-            ('=', 1, _, 0) => {
-                while let Some('=') = chars.peek() {
-                    chars.next();
-                    col += 1;
-                }
-
-                if chars.peek().is_none() {
-                    if col >= 4 {
-                        tokens.push(Token::Delimiter("=".repeat(col)));
-                    } else {
-                        tokens.push(Token::Text("=".repeat(col)));
-                    }
-
-                    break;
-                }
-
-                if chars.peek() != Some(&' ') {
-                    buffer += &"=".repeat(col);
-                    is_constrainable = false;
-
-                    continue;
-                }
-
-                tokens.push(Token::Heading(col));
-
-                while let Some(' ') = chars.peek() {
-                    chars.next();
-                    col += 1;
-                }
-            }
             ('/', 1, _, 0) => {
                 while let Some('/') = chars.peek() {
                     chars.next();
@@ -110,6 +60,36 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
                 if chars.peek().is_none() && col == cd {
                     tokens.push(Token::CommentDelimiter);
                     *comment_delimiter = 0;
+                }
+            }
+            ('=', 1, _, 0) => {
+                while let Some('=') = chars.peek() {
+                    chars.next();
+                    col += 1;
+                }
+
+                if chars.peek().is_none() {
+                    if col >= 4 {
+                        tokens.push(Token::Delimiter("=".repeat(col)));
+                    } else {
+                        tokens.push(Token::Text("=".repeat(col)));
+                    }
+
+                    break;
+                }
+
+                if chars.peek() != Some(&' ') {
+                    buffer += &"=".repeat(col);
+                    is_constrainable = false;
+
+                    continue;
+                }
+
+                tokens.push(Token::Heading(col));
+
+                while let Some(' ') = chars.peek() {
+                    chars.next();
+                    col += 1;
                 }
             }
             ('*', _, true, 0) => {
