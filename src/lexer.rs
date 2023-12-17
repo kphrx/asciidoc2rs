@@ -70,7 +70,7 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
 
                 if chars.peek().is_none() {
                     if col >= 4 {
-                        tokens.push(Token::Delimiter("=".repeat(col)));
+                        tokens.push(Token::ExampleDelimiter(col));
                     } else {
                         tokens.push(Token::Text("=".repeat(col)));
                     }
@@ -259,7 +259,7 @@ mod tests {
             Token::Text("Heading 2".to_string()),
             Token::NewLine,
             Token::NewLine,
-            Token::Delimiter("====".to_string()),
+            Token::ExampleDelimiter(4),
             Token::NewLine,
             Token::Heading(1),
             Token::Text("Block heading 1".to_string()),
@@ -275,7 +275,7 @@ mod tests {
             Token::EmphasisClose,
             Token::Text(" text.".to_string()),
             Token::NewLine,
-            Token::Delimiter("====".to_string()),
+            Token::ExampleDelimiter(4),
         ];
 
         assert_eq!(lex(input), expected_output);

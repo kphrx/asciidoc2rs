@@ -1,10 +1,21 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    CommentDelimiter,
-    Comment,
     NewLine,
+    Comment,
+    CommentDelimiter,        // `////`
+    ExampleDelimiter(usize), // `====`
+    SidebarDelimiter(usize), // `****`
+    QuoteDelimiter(usize),   // `____`
+    ListingDelimiter(usize), // `----`
+    LiteralDelimiter(usize), // `....`
+    PassDelimiter(usize),    // `++++`
+    OpenDelimiter(usize),    // `~~~~`
+    LegacyOpenDelimiter,     // `--` (legacy)
+    TableDelimiter,          // `|===`
+    NestedTableDelimiter,    // `!===`
+    CsvTableDelimiter,       // `,===`
+    DsvTableDelimiter,       // `:===`
     Heading(usize),
-    Delimiter(String),
     Text(String),
     StrongOpen,
     StrongClose,
