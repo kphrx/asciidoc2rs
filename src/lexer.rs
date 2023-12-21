@@ -345,6 +345,35 @@ mod tests {
     }
 
     #[test]
+    fn test_lex_asterisk_edge() {
+        let input = "== Heading 2\n\n* Unordered level 1 list item\n*\n*****\n***\n****strong mark";
+        let expected_output = vec![
+            Token::Heading(2),
+            Token::Text("Heading 2".to_string()),
+            Token::NewLine,
+            Token::NewLine,
+            Token::UnorderedList(1),
+            Token::Text("Unordered level 1 list item".to_string()),
+            Token::NewLine,
+            Token::Text("*".to_string()),
+            Token::NewLine,
+            Token::SidebarDelimiter(5),
+            Token::NewLine,
+            Token::Strong(true, true),
+            Token::Strong(true, true),
+            Token::Strong(true, true),
+            Token::NewLine,
+            Token::Strong(true, true),
+            Token::Strong(true, true),
+            Token::Strong(true, true),
+            Token::Strong(true, false),
+            Token::Text("strong mark".to_string()),
+        ];
+
+        assert_eq!(lex(input), expected_output);
+    }
+
+    #[test]
     fn test_lex_examples_block_delimiter() {
         let input =
             "== Heading 2\n\n====\n= Block heading 1\n\nMore *bold* and _italic_ text.\n====";
