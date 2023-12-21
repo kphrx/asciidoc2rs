@@ -118,12 +118,18 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
                 for _ in 1..col {
                     tokens.push(Token::Strong(true, true));
                 }
-                tokens.push(Token::Strong(true, next.map_or(true, |c| !c.is_alphanumeric())));
+                tokens.push(Token::Strong(
+                    true,
+                    next.map_or(true, |c| !c.is_alphanumeric()),
+                ));
             }
             ('*', Some(' '), None | Some(' '), 0) => {
                 buffer.push(c);
             }
-            ('*', pr, nx, 0) => match (pr.map_or(false, |c| c.is_alphanumeric()), nx.map_or(false, |c| c.is_alphanumeric())) {
+            ('*', pr, nx, 0) => match (
+                pr.map_or(false, |c| c.is_alphanumeric()),
+                nx.map_or(false, |c| c.is_alphanumeric()),
+            ) {
                 (true, true) => {
                     buffer.push(c);
                 }
@@ -135,11 +141,14 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
 
                     tokens.push(Token::Strong(!is_wordy_prev, !is_wordy_next));
                 }
-            }
+            },
             ('_', None | Some(' '), None | Some(' '), 0) => {
                 buffer.push(c);
             }
-            ('_', pr, nx, 0) => match (pr.map_or(false, |c| c.is_alphanumeric()), nx.map_or(false, |c| c.is_alphanumeric())) {
+            ('_', pr, nx, 0) => match (
+                pr.map_or(false, |c| c.is_alphanumeric()),
+                nx.map_or(false, |c| c.is_alphanumeric()),
+            ) {
                 (true, true) => {
                     buffer.push(c);
                 }
@@ -151,11 +160,14 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
 
                     tokens.push(Token::Emphasis(!is_wordy_prev, !is_wordy_next));
                 }
-            }
+            },
             ('`', None | Some(' '), None | Some(' '), 0) => {
                 buffer.push(c);
             }
-            ('`', pr, nx, 0) => match (pr.map_or(false, |c| c.is_alphanumeric()), nx.map_or(false, |c| c.is_alphanumeric())) {
+            ('`', pr, nx, 0) => match (
+                pr.map_or(false, |c| c.is_alphanumeric()),
+                nx.map_or(false, |c| c.is_alphanumeric()),
+            ) {
                 (true, true) => {
                     buffer.push(c);
                 }
@@ -167,11 +179,14 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
 
                     tokens.push(Token::Code(!is_wordy_prev, !is_wordy_next));
                 }
-            }
+            },
             ('#', None | Some(' '), None | Some(' '), 0) => {
                 buffer.push(c);
             }
-            ('#', pr, nx, 0) => match (pr.map_or(false, |c| c.is_alphanumeric()), nx.map_or(false, |c| c.is_alphanumeric())) {
+            ('#', pr, nx, 0) => match (
+                pr.map_or(false, |c| c.is_alphanumeric()),
+                nx.map_or(false, |c| c.is_alphanumeric()),
+            ) {
                 (true, true) => {
                     buffer.push(c);
                 }
@@ -183,11 +198,14 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
 
                     tokens.push(Token::Mark(!is_wordy_prev, !is_wordy_next));
                 }
-            }
+            },
             ('~', None | Some(' '), None | Some(' '), 0) => {
                 buffer.push(c);
             }
-            ('~', pr, nx, 0) => match (pr.map_or(false, |c| c.is_alphanumeric()), nx.map_or(false, |c| c.is_alphanumeric())) {
+            ('~', pr, nx, 0) => match (
+                pr.map_or(false, |c| c.is_alphanumeric()),
+                nx.map_or(false, |c| c.is_alphanumeric()),
+            ) {
                 (true, true) => {
                     buffer.push(c);
                 }
@@ -199,11 +217,14 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
 
                     tokens.push(Token::Subscript(!is_wordy_prev, !is_wordy_next));
                 }
-            }
+            },
             ('^', None | Some(' '), None | Some(' '), 0) => {
                 buffer.push(c);
             }
-            ('^', pr, nx, 0) => match (pr.map_or(false, |c| c.is_alphanumeric()), nx.map_or(false, |c| c.is_alphanumeric())) {
+            ('^', pr, nx, 0) => match (
+                pr.map_or(false, |c| c.is_alphanumeric()),
+                nx.map_or(false, |c| c.is_alphanumeric()),
+            ) {
                 (true, true) => {
                     buffer.push(c);
                 }
@@ -215,7 +236,7 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
 
                     tokens.push(Token::Superscript(!is_wordy_prev, !is_wordy_next));
                 }
-            }
+            },
             (_, _, _, 0) => {
                 buffer.push(c);
             }
