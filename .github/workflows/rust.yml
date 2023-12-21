@@ -23,6 +23,8 @@ jobs:
     - name: Setup Rust stable
       run: rustup update stable && rustup default stable
 
+    - run: cargo fmt
+
     - name: Reviewdog suggester (cargo-fmt)
       uses: reviewdog/action-suggester@v1
       with:
