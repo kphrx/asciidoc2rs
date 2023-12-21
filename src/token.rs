@@ -16,6 +16,7 @@ pub enum Token {
     CsvTableDelimiter,       // `,===`
     DsvTableDelimiter,       // `:===`
     Heading(usize),
+    UnorderedList(usize),
     Text(String),
     Strong(bool, bool),
     Emphasis(bool, bool),
