@@ -61,25 +61,28 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
                     col += 1;
                 }
 
-                if chars.peek().is_none() && col >= 4 {
+                let next = chars.peek();
+
+                if next.is_none() && col >= 4 {
                     tokens.push(Token::ExampleDelimiter(col));
 
                     break;
                 }
 
-                if chars.peek() != Some(&' ') {
-                    buffer += &"=".repeat(col);
-                    prev = Some('=');
+                if let Some(' ') = next {
+                    tokens.push(Token::Heading(col));
+
+                    while let Some(' ') = chars.peek() {
+                        chars.next();
+                        col += 1;
+                    }
+
+                    prev = Some(' ');
 
                     continue;
                 }
 
-                tokens.push(Token::Heading(col));
-
-                while let Some(' ') = chars.peek() {
-                    chars.next();
-                    col += 1;
-                }
+                buffer += &"=".repeat(col);
             }
             ('*', None, _, 0) => {
                 while let Some('*') = chars.peek() {
@@ -118,6 +121,7 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
                 for _ in 1..col {
                     tokens.push(Token::Strong(true, true));
                 }
+
                 tokens.push(Token::Strong(
                     true,
                     next.map_or(true, |c| !c.is_alphanumeric()),
@@ -260,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_lex_constrained_mark() {
-        let input = "== Heading 2\n\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.";
+        let input = "== Heading 2\n\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.\n";
         let expected_output = vec![
             Token::Heading(2),
             Token::Text("Heading 2".to_string()),
@@ -298,7 +302,7 @@ mod tests {
 
     #[test]
     fn test_lex_constrained_mark_edge() {
-        let input = "== Heading 2\n\nMore **constrain*ed * bold* and _constrain_ed _ italic__ and ` `constrain`ed(`monospace`)` and #constrain#ed highlight# # and ~constrain~ed ~ subscript~ and ^constrain^ed ^ superscript^ text.";
+        let input = "== Heading 2\n\nMore **constrain*ed * bold* and _constrain_ed _ italic__ and ` `constrain`ed(`monospace`)` and #constrain#ed highlight# # and ~constrain~ed ~ subscript~ and ^constrain^ed ^ superscript^ text.\n";
         let expected_output = vec![
             Token::Heading(2),
             Token::Text("Heading 2".to_string()),
@@ -343,7 +347,7 @@ mod tests {
     #[test]
     fn test_lex_unordered_lists() {
         let input =
-            "== Heading 2\n\n*** Unordered level 3 list item\n* Unordered level 1 list item\n** Unordered level 2 list item\n**** Unordered level 4 list item";
+            "== Heading 2\n\n*** Unordered level 3 list item\n* Unordered level 1 list item\n** Unordered level 2 list item\n**** Unordered level 4 list item\n";
         let expected_output = vec![
             Token::Heading(2),
             Token::Text("Heading 2".to_string()),
@@ -367,7 +371,8 @@ mod tests {
 
     #[test]
     fn test_lex_asterisk_edge() {
-        let input = "== Heading 2\n\n* Unordered level 1 list item\n*\n*****\n***\n****strong mark";
+        let input =
+            "== Heading 2\n\n* Unordered level 1 list item\n*\n*****\n***\n****strong mark\n";
         let expected_output = vec![
             Token::Heading(2),
             Token::Text("Heading 2".to_string()),
@@ -397,7 +402,7 @@ mod tests {
     #[test]
     fn test_lex_examples_block_delimiter() {
         let input =
-            "== Heading 2\n\n====\n= Block heading 1\n\nMore *bold* and _italic_ text.\n====";
+            "== Heading 2\n\n====\n= Block heading 1\n\nMore *bold* and _italic_ text.\n====\n";
         let expected_output = vec![
             Token::Heading(2),
             Token::Text("Heading 2".to_string()),
@@ -428,7 +433,7 @@ mod tests {
     #[test]
     fn test_lex_sidebars_block_delimiter() {
         let input =
-            "== Heading 2\n\n****\n= Block heading 1\n\nMore *bold* and _italic_ text.\n****";
+            "== Heading 2\n\n****\n= Block heading 1\n\nMore *bold* and _italic_ text.\n****\n";
         let expected_output = vec![
             Token::Heading(2),
             Token::Text("Heading 2".to_string()),
@@ -458,7 +463,7 @@ mod tests {
 
     #[test]
     fn test_lex_comment_out() {
-        let input = "// comment\n== Heading 2\n\n/////\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.\n////\n/////";
+        let input = "// comment\n== Heading 2\n\n/////\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.\n////\n/////\n";
         let expected_output = vec![
             Token::Comment,
             Token::NewLine,
