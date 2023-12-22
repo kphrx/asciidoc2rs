@@ -241,6 +241,62 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
                     tokens.push(Token::Superscript(!is_wordy_prev, !is_wordy_next));
                 }
             },
+            (':', None, next, 0) => {
+                let disable = if let Some('!') = next {
+                    prev = chars.next();
+                    true
+                } else {
+                    false
+                };
+
+                while let Some('A'..='Z' | 'a'..='z' | '-' | '_') = chars.peek() {
+                    prev = chars.next();
+                    buffer.push(prev.unwrap());
+                    col += 1;
+                }
+
+                if col == 1 {
+                    buffer.push(c);
+                    if disable {
+                        buffer.push('!');
+                    }
+
+                    continue;
+                }
+
+                if chars.peek() != Some(&':') {
+                    buffer = format!(":{}{}", if disable { "!" } else { "" }, buffer.clone());
+
+                    continue;
+                }
+
+                chars.next();
+
+                let next = chars.peek();
+
+                if next.is_none() {
+                    tokens.push(Token::AttributeEntry(buffer.clone(), disable));
+                    buffer.clear();
+
+                    break;
+                }
+
+                if next == Some(&' ') && !disable {
+                    tokens.push(Token::AttributeEntry(buffer.clone(), false));
+                    buffer.clear();
+
+                    while let Some(' ') = chars.peek() {
+                        chars.next();
+                        col += 1;
+                    }
+
+                    prev = Some(' ');
+
+                    continue;
+                }
+
+                buffer = format!(":{}{}:", if disable { "!" } else { "" }, buffer.clone());
+            }
             (_, _, _, 0) => {
                 buffer.push(c);
             }
@@ -261,6 +317,27 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_lex_attribute_entry() {
+        let input = "= Document Header\n:notitle:\n:description: test document.\n:!showtitle:\n\nprincipal text.\n";
+        let expected_output = vec![
+            Token::Heading(1),
+            Token::Text("Document Header".to_string()),
+            Token::NewLine,
+            Token::AttributeEntry("notitle".to_string(), false),
+            Token::NewLine,
+            Token::AttributeEntry("description".to_string(), false),
+            Token::Text("test document.".to_string()),
+            Token::NewLine,
+            Token::AttributeEntry("showtitle".to_string(), true),
+            Token::NewLine,
+            Token::NewLine,
+            Token::Text("principal text.".to_string()),
+        ];
+
+        assert_eq!(lex(input), expected_output);
+    }
 
     #[test]
     fn test_lex_constrained_mark() {

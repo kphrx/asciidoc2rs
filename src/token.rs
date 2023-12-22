@@ -15,6 +15,7 @@ pub enum Token {
     NestedTableDelimiter,    // `!===`
     CsvTableDelimiter,       // `,===`
     DsvTableDelimiter,       // `:===`
+    AttributeEntry(String, bool),
     Heading(usize),
     UnorderedList(usize),
     Text(String),
