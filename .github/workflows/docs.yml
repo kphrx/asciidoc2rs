@@ -1,4 +1,4 @@
-name: Deploy user documentation to Pages
+name: Deploy documents to Pages
 
 on:
   push:
