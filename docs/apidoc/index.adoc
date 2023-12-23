@@ -1,0 +1,5 @@
+= API Documentation
+
+See
+ifdef::env-github[link:https://kphrx.github.io/asciidoc2rs/apidoc/asciidoc2rs/[crate documentation,window=_blank].]
+ifndef::env-github[link:asciidoc2rs/[crate documentation,window=_blank].]

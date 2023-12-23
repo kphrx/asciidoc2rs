@@ -14,13 +14,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  honkit:
 
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           cache: 'npm'
@@ -30,15 +29,38 @@ jobs:
         run: npm run build
 
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v2
+        uses: actions/upload-pages-artifact@v3
         with:
+          name: user-documentation
           path: docs/_book/
+
+
+  rustdoc:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust
+        run: rustup update stable && rustup default stable
+
+      - run: |
+          cargo doc --no-deps
+          rm -f target/doc/.lock
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          name: api-documentation
+          path: target/doc/
 
 
   deploy:
 
     if: github.event_name != 'pull_request'
-    needs: build
+    needs:
+      - honkit
+      - rustdoc
     runs-on: ubuntu-latest
 
     permissions:
@@ -51,6 +73,27 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: "*-documentation"
+          path: ${{ runner.temp }}
+
+      - name: Merge user docs and api docs
+        working-directory: ${{ runner.temp }}
+        run: |
+          mkdir ./docs
+          tar -xf ./user-documentation/artifact.tar -C ./docs/
+          tar -xf ./api-documentation/artifact.tar -C ./docs/apidoc/
+          chmod -c -R +rX ./docs/apidoc/ | while read -r line; do
+              echo "::warning title=Invalid file permissions automatically fixed::$line"
+          done
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ runner.temp }}/docs/
+
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v3
+        uses: actions/deploy-pages@v4
