@@ -3,6 +3,8 @@ name: Check TCK
 on:
   push:
     branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
   workflow_dispatch:
 
 concurrency:
@@ -14,9 +16,13 @@ env:
   BADGE_GIST_ID: e795d8d23466d049a08e03c23301e996
 
 jobs:
-  build:
+  tck:
 
     runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.tck.outputs.tests }}
+      passed: ${{ steps.tck.outputs.pass }}
+      failed: ${{ steps.tck.outputs.fail }}
 
     steps:
     - uses: actions/checkout@v4
@@ -44,8 +50,8 @@ jobs:
       env:
         NODE_OPTIONS: --import ./depth.js
       run: |
-        npx asciidoc-tck cli -c ${GITHUB_WORKSPACE}/target/debug/asciidoc2rs | tee output.txt
-        grep 'ℹ' output.txt | awk '{print $2"="$3}' >> $GITHUB_OUTPUT
+        npx asciidoc-tck cli -c ${{ github.workspace }}/target/debug/asciidoc2rs | tee output.txt
+        grep 'ℹ' output.txt | awk '{print $2"="$3}' >> "$GITHUB_OUTPUT"
         sed -i'' '/^ℹ/d' output.txt
 
     - name: Generate summary
@@ -176,13 +182,36 @@ jobs:
             codeBuffer += `${code}\n`;
           }
 
-          core.summary.addHeading('TCK result');
+          core.summary
+            .addHeading('TCK result')
+            .addImage('https://img.shields.io/badge/TCK%20passed-${{ steps.tck.outputs.pass }}-success', 'TCK passed count')
+            .addImage('https://img.shields.io/badge/TCK%20failed-${{ steps.tck.outputs.fail }}-important', 'TCK failed count');
           for (const [section, bodyList] of sections) {
             core.summary.addHeading(section, 2).addList(bodyList);
           }
           await core.summary.write();
 
-    - name: Dynamic Badges
+
+  dynamic-badges:
+
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    needs: [tck]
+
+    steps:
+    - name: Result badge
+      uses: Schneegans/dynamic-badges-action@v1.7.0
+      with:
+        auth: ${{ secrets.GIST_TOKEN }}
+        gistId: ${{ env.BADGE_GIST_ID }}
+        filename: asciidoc2rs-tck-tests.json
+        label: TCK tests
+        valColorRange: ${{ needs.tck.outputs.passed }}
+        maxColorRange: ${{ needs.tck.outputs.tests }}
+        minColorRange: 0
+        message: ${{ needs.tck.outputs.passed }} / ${{ needs.tck.outputs.tests }}
+
+    - name: Passed badge
       uses: Schneegans/dynamic-badges-action@v1.7.0
       with:
         auth: ${{ secrets.GIST_TOKEN }}
@@ -190,8 +219,9 @@ jobs:
         filename: asciidoc2rs-passed.json
         label: TCK passed
         color: success
-        message: ${{ steps.tck.outputs.pass }}
-    - name: Dynamic Badges
+        message: ${{ needs.tck.outputs.passed }}
+
+    - name: Failed badge
       uses: Schneegans/dynamic-badges-action@v1.7.0
       with:
         auth: ${{ secrets.GIST_TOKEN }}
@@ -199,4 +229,4 @@ jobs:
         filename: asciidoc2rs-failed.json
         label: TCK failed
         color: important
-        message: ${{ steps.tck.outputs.fail }}
+        message: ${{ needs.tck.outputs.failed }}
