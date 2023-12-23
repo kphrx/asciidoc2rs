@@ -5,6 +5,5 @@ kPherox <kphrx@kpherox.dev>
 
 AsciiDoc parser in Rust
 
-image:https://img.shields.io/endpoint?style=flat-square&url=https://gist.githubusercontent.com/kphrx/e795d8d23466d049a08e03c23301e996/raw/asciidoc2rs-passed.json[TCK passed count,format=svg]
-image:https://img.shields.io/endpoint?style=flat-square&url=https://gist.githubusercontent.com/kphrx/e795d8d23466d049a08e03c23301e996/raw/asciidoc2rs-failed.json[TCK failed count,format=svg]
+image:https://img.shields.io/endpoint?style=flat-square&url=https://gist.githubusercontent.com/kphrx/e795d8d23466d049a08e03c23301e996/raw/asciidoc2rs-tck-tests.json[TCK tests result,format=svg]
 image:https://img.shields.io/codecov/c/gh/kphrx/asciidoc2rs?style=flat-square[Codecov,format=svg]
