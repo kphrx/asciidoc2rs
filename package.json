@@ -1,0 +1,16 @@
+{
+  "name": "asciidoc2rs-docs",
+  "version": "0.1.0",
+  "description": "Documentation of asciidoc2rs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "honkit build ./docs",
+    "serve": "honkit serve ./docs"
+  },
+  "keywords": [],
+  "author": "kPherox <kphrx@kpherox.dev>",
+  "license": "CC-BY-4.0",
+  "devDependencies": {
+    "honkit": "^5.1.1"
+  }
+}
