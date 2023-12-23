@@ -50,8 +50,8 @@ jobs:
       env:
         NODE_OPTIONS: --import ./depth.js
       run: |
-        npx asciidoc-tck cli -c ${GITHUB_WORKSPACE}/target/debug/asciidoc2rs | tee output.txt
-        grep 'ℹ' output.txt | awk '{print $2"="$3}' >> $GITHUB_OUTPUT
+        npx asciidoc-tck cli -c ${{ github.workspace }}/target/debug/asciidoc2rs | tee output.txt
+        grep 'ℹ' output.txt | awk '{print $2"="$3}' >> "$GITHUB_OUTPUT"
         sed -i'' '/^ℹ/d' output.txt
 
     - name: Generate summary
