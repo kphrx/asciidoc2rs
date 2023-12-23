@@ -211,23 +211,3 @@ jobs:
           maxColorRange: ${{ needs.tck.outputs.tests }}
           minColorRange: 0
           message: ${{ needs.tck.outputs.passed }} / ${{ needs.tck.outputs.tests }}
-
-      - name: Passed badge
-        uses: Schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistId: ${{ env.BADGE_GIST_ID }}
-          filename: asciidoc2rs-passed.json
-          label: TCK passed
-          color: success
-          message: ${{ needs.tck.outputs.passed }}
-
-      - name: Failed badge
-        uses: Schneegans/dynamic-badges-action@v1.7.0
-        with:
-          auth: ${{ secrets.GIST_TOKEN }}
-          gistId: ${{ env.BADGE_GIST_ID }}
-          filename: asciidoc2rs-failed.json
-          label: TCK failed
-          color: important
-          message: ${{ needs.tck.outputs.failed }}

@@ -1,2 +1,6 @@
 /target
 /Cargo.lock
+
+# documentaiton
+node_modules/
+_book/
