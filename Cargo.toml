@@ -9,7 +9,7 @@ keywords = ["asciidoc"]
 categories = ["text-processing"]
 edition = "2021"
 
-readme = "docs/README.md"
+readme = true
 
 
 [dependencies]
