@@ -38,8 +38,8 @@ impl<'input> Parser<'input> {
         Self { text, doctype }
     }
 
-    fn parse_inline(self) -> Vec<Inline> {
-        Inline::new(self.text)
+    pub fn parse_inline(text: &'input str) -> Vec<Inline> {
+        Inline::new(text)
     }
 
     pub fn parse_to_asg(self) -> Result<Document, Box<dyn Error>> {
