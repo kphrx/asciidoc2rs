@@ -1,7 +1,10 @@
 # asciidoc2rs
+kPherox <kphrx@kpherox.dev>
+0.1.0: Initial
+:description: Doumentation for asciidoc2rs
 
-image:https://img.shields.io/endpoint?style=for-the-badge&url=https://gist.githubusercontent.com/kphrx/e795d8d23466d049a08e03c23301e996/raw/asciidoc2rs-passed.json[TCK passed count,height=24,format=svg]
-image:https://img.shields.io/endpoint?style=for-the-badge&url=https://gist.githubusercontent.com/kphrx/e795d8d23466d049a08e03c23301e996/raw/asciidoc2rs-failed.json[TCK failed count,height=24,format=svg]
-image:https://img.shields.io/codecov/c/gh/kphrx/asciidoc2rs?style=for-the-badge[Codecov,height=24,format=svg]
+AsciiDoc parser in Rust
 
-AsciiDoc parser of Rust
+image:https://img.shields.io/endpoint?style=flat-square&url=https://gist.githubusercontent.com/kphrx/e795d8d23466d049a08e03c23301e996/raw/asciidoc2rs-passed.json[TCK passed count,format=svg]
+image:https://img.shields.io/endpoint?style=flat-square&url=https://gist.githubusercontent.com/kphrx/e795d8d23466d049a08e03c23301e996/raw/asciidoc2rs-failed.json[TCK failed count,format=svg]
+image:https://img.shields.io/codecov/c/gh/kphrx/asciidoc2rs?style=flat-square[Codecov,format=svg]
