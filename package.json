@@ -4,8 +4,8 @@
   "description": "Documentation of asciidoc2rs",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "honkit build ./docs",
-    "serve": "honkit serve ./docs"
+    "build": "honkit build",
+    "serve": "honkit serve"
   },
   "keywords": [],
   "author": "kPherox <kphrx@kpherox.dev>",
