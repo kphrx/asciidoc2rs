@@ -182,7 +182,10 @@ jobs:
             codeBuffer += `${code}\n`;
           }
 
-          core.summary.addHeading('TCK result');
+          core.summary
+            .addHeading('TCK result')
+            .addImage('https://img.shields.io/badge/TCK%20passed-${{ steps.tck.outputs.pass }}-success', 'TCK passed count')
+            .addImage('https://img.shields.io/badge/TCK%20failed-${{ steps.tck.outputs.fail }}-important', 'TCK failed count');
           for (const [section, bodyList] of sections) {
             core.summary.addHeading(section, 2).addList(bodyList);
           }
