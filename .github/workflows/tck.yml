@@ -182,7 +182,18 @@ jobs:
           }
           await core.summary.write();
 
-    - name: Dynamic Badges
+    - name: Result badge
+      uses: Schneegans/dynamic-badges-action@v1.7.0
+      with:
+        auth: ${{ secrets.GIST_TOKEN }}
+        gistId: ${{ env.BADGE_GIST_ID }}
+        filename: asciidoc2rs-tck-tests.json
+        label: TCK tests
+        valColorRange: ${{ steps.tck.outputs.pass }}
+        maxColorRange: ${{ steps.tck.outputs.tests }}
+        minColorRange: 0
+        message: ${{ steps.tck.outputs.pass }} / ${{ steps.tck.outputs.tests }}
+    - name: Passed badge
       uses: Schneegans/dynamic-badges-action@v1.7.0
       with:
         auth: ${{ secrets.GIST_TOKEN }}
@@ -191,7 +202,7 @@ jobs:
         label: TCK passed
         color: success
         message: ${{ steps.tck.outputs.pass }}
-    - name: Dynamic Badges
+    - name: Failed badge
       uses: Schneegans/dynamic-badges-action@v1.7.0
       with:
         auth: ${{ secrets.GIST_TOKEN }}
