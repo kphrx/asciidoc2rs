@@ -31,7 +31,7 @@ jobs:
         id: filter-mode
         with:
           cond: ${{ github.event_name == 'pull_request' }}
-          if_true: "file"
+          if_true: "diff_context"
           if_false: "nofilter"
 
 
