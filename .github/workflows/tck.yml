@@ -14,9 +14,13 @@ env:
   BADGE_GIST_ID: e795d8d23466d049a08e03c23301e996
 
 jobs:
-  build:
+  tck:
 
     runs-on: ubuntu-latest
+    outputs:
+      tests: ${{ steps.tck.outputs.tests }}
+      passed: ${{ steps.tck.outputs.pass }}
+      failed: ${{ steps.tck.outputs.fail }}
 
     steps:
     - uses: actions/checkout@v4
@@ -182,6 +186,13 @@ jobs:
           }
           await core.summary.write();
 
+
+  dynamic-badges:
+
+    runs-on: ubuntu-latest
+    needs: [tck]
+
+    steps:
     - name: Result badge
       uses: Schneegans/dynamic-badges-action@v1.7.0
       with:
@@ -189,10 +200,11 @@ jobs:
         gistId: ${{ env.BADGE_GIST_ID }}
         filename: asciidoc2rs-tck-tests.json
         label: TCK tests
-        valColorRange: ${{ steps.tck.outputs.pass }}
-        maxColorRange: ${{ steps.tck.outputs.tests }}
+        valColorRange: ${{ needs.tck.outputs.passed }}
+        maxColorRange: ${{ needs.tck.outputs.tests }}
         minColorRange: 0
-        message: ${{ steps.tck.outputs.pass }} / ${{ steps.tck.outputs.tests }}
+        message: ${{ needs.tck.outputs.passed }} / ${{ needs.tck.outputs.tests }}
+
     - name: Passed badge
       uses: Schneegans/dynamic-badges-action@v1.7.0
       with:
@@ -201,7 +213,8 @@ jobs:
         filename: asciidoc2rs-passed.json
         label: TCK passed
         color: success
-        message: ${{ steps.tck.outputs.pass }}
+        message: ${{ needs.tck.outputs.passed }}
+
     - name: Failed badge
       uses: Schneegans/dynamic-badges-action@v1.7.0
       with:
@@ -210,4 +223,4 @@ jobs:
         filename: asciidoc2rs-failed.json
         label: TCK failed
         color: important
-        message: ${{ steps.tck.outputs.fail }}
+        message: ${{ needs.tck.outputs.failed }}
