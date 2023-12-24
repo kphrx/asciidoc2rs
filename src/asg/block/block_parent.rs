@@ -92,23 +92,23 @@ impl BlockParentBody {
 }
 
 impl Block {
-    fn new_admonition(variant: AdmonitionVariant) -> Self {
+    pub fn new_admonition(variant: AdmonitionVariant) -> Self {
         Self::BlockParent(BlockParent::new_admonition(variant))
     }
 
-    fn new_example() -> Self {
+    pub fn new_example() -> Self {
         Self::BlockParent(BlockParent::new_example())
     }
 
-    fn new_sidebar() -> Self {
+    pub fn new_sidebar() -> Self {
         Self::BlockParent(BlockParent::new_sidebar())
     }
 
-    fn new_open() -> Self {
+    pub fn new_open() -> Self {
         Self::BlockParent(BlockParent::new_open())
     }
 
-    fn new_quote() -> Self {
+    pub fn new_quote() -> Self {
         Self::BlockParent(BlockParent::new_quote())
     }
 }
