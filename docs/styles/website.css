@@ -1,0 +1,23 @@
+.book.color-theme-2 {
+  #book-search-input {
+    color: #bdcadb;
+    background: #1c1f2b;
+  }
+
+  .book-body .page-wrapper .page-inner section.normal .highlight {
+    &, > code {
+      background-color: #282a39;
+    }
+  }
+}
+
+.book.color-theme-1 {
+  #book-search-input {
+    color: #704214;
+    background: #f3eacb;
+  }
+
+  .book-body .page-wrapper .page-inner section.normal .highlight {
+    background-color: #fdf6e3;
+  }
+}
