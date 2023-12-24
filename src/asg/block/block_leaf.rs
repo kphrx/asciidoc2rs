@@ -45,7 +45,7 @@ impl BlockLeaf {
     pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
         match self {
             Self::Paragraph(body) => {
-                body.inlines = Inline::append(body.inlines.clone(), line);
+                body.inlines = Inline::append(body.inlines(), line);
 
                 Ok(())
             }
