@@ -1,6 +1,6 @@
 #![doc = include_str!("../README.md")]
 
-mod asg;
+pub mod asg;
 
 use asg::block::Document;
 use asg::Inline;

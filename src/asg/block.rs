@@ -6,13 +6,13 @@ mod document;
 mod list;
 mod section;
 
-pub(crate) use block_break::*;
-pub(crate) use block_leaf::*;
-pub(crate) use block_macro::*;
-pub(crate) use block_parent::*;
-pub(crate) use document::*;
-pub(crate) use list::*;
-pub(crate) use section::*;
+pub use block_break::*;
+pub use block_leaf::*;
+pub use block_macro::*;
+pub use block_parent::*;
+pub use document::*;
+pub use list::*;
+pub use section::*;
 
 use serde::{Deserialize, Serialize};
 

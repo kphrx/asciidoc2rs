@@ -41,11 +41,11 @@ pub enum BlockBreakVariant {
 }
 
 impl Block {
-    fn new_page_break() -> Self {
+    pub fn new_page_break() -> Self {
         Self::BlockBreak(BlockBreak::new_page())
     }
 
-    fn new_thematic_break() -> Self {
+    pub fn new_thematic_break() -> Self {
         Self::BlockBreak(BlockBreak::new_thematic())
     }
 }
