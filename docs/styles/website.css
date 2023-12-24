@@ -1,6 +1,5 @@
 .book.color-theme-2 {
   #book-search-input {
-    color: #bdcadb;
     background: #1c1f2b;
   }
 
@@ -8,6 +7,10 @@
     &, > code {
       background-color: #282a39;
     }
+  }
+
+  #book-search-results .search-results .has-results .search-results-item {
+    color: #bdcadb;
   }
 }
 
@@ -19,5 +22,9 @@
 
   .book-body .page-wrapper .page-inner section.normal .highlight {
     background-color: #fdf6e3;
+  }
+
+  #book-search-results .search-results .has-results .search-results-item {
+    color: #704214;
   }
 }
