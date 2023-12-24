@@ -451,7 +451,6 @@ enum HeaderLineKind {
 
 #[derive(Debug)]
 struct HeaderParser {
-    doctype: Doctype,
     has_title: bool,
     has_attr: bool,
     is_authors_line: bool,
@@ -460,13 +459,12 @@ struct HeaderParser {
 }
 impl Default for HeaderParser {
     fn default() -> Self {
-        Self::new(Doctype::Article)
+        Self::new()
     }
 }
 impl HeaderParser {
-    fn new(doctype: Doctype) -> Self {
+    fn new() -> Self {
         Self {
-            doctype,
             has_title: false,
             has_attr: false,
             is_authors_line: false,
@@ -683,22 +681,6 @@ struct Author {
 impl Author {
     fn new(name: String, email: Option<String>) -> Self {
         Self { name, email }
-    }
-}
-
-#[derive(Debug)]
-struct Revision {
-    number: String,
-    date: Option<String>,
-    remark: Option<String>,
-}
-impl Revision {
-    fn new(number: String, date: Option<String>, remark: Option<String>) -> Self {
-        Self {
-            number,
-            date,
-            remark,
-        }
     }
 }
 
