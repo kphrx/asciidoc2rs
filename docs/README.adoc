@@ -1,4 +1,4 @@
-# asciidoc2rs
+= asciidoc2rs
 kPherox <kphrx@kpherox.dev>
 0.1.0: Initial
 :description: Doumentation for asciidoc2rs

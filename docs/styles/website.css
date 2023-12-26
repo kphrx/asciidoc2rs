@@ -1,0 +1,49 @@
+.book-summary {
+  display: flex;
+  flex-direction: column;
+
+  nav[role=navigation] {
+    flex: 1;
+
+    ul.summary {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+
+      li:nth-child(1 of li.chapter:has(+ li.divider)) {
+        margin-bottom: auto;
+      }
+    }
+  }
+}
+
+.book.color-theme-2 {
+  #book-search-input {
+    background: #1c1f2b;
+  }
+
+  .book-body .page-wrapper .page-inner section.normal .highlight {
+    &, > code {
+      background-color: #282a39;
+    }
+  }
+
+  #book-search-results .search-results .has-results .search-results-item {
+    color: #bdcadb;
+  }
+}
+
+.book.color-theme-1 {
+  #book-search-input {
+    color: #704214;
+    background: #f3eacb;
+  }
+
+  .book-body .page-wrapper .page-inner section.normal .highlight {
+    background-color: #fdf6e3;
+  }
+
+  #book-search-results .search-results .has-results .search-results-item {
+    color: #704214;
+  }
+}
