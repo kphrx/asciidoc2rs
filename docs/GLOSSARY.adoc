@@ -1,0 +1,14 @@
+= Glossary
+
+== AsciiDoc TCK
+
+AsciiDoc TCK is "Technology Compatibility Kit". See link:https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck[AsciiDoc TCK git page,window=_blank].
+
+== Asciidoctor
+
+Asciidoctor is AsciiDoc processor. See link:https://docs.asciidoctor.org/asciidoctor/latest/[Asciidoctor Documentation,window=_blank].
+
+== AsciiDoc
+
+"AsciiDoc is a lightweight and semantic markup language primarily designed for writing technical documentation. The language can be used to produce a variety of presentation-rich output formats, all from content encoded in a concise, human-readable, plain text format."
+-- https://docs.asciidoctor.org/asciidoc/latest/

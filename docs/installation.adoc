@@ -1,0 +1,16 @@
+= Installation
+
+WARNING: *asciidoc2rs* is currently an experimental project. Not published on crates.io.
+
+== Installing from GitHub
+
+.cargo install from git
+[source,shell]
+----
+$ cargo install --git https://github.com/kphrx/asciidoc2rs
+    Updating git repository `https://github.com/kphrx/asciidoc2rs`
+  Installing asciidoc2rs v0.1.0 (https://github.com/kphrx/asciidoc2rs#commithash)
+    Updating crates.io index
+         ...
+   Compiling asciidoc2rs v0.1.0 (/Users/kPherox/.cargo/git/checkouts/asciidoc2rs-*/commithash)
+----
