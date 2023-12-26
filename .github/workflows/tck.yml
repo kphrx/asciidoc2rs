@@ -183,8 +183,8 @@ jobs:
 
             core.summary
               .addHeading('TCK result')
-              .addImage('https://img.shields.io/badge/TCK%20passed-${{ steps.tck.outputs.pass }}-success', 'TCK passed count')
-              .addImage('https://img.shields.io/badge/TCK%20failed-${{ steps.tck.outputs.fail }}-important', 'TCK failed count');
+              .addImage('https://a11y-shields-badge.kphrx.workers.dev/badge/TCK%20passed-${{ steps.tck.outputs.pass }}-success', 'TCK passed count')
+              .addImage('https://a11y-shields-badge.kphrx.workers.dev/badge/TCK%20failed-${{ steps.tck.outputs.fail }}-important', 'TCK failed count');
             for (const [section, bodyList] of sections) {
               core.summary.addHeading(section, 2).addList(bodyList);
             }
