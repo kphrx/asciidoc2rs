@@ -171,8 +171,12 @@ jobs:
               const failedMessagePosition = line.indexOf('AssertionError');
               if (failedMessagePosition !== -1) {
                 const message = line.slice(failedMessagePosition, -3);
-                const [msg, name] = message.split('for');
-                core.summary.addRaw(`${msg.trim()} for <code>${name.trim()}</code>`);
+                let [msg, name] = message.split('for');
+                msg = msg.trim();
+                if (name != null) {
+                  msg += ` for <code>${name.trim()}</code>`;
+                }
+                core.summary.addRaw(msg);
                 codeBuffer += '{\n';
                 continue;
               }
