@@ -70,11 +70,11 @@ jobs:
       - uses: reviewdog/action-setup@v1
         with:
           reviewdog_version: latest
-      - name: reviewdog (cargo-check, clippy)
+      - name: reviewdog (clippy)
         env:
           REVIEWDOG_GITHUB_API_TOKEN: ${{ github.token }}
         run: |
-          reviewdog -runners=cargo-check,clippy \
+          reviewdog -runners=clippy \
             -reporter=${{ needs.opts.outputs.reporter }} \
             -filter-mode=${{ needs.opts.outputs.filter-mode }} \
             -fail-on-error
