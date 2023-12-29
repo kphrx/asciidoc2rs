@@ -1,8 +1,28 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, NonSectionBlockBody};
-use crate::asg::{Inline, Location, NodeType};
+use super::{Body, Metadata, NonSectionBlockBody};
+use crate::asg::{inline::Inline, Location, NodeType};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "variant", rename_all = "camelCase")]
+pub enum ParentWithVariant {
+    Caution(Parent),
+    Important(Parent),
+    Note(Parent),
+    Tip(Parent),
+    Warning(Parent),
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Parent {
+    delimiter: Option<String>,
+    title: Option<Vec<Inline>>,
+    metadata: Option<Metadata>,
+    blocks: Vec<Body>,
+    location: Option<Location>,
+}
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -88,27 +108,5 @@ impl BlockParentBody {
             blocks: Vec::with_capacity(0),
             location: None,
         }
-    }
-}
-
-impl Block {
-    fn new_admonition(variant: AdmonitionVariant) -> Self {
-        Self::BlockParent(BlockParent::new_admonition(variant))
-    }
-
-    fn new_example() -> Self {
-        Self::BlockParent(BlockParent::new_example())
-    }
-
-    fn new_sidebar() -> Self {
-        Self::BlockParent(BlockParent::new_sidebar())
-    }
-
-    fn new_open() -> Self {
-        Self::BlockParent(BlockParent::new_open())
-    }
-
-    fn new_quote() -> Self {
-        Self::BlockParent(BlockParent::new_quote())
     }
 }
