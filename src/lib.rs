@@ -4,6 +4,8 @@ mod asg;
 mod lexer;
 mod token;
 
+pub use asg::schema;
+
 use asg::block::Document;
 use asg::Inline;
 
