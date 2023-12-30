@@ -1,8 +1,8 @@
 #![doc = include_str!("../README.md")]
 
 mod asg;
-mod lexer;
-mod token;
+pub mod lexer;
+pub mod token;
 
 pub use asg::schema;
 
