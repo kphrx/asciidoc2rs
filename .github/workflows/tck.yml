@@ -168,16 +168,16 @@ jobs:
                 continue;
               }
 
-              const failedMessagePosition = line.indexOf('AssertionError');
-              if (failedMessagePosition !== -1) {
-                const message = line.slice(failedMessagePosition, -3);
-                let [msg, name] = message.split('for');
+              if (line.indexOf('AssertionError') !== -1) {
+                const message = line.split(']: ')[1];
+                let [errMsg, code] = message.split('] {');
+                let [msg, name] = errMsg.split('for');
                 msg = msg.trim();
                 if (name != null) {
                   msg += ` for <code>${name.trim()}</code>`;
                 }
                 core.summary.addRaw(msg);
-                codeBuffer += '{\n';
+                codeBuffer += `{${code}\n`;
                 continue;
               }
 
