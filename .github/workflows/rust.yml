@@ -47,6 +47,9 @@ jobs:
           name: coverage
           path: codecov.json
           retention-days: 7
+      - name: Run doc-tests
+        if: matrix.toolchain == 'stable'
+        run: cargo test --doc --verbose
 
 
   upload-coverage:
