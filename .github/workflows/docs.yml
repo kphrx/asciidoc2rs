@@ -9,10 +9,6 @@ on:
       - master
   workflow_dispatch:
 
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
-
 jobs:
   honkit:
 
@@ -90,6 +86,10 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: merge
     runs-on: ubuntu-latest
+
+    concurrency:
+      group: pages
+      cancel-in-progress: true
 
     permissions:
       contents: read

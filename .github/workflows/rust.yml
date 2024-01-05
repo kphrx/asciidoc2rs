@@ -6,14 +6,13 @@ on:
   pull_request:
     branches: [ "master" ]
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   build:
 
     runs-on: ubuntu-latest
     continue-on-error: ${{ matrix.toolchain != 'stable' }}
+    env:
+      CARGO_TERM_COLOR: always
     strategy:
       matrix:
         toolchain:

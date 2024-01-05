@@ -7,13 +7,6 @@ on:
     branches: [ "master" ]
   workflow_dispatch:
 
-concurrency:
-  group: tck
-  cancel-in-progress: true
-
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
   tck:
 
@@ -26,6 +19,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Build
+        env:
+          CARGO_TERM_COLOR: always
         run: cargo build --verbose
 
       - name: Checkout https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck
@@ -200,6 +195,9 @@ jobs:
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     needs: tck
+    concurrency:
+      group: tck
+      cancel-in-progress: true
     env:
       BADGE_GIST_ID: e795d8d23466d049a08e03c23301e996
 
