@@ -1,6 +1,10 @@
 #![doc = include_str!("../README.md")]
 
 mod asg;
+pub mod lexer;
+pub mod token;
+
+pub use asg::schema;
 
 use asg::block::Document;
 use asg::Inline;
