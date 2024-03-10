@@ -29,20 +29,8 @@ impl Inline {
         }
     }
 
-    fn new_span() -> Self {
-        Self::Span(InlineParent::new())
-    }
-
     fn new_text(value: &str) -> Self {
         Self::Text(InlineLiteral::new(value.to_owned()))
-    }
-
-    fn new_charref(value: &str) -> Self {
-        Self::Charref(InlineLiteral::new(value.to_owned()))
-    }
-
-    fn new_raw(value: &str) -> Self {
-        Self::Raw(InlineLiteral::new(value.to_owned()))
     }
 }
 
@@ -53,15 +41,6 @@ pub struct InlineParent {
     node_type: NodeType,
     inlines: Vec<Inline>,
     location: Option<Location>,
-}
-impl InlineParent {
-    fn new() -> Self {
-        Self {
-            node_type: NodeType::Inline,
-            inlines: Vec::with_capacity(0),
-            location: None,
-        }
-    }
 }
 
 #[skip_serializing_none]
