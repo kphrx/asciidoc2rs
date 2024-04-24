@@ -1,0 +1,503 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.asciidoc.org/asg/1-0-0/draft-01",
+  "title": "AsciiDoc Abstract Semantic Graph (ASG)",
+  "description": "A structured representation of the semantics in an AsciiDoc document, primarily used for validating the compliance of an AsciiDoc processor.",
+  "type": "object",
+  "defaults": { "blocks": [] },
+  "additionalProperties": false,
+  "oneOf": [
+    {},
+    {
+      "required": ["name", "type", "header", "attributes"]
+    }
+  ],
+  "required": ["name", "type"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "enum": ["document"]
+    },
+    "type": {
+      "type": "string",
+      "enum": ["block"]
+    },
+    "attributes": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          { "type": "string" },
+          { "type": "null" }
+        ]
+      }
+    },
+    "header": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "title": { "$ref": "#/$defs/inlines" },
+        "authors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/author" },
+          "minItems": 1
+        },
+        "location": { "$ref": "#/$defs/location" }
+      }
+    },
+    "blocks": { "$ref": "#/$defs/sectionBody" },
+    "location": { "$ref": "#/$defs/location" }
+  },
+  "$defs": {
+    "abstractBlock": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["block"]
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": { "$ref": "#/$defs/inlines" },
+        "reftext": { "$ref": "#/$defs/inlines" },
+        "metadata": { "$ref": "#/$defs/blockMetadata" },
+        "location": { "$ref": "#/$defs/location" }
+      }
+    },
+    "abstractHeading": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractBlock" }],
+      "required": ["title", "level"],
+      "properties": {
+        "level": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "abstractListItem": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractBlock" }],
+      "required": ["marker"],
+      "defaults": { "blocks": [] },
+      "properties": {
+        "marker": {
+          "type": "string"
+        },
+        "principal": { "$ref": "#/$defs/inlines" },
+        "blocks": { "$ref": "#/$defs/nonSectionBlockBody" }
+      }
+    },
+    "sectionBody": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "oneOf": [
+          { "$ref": "#/$defs/block" },
+          { "$ref": "#/$defs/section" }
+        ]
+      }
+    },
+    "nonSectionBlockBody": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/block" }
+    },
+    "section": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractHeading" }],
+      "unevaluatedProperties": false,
+      "required": ["name"],
+      "defaults": { "blocks": [] },
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["section"]
+        },
+        "blocks": { "$ref": "#/$defs/sectionBody" }
+      }
+    },
+    "block": {
+      "type": "object",
+      "discriminator": { "propertyName": "name" },
+      "oneOf": [
+        { "$ref": "#/$defs/list" },
+        { "$ref": "#/$defs/dlist" },
+        { "$ref": "#/$defs/discreteHeading" },
+        { "$ref": "#/$defs/break" },
+        { "$ref": "#/$defs/blockMacro" },
+        { "$ref": "#/$defs/leafBlock" },
+        { "$ref": "#/$defs/parentBlock" }
+      ]
+    },
+    "list": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractBlock" }],
+      "unevaluatedProperties": false,
+      "required": ["name", "marker", "variant", "items"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["list"]
+        },
+        "marker": {
+          "type": "string"
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["callout", "ordered", "unordered"]
+        },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/listItem" },
+          "minItems": 1
+        }
+      }
+    },
+    "dlist": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractBlock" }],
+      "unevaluatedProperties": false,
+      "required": ["name", "marker", "items"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["dlist"]
+        },
+        "marker": {
+          "type": "string"
+        },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/dlistItem" },
+          "minItems": 1
+        }
+      }
+    },
+    "listItem": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractListItem" }],
+      "unevaluatedProperties": false,
+      "required": ["name", "principal"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["listItem"]
+        }
+      }
+    },
+    "dlistItem": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractListItem" }],
+      "unevaluatedProperties": false,
+      "required": ["name", "terms"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["dlistItem"]
+        },
+        "terms": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/inlines" },
+          "minItems": 1
+        }
+      }
+    },
+    "discreteHeading": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractHeading" }],
+      "unevaluatedProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["heading"]
+        }
+      }
+    },
+    "break": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractBlock" }],
+      "unevaluatedProperties": false,
+      "required": ["name", "variant"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["break"]
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["page", "thematic"]
+        }
+      }
+    },
+    "blockMacro": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractBlock" }],
+      "unevaluatedProperties": false,
+      "required": ["name", "form"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["audio", "video", "image", "toc"]
+        },
+        "form": {
+          "type": "string",
+          "enum": ["macro"]
+        },
+        "target": {
+          "type": "string"
+        }
+      }
+    },
+    "leafBlock": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/abstractBlock" },
+        {
+          "oneOf": [
+            {
+              "required": ["form", "delimiter"],
+              "properties": {
+                "form": {
+                  "type": "string",
+                  "enum": ["delimited"]
+                },
+                "delimiter": {
+                  "type": "string"
+                }
+              }
+            },
+            {
+              "properties": {
+                "form": {
+                  "type": "string",
+                  "enum": ["indented", "paragraph"]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "unevaluatedProperties": false,
+      "required": ["name"],
+      "defaults": { "inlines": [] },
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["listing", "literal", "paragraph", "pass", "stem", "verse"]
+        },
+        "inlines": { "$ref": "#/$defs/inlines" }
+      }
+    },
+    "parentBlock": {
+      "type": "object",
+      "allOf": [
+        { "$ref": "#/$defs/abstractBlock" },
+        {
+          "oneOf": [
+            {
+              "required": ["name"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": ["example", "sidebar", "open", "quote"]
+                }
+              }
+            },
+            {
+              "required": ["name", "variant"],
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "enum": ["admonition"]
+                },
+                "variant": {
+                  "type": "string",
+                  "enum": ["caution", "important", "note", "tip", "warning"]
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "unevaluatedProperties": false,
+      "required": ["form", "delimiter"],
+      "defaults": { "blocks": [] },
+      "properties": {
+        "form": {
+          "type": "string",
+          "enum": ["delimited"]
+        },
+        "delimiter": {
+          "type": "string"
+        },
+        "blocks": { "$ref": "#/$defs/nonSectionBlockBody" }
+      }
+    },
+    "blockMetadata": {
+      "type": "object",
+      "defaults": { "attributes": {}, "options": [], "roles": [] },
+      "additionalProperties": false,
+      "properties": {
+        "attributes": {
+          "type": "object",
+          "additionalProperties": {
+            "oneOf": [{ "type": "string" }]
+          }
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "roles": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "location": { "$ref": "#/$defs/location" }
+      }
+    },
+    "inlines": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/inline" }
+    },
+    "inline": {
+      "type": "object",
+      "discriminator": { "propertyName": "name" },
+      "oneOf": [
+        { "$ref": "#/$defs/inlineSpan" },
+        { "$ref": "#/$defs/inlineRef" },
+        { "$ref": "#/$defs/inlineLiteral" }
+      ]
+    },
+    "abstractParentInline": {
+      "type": "object",
+      "required": ["type", "inlines"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": ["inline"]
+        },
+        "inlines": { "$ref": "#/$defs/inlines" },
+        "location": { "$ref": "#/$defs/location" }
+      }
+    },
+    "inlineSpan": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractParentInline" }],
+      "unevaluatedProperties": false,
+      "required": ["name", "variant", "form"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["span"]
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["strong", "emphasis", "code", "mark"]
+        },
+        "form": {
+          "type": "string",
+          "enum": ["constrained", "unconstrained"]
+        }
+      }
+    },
+    "inlineRef": {
+      "type": "object",
+      "allOf": [{ "$ref": "#/$defs/abstractParentInline" }],
+      "unevaluatedProperties": false,
+      "required": ["name", "variant", "target"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["ref"]
+        },
+        "variant": {
+          "type": "string",
+          "enum": ["link", "xref"]
+        },
+        "target": {
+          "type": "string"
+        }
+      }
+    },
+    "inlineLiteral": {
+      "type": "object",
+      "required": ["name", "type", "value"],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["text", "charref", "raw"]
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string"]
+        },
+        "value": {
+          "type": "string"
+        },
+        "location": { "$ref": "#/$defs/location" }
+      }
+    },
+    "author": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fullname": {
+          "type": "string"
+        },
+        "initials": {
+          "type": "string"
+        },
+        "firstname": {
+          "type": "string"
+        },
+        "middlename": {
+          "type": "string"
+        },
+        "lastname": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        }
+      }
+    },
+    "location": {
+      "type": "array",
+      "prefixItems": [
+        { "$ref": "#/$defs/locationBoundary" },
+        { "$ref": "#/$defs/locationBoundary" }
+      ],
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "locationBoundary": {
+      "type": "object",
+      "required": ["line", "col"],
+      "additionalProperties": false,
+      "properties": {
+        "line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "col": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "file": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        }
+      }
+    }
+  }
+}
