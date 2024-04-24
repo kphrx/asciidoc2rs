@@ -1,8 +1,21 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::Block;
+use super::Metadata;
 use crate::asg::{Location, NodeType};
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "variant", rename_all = "camelCase")]
+pub enum Break {
+    Page(BreakBody),
+    Thematic(BreakBody),
+}
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct BreakBody {
+    metadata: Option<Metadata>,
+    location: Option<Location>,
+}
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -38,14 +51,4 @@ impl BlockBreak {
 pub enum BlockBreakVariant {
     Page,
     Thematic,
-}
-
-impl Block {
-    fn new_page_break() -> Self {
-        Self::BlockBreak(BlockBreak::new_page())
-    }
-
-    fn new_thematic_break() -> Self {
-        Self::BlockBreak(BlockBreak::new_thematic())
-    }
 }
