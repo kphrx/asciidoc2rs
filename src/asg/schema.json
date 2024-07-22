@@ -4,15 +4,9 @@
   "title": "AsciiDoc Abstract Semantic Graph (ASG)",
   "description": "A structured representation of the semantics in an AsciiDoc document, primarily used for validating the compliance of an AsciiDoc processor.",
   "type": "object",
+  "required": ["name", "type"],
   "defaults": { "blocks": [] },
   "additionalProperties": false,
-  "oneOf": [
-    {},
-    {
-      "required": ["name", "type", "header", "attributes"]
-    }
-  ],
-  "required": ["name", "type"],
   "properties": {
     "name": {
       "type": "string",
@@ -47,6 +41,12 @@
     "blocks": { "$ref": "#/$defs/sectionBody" },
     "location": { "$ref": "#/$defs/location" }
   },
+  "oneOf": [
+    {
+      "required": ["header", "attributes"]
+    },
+    {}
+  ],
   "$defs": {
     "abstractBlock": {
       "type": "object",
@@ -259,23 +259,13 @@
             {
               "required": ["form", "delimiter"],
               "properties": {
-                "form": {
-                  "type": "string",
-                  "enum": ["delimited"]
-                },
+                "form": { "const": "delimited" },
                 "delimiter": {
                   "type": "string"
                 }
               }
             },
-            {
-              "properties": {
-                "form": {
-                  "type": "string",
-                  "enum": ["indented", "paragraph"]
-                }
-              }
-            }
+            {}
           ]
         }
       ],
@@ -287,6 +277,10 @@
           "type": "string",
           "enum": ["listing", "literal", "paragraph", "pass", "stem", "verse"]
         },
+        "form": {
+          "type": "string",
+          "enum": ["delimited", "indented", "paragraph"]
+        },
         "inlines": { "$ref": "#/$defs/inlines" }
       }
     },
@@ -297,34 +291,27 @@
         {
           "oneOf": [
             {
-              "required": ["name"],
-              "properties": {
-                "name": {
-                  "type": "string",
-                  "enum": ["example", "sidebar", "open", "quote"]
-                }
-              }
-            },
-            {
               "required": ["name", "variant"],
               "properties": {
-                "name": {
-                  "type": "string",
-                  "enum": ["admonition"]
-                },
+                "name": { "const": "admonition" },
                 "variant": {
                   "type": "string",
                   "enum": ["caution", "important", "note", "tip", "warning"]
                 }
               }
-            }
+            },
+            {}
           ]
         }
       ],
       "unevaluatedProperties": false,
-      "required": ["form", "delimiter"],
+      "required": ["name", "form", "delimiter"],
       "defaults": { "blocks": [] },
       "properties": {
+        "name": {
+          "type": "string",
+          "enum": ["admonition", "example", "sidebar", "open", "quote"]
+        },
         "form": {
           "type": "string",
           "enum": ["delimited"]

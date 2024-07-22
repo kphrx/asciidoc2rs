@@ -489,15 +489,13 @@ impl std::convert::TryFrom<String> for AbstractParentInlineType {
 #[doc = "  \"description\": \"A structured representation of the semantics in an AsciiDoc document, primarily used for validating the compliance of an AsciiDoc processor.\","]
 #[doc = "  \"type\": \"object\","]
 #[doc = "  \"oneOf\": ["]
-#[doc = "    {},"]
 #[doc = "    {"]
 #[doc = "      \"required\": ["]
 #[doc = "        \"attributes\","]
-#[doc = "        \"header\","]
-#[doc = "        \"name\","]
-#[doc = "        \"type\""]
+#[doc = "        \"header\""]
 #[doc = "      ]"]
-#[doc = "    }"]
+#[doc = "    },"]
+#[doc = "    {}"]
 #[doc = "  ],"]
 #[doc = "  \"required\": ["]
 #[doc = "    \"name\","]
@@ -566,12 +564,10 @@ impl std::convert::TryFrom<String> for AbstractParentInlineType {
 #[serde(untagged, deny_unknown_fields)]
 pub enum AsciiDocAbstractSemanticGraphAsg {
     Variant0 {
-        #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
         attributes: std::collections::HashMap<String, Option<String>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         blocks: Option<SectionBody>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        header: Option<AsciiDocAbstractSemanticGraphAsgVariant0Header>,
+        header: AsciiDocAbstractSemanticGraphAsgVariant0Header,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         location: Option<Location>,
         name: AsciiDocAbstractSemanticGraphAsgVariant0Name,
@@ -579,10 +575,12 @@ pub enum AsciiDocAbstractSemanticGraphAsg {
         type_: AsciiDocAbstractSemanticGraphAsgVariant0Type,
     },
     Variant1 {
+        #[serde(default, skip_serializing_if = "std::collections::HashMap::is_empty")]
         attributes: std::collections::HashMap<String, Option<String>>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         blocks: Option<SectionBody>,
-        header: AsciiDocAbstractSemanticGraphAsgVariant1Header,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        header: Option<AsciiDocAbstractSemanticGraphAsgVariant1Header>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         location: Option<Location>,
         name: AsciiDocAbstractSemanticGraphAsgVariant1Name,
@@ -3000,24 +2998,11 @@ impl From<Vec<Inline>> for Inlines {
 #[doc = "              \"type\": \"string\""]
 #[doc = "            },"]
 #[doc = "            \"form\": {"]
-#[doc = "              \"type\": \"string\","]
-#[doc = "              \"enum\": ["]
-#[doc = "                \"delimited\""]
-#[doc = "              ]"]
+#[doc = "              \"const\": \"delimited\""]
 #[doc = "            }"]
 #[doc = "          }"]
 #[doc = "        },"]
-#[doc = "        {"]
-#[doc = "          \"properties\": {"]
-#[doc = "            \"form\": {"]
-#[doc = "              \"type\": \"string\","]
-#[doc = "              \"enum\": ["]
-#[doc = "                \"indented\","]
-#[doc = "                \"paragraph\""]
-#[doc = "              ]"]
-#[doc = "            }"]
-#[doc = "          }"]
-#[doc = "        }"]
+#[doc = "        {}"]
 #[doc = "      ]"]
 #[doc = "    }"]
 #[doc = "  ],"]
@@ -3025,6 +3010,14 @@ impl From<Vec<Inline>> for Inlines {
 #[doc = "    \"name\""]
 #[doc = "  ],"]
 #[doc = "  \"properties\": {"]
+#[doc = "    \"form\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"delimited\","]
+#[doc = "        \"indented\","]
+#[doc = "        \"paragraph\""]
+#[doc = "      ]"]
+#[doc = "    },"]
 #[doc = "    \"inlines\": {"]
 #[doc = "      \"$ref\": \"#/$defs/inlines\""]
 #[doc = "    },"]
@@ -3070,6 +3063,8 @@ pub enum LeafBlock {
         type_: LeafBlockVariant0Type,
     },
     Variant1 {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        form: Option<LeafBlockVariant1Form>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         id: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -3283,6 +3278,73 @@ impl std::convert::TryFrom<&String> for LeafBlockVariant0Type {
     }
 }
 impl std::convert::TryFrom<String> for LeafBlockVariant0Type {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+#[doc = "LeafBlockVariant1Form"]
+#[doc = r""]
+#[doc = r" <details><summary>JSON schema</summary>"]
+#[doc = r""]
+#[doc = r" ```json"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"delimited\","]
+#[doc = "    \"indented\","]
+#[doc = "    \"paragraph\""]
+#[doc = "  ]"]
+#[doc = "}"]
+#[doc = r" ```"]
+#[doc = r" </details>"]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum LeafBlockVariant1Form {
+    #[serde(rename = "delimited")]
+    Delimited,
+    #[serde(rename = "indented")]
+    Indented,
+    #[serde(rename = "paragraph")]
+    Paragraph,
+}
+impl From<&LeafBlockVariant1Form> for LeafBlockVariant1Form {
+    fn from(value: &LeafBlockVariant1Form) -> Self {
+        value.clone()
+    }
+}
+impl ToString for LeafBlockVariant1Form {
+    fn to_string(&self) -> String {
+        match *self {
+            Self::Delimited => "delimited".to_string(),
+            Self::Indented => "indented".to_string(),
+            Self::Paragraph => "paragraph".to_string(),
+        }
+    }
+}
+impl std::str::FromStr for LeafBlockVariant1Form {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
+        match value {
+            "delimited" => Ok(Self::Delimited),
+            "indented" => Ok(Self::Indented),
+            "paragraph" => Ok(Self::Paragraph),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl std::convert::TryFrom<&str> for LeafBlockVariant1Form {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<&String> for LeafBlockVariant1Form {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<String> for LeafBlockVariant1Form {
     type Error = self::error::ConversionError;
     fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
@@ -4001,31 +4063,12 @@ impl From<Vec<Block>> for NonSectionBlockBody {
 #[doc = "      \"oneOf\": ["]
 #[doc = "        {"]
 #[doc = "          \"required\": ["]
-#[doc = "            \"name\""]
-#[doc = "          ],"]
-#[doc = "          \"properties\": {"]
-#[doc = "            \"name\": {"]
-#[doc = "              \"type\": \"string\","]
-#[doc = "              \"enum\": ["]
-#[doc = "                \"example\","]
-#[doc = "                \"sidebar\","]
-#[doc = "                \"open\","]
-#[doc = "                \"quote\""]
-#[doc = "              ]"]
-#[doc = "            }"]
-#[doc = "          }"]
-#[doc = "        },"]
-#[doc = "        {"]
-#[doc = "          \"required\": ["]
 #[doc = "            \"name\","]
 #[doc = "            \"variant\""]
 #[doc = "          ],"]
 #[doc = "          \"properties\": {"]
 #[doc = "            \"name\": {"]
-#[doc = "              \"type\": \"string\","]
-#[doc = "              \"enum\": ["]
-#[doc = "                \"admonition\""]
-#[doc = "              ]"]
+#[doc = "              \"const\": \"admonition\""]
 #[doc = "            },"]
 #[doc = "            \"variant\": {"]
 #[doc = "              \"type\": \"string\","]
@@ -4038,13 +4081,15 @@ impl From<Vec<Block>> for NonSectionBlockBody {
 #[doc = "              ]"]
 #[doc = "            }"]
 #[doc = "          }"]
-#[doc = "        }"]
+#[doc = "        },"]
+#[doc = "        {}"]
 #[doc = "      ]"]
 #[doc = "    }"]
 #[doc = "  ],"]
 #[doc = "  \"required\": ["]
 #[doc = "    \"delimiter\","]
-#[doc = "    \"form\""]
+#[doc = "    \"form\","]
+#[doc = "    \"name\""]
 #[doc = "  ],"]
 #[doc = "  \"properties\": {"]
 #[doc = "    \"blocks\": {"]
@@ -4058,6 +4103,16 @@ impl From<Vec<Block>> for NonSectionBlockBody {
 #[doc = "      \"enum\": ["]
 #[doc = "        \"delimited\""]
 #[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"admonition\","]
+#[doc = "        \"example\","]
+#[doc = "        \"sidebar\","]
+#[doc = "        \"open\","]
+#[doc = "        \"quote\""]
+#[doc = "      ]"]
 #[doc = "    }"]
 #[doc = "  },"]
 #[doc = "  \"defaults\": {"]
@@ -4070,230 +4125,488 @@ impl From<Vec<Block>> for NonSectionBlockBody {
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum ParentBlock {
-    Variant0(ParentBlockVariant0),
-    Variant1(ParentBlockVariant1),
+    Variant0 {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        blocks: Option<NonSectionBlockBody>,
+        delimiter: String,
+        form: ParentBlockVariant0Form,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        location: Option<Location>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        metadata: Option<BlockMetadata>,
+        name: ParentBlockVariant0Name,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reftext: Option<Inlines>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        title: Option<Inlines>,
+        #[serde(rename = "type")]
+        type_: ParentBlockVariant0Type,
+        variant: ParentBlockVariant0Variant,
+    },
+    Variant1 {
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        blocks: Option<NonSectionBlockBody>,
+        delimiter: String,
+        form: ParentBlockVariant1Form,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        location: Option<Location>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        metadata: Option<BlockMetadata>,
+        name: ParentBlockVariant1Name,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        reftext: Option<Inlines>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        title: Option<Inlines>,
+        #[serde(rename = "type")]
+        type_: ParentBlockVariant1Type,
+    },
 }
 impl From<&ParentBlock> for ParentBlock {
     fn from(value: &ParentBlock) -> Self {
         value.clone()
     }
 }
-impl From<ParentBlockVariant0> for ParentBlock {
-    fn from(value: ParentBlockVariant0) -> Self {
-        Self::Variant0(value)
-    }
-}
-impl From<ParentBlockVariant1> for ParentBlock {
-    fn from(value: ParentBlockVariant1) -> Self {
-        Self::Variant1(value)
-    }
-}
-#[doc = "ParentBlockVariant0"]
+#[doc = "ParentBlockVariant0Form"]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
 #[doc = "{"]
-#[doc = "  \"allOf\": ["]
-#[doc = "    {"]
-#[doc = "      \"type\": \"object\","]
-#[doc = "      \"required\": ["]
-#[doc = "        \"delimiter\","]
-#[doc = "        \"form\","]
-#[doc = "        \"type\""]
-#[doc = "      ],"]
-#[doc = "      \"properties\": {"]
-#[doc = "        \"blocks\": {"]
-#[doc = "          \"$ref\": \"#/$defs/nonSectionBlockBody\""]
-#[doc = "        },"]
-#[doc = "        \"delimiter\": {"]
-#[doc = "          \"type\": \"string\""]
-#[doc = "        },"]
-#[doc = "        \"form\": {"]
-#[doc = "          \"type\": \"string\","]
-#[doc = "          \"enum\": ["]
-#[doc = "            \"delimited\""]
-#[doc = "          ]"]
-#[doc = "        },"]
-#[doc = "        \"id\": {"]
-#[doc = "          \"type\": \"string\""]
-#[doc = "        },"]
-#[doc = "        \"location\": {"]
-#[doc = "          \"$ref\": \"#/$defs/location\""]
-#[doc = "        },"]
-#[doc = "        \"metadata\": {"]
-#[doc = "          \"$ref\": \"#/$defs/blockMetadata\""]
-#[doc = "        },"]
-#[doc = "        \"reftext\": {"]
-#[doc = "          \"$ref\": \"#/$defs/inlines\""]
-#[doc = "        },"]
-#[doc = "        \"title\": {"]
-#[doc = "          \"$ref\": \"#/$defs/inlines\""]
-#[doc = "        },"]
-#[doc = "        \"type\": {"]
-#[doc = "          \"type\": \"string\","]
-#[doc = "          \"enum\": ["]
-#[doc = "            \"block\""]
-#[doc = "          ]"]
-#[doc = "        }"]
-#[doc = "      }"]
-#[doc = "    },"]
-#[doc = "    {"]
-#[doc = "      \"required\": ["]
-#[doc = "        \"name\""]
-#[doc = "      ],"]
-#[doc = "      \"properties\": {"]
-#[doc = "        \"name\": {"]
-#[doc = "          \"type\": \"string\","]
-#[doc = "          \"enum\": ["]
-#[doc = "            \"example\","]
-#[doc = "            \"sidebar\","]
-#[doc = "            \"open\","]
-#[doc = "            \"quote\""]
-#[doc = "          ]"]
-#[doc = "        }"]
-#[doc = "      }"]
-#[doc = "    },"]
-#[doc = "    {"]
-#[doc = "      \"not\": {"]
-#[doc = "        \"required\": ["]
-#[doc = "          \"name\","]
-#[doc = "          \"variant\""]
-#[doc = "        ],"]
-#[doc = "        \"properties\": {"]
-#[doc = "          \"name\": {"]
-#[doc = "            \"type\": \"string\","]
-#[doc = "            \"enum\": ["]
-#[doc = "              \"admonition\""]
-#[doc = "            ]"]
-#[doc = "          },"]
-#[doc = "          \"variant\": {"]
-#[doc = "            \"type\": \"string\","]
-#[doc = "            \"enum\": ["]
-#[doc = "              \"caution\","]
-#[doc = "              \"important\","]
-#[doc = "              \"note\","]
-#[doc = "              \"tip\","]
-#[doc = "              \"warning\""]
-#[doc = "            ]"]
-#[doc = "          }"]
-#[doc = "        }"]
-#[doc = "      }"]
-#[doc = "    }"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"delimited\""]
 #[doc = "  ]"]
 #[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(deny_unknown_fields)]
-pub enum ParentBlockVariant0 {}
-impl From<&ParentBlockVariant0> for ParentBlockVariant0 {
-    fn from(value: &ParentBlockVariant0) -> Self {
+pub enum ParentBlockVariant0Form {
+    #[serde(rename = "delimited")]
+    Delimited,
+}
+impl From<&ParentBlockVariant0Form> for ParentBlockVariant0Form {
+    fn from(value: &ParentBlockVariant0Form) -> Self {
         value.clone()
     }
 }
-#[doc = "ParentBlockVariant1"]
+impl ToString for ParentBlockVariant0Form {
+    fn to_string(&self) -> String {
+        match *self {
+            Self::Delimited => "delimited".to_string(),
+        }
+    }
+}
+impl std::str::FromStr for ParentBlockVariant0Form {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
+        match value {
+            "delimited" => Ok(Self::Delimited),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl std::convert::TryFrom<&str> for ParentBlockVariant0Form {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<&String> for ParentBlockVariant0Form {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<String> for ParentBlockVariant0Form {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+#[doc = "ParentBlockVariant0Name"]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
 #[doc = "{"]
-#[doc = "  \"allOf\": ["]
-#[doc = "    {"]
-#[doc = "      \"type\": \"object\","]
-#[doc = "      \"required\": ["]
-#[doc = "        \"delimiter\","]
-#[doc = "        \"form\","]
-#[doc = "        \"type\""]
-#[doc = "      ],"]
-#[doc = "      \"properties\": {"]
-#[doc = "        \"blocks\": {"]
-#[doc = "          \"$ref\": \"#/$defs/nonSectionBlockBody\""]
-#[doc = "        },"]
-#[doc = "        \"delimiter\": {"]
-#[doc = "          \"type\": \"string\""]
-#[doc = "        },"]
-#[doc = "        \"form\": {"]
-#[doc = "          \"type\": \"string\","]
-#[doc = "          \"enum\": ["]
-#[doc = "            \"delimited\""]
-#[doc = "          ]"]
-#[doc = "        },"]
-#[doc = "        \"id\": {"]
-#[doc = "          \"type\": \"string\""]
-#[doc = "        },"]
-#[doc = "        \"location\": {"]
-#[doc = "          \"$ref\": \"#/$defs/location\""]
-#[doc = "        },"]
-#[doc = "        \"metadata\": {"]
-#[doc = "          \"$ref\": \"#/$defs/blockMetadata\""]
-#[doc = "        },"]
-#[doc = "        \"reftext\": {"]
-#[doc = "          \"$ref\": \"#/$defs/inlines\""]
-#[doc = "        },"]
-#[doc = "        \"title\": {"]
-#[doc = "          \"$ref\": \"#/$defs/inlines\""]
-#[doc = "        },"]
-#[doc = "        \"type\": {"]
-#[doc = "          \"type\": \"string\","]
-#[doc = "          \"enum\": ["]
-#[doc = "            \"block\""]
-#[doc = "          ]"]
-#[doc = "        }"]
-#[doc = "      }"]
-#[doc = "    },"]
-#[doc = "    {"]
-#[doc = "      \"required\": ["]
-#[doc = "        \"name\","]
-#[doc = "        \"variant\""]
-#[doc = "      ],"]
-#[doc = "      \"properties\": {"]
-#[doc = "        \"name\": {"]
-#[doc = "          \"type\": \"string\","]
-#[doc = "          \"enum\": ["]
-#[doc = "            \"admonition\""]
-#[doc = "          ]"]
-#[doc = "        },"]
-#[doc = "        \"variant\": {"]
-#[doc = "          \"type\": \"string\","]
-#[doc = "          \"enum\": ["]
-#[doc = "            \"caution\","]
-#[doc = "            \"important\","]
-#[doc = "            \"note\","]
-#[doc = "            \"tip\","]
-#[doc = "            \"warning\""]
-#[doc = "          ]"]
-#[doc = "        }"]
-#[doc = "      }"]
-#[doc = "    },"]
-#[doc = "    {"]
-#[doc = "      \"not\": {"]
-#[doc = "        \"required\": ["]
-#[doc = "          \"name\""]
-#[doc = "        ],"]
-#[doc = "        \"properties\": {"]
-#[doc = "          \"name\": {"]
-#[doc = "            \"type\": \"string\","]
-#[doc = "            \"enum\": ["]
-#[doc = "              \"example\","]
-#[doc = "              \"sidebar\","]
-#[doc = "              \"open\","]
-#[doc = "              \"quote\""]
-#[doc = "            ]"]
-#[doc = "          }"]
-#[doc = "        }"]
-#[doc = "      }"]
-#[doc = "    }"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"admonition\""]
 #[doc = "  ]"]
 #[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-#[serde(deny_unknown_fields)]
-pub enum ParentBlockVariant1 {}
-impl From<&ParentBlockVariant1> for ParentBlockVariant1 {
-    fn from(value: &ParentBlockVariant1) -> Self {
+pub enum ParentBlockVariant0Name {
+    #[serde(rename = "admonition")]
+    Admonition,
+}
+impl From<&ParentBlockVariant0Name> for ParentBlockVariant0Name {
+    fn from(value: &ParentBlockVariant0Name) -> Self {
         value.clone()
+    }
+}
+impl ToString for ParentBlockVariant0Name {
+    fn to_string(&self) -> String {
+        match *self {
+            Self::Admonition => "admonition".to_string(),
+        }
+    }
+}
+impl std::str::FromStr for ParentBlockVariant0Name {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
+        match value {
+            "admonition" => Ok(Self::Admonition),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl std::convert::TryFrom<&str> for ParentBlockVariant0Name {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<&String> for ParentBlockVariant0Name {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<String> for ParentBlockVariant0Name {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+#[doc = "ParentBlockVariant0Type"]
+#[doc = r""]
+#[doc = r" <details><summary>JSON schema</summary>"]
+#[doc = r""]
+#[doc = r" ```json"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
+#[doc = r" ```"]
+#[doc = r" </details>"]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ParentBlockVariant0Type {
+    #[serde(rename = "block")]
+    Block,
+}
+impl From<&ParentBlockVariant0Type> for ParentBlockVariant0Type {
+    fn from(value: &ParentBlockVariant0Type) -> Self {
+        value.clone()
+    }
+}
+impl ToString for ParentBlockVariant0Type {
+    fn to_string(&self) -> String {
+        match *self {
+            Self::Block => "block".to_string(),
+        }
+    }
+}
+impl std::str::FromStr for ParentBlockVariant0Type {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
+        match value {
+            "block" => Ok(Self::Block),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl std::convert::TryFrom<&str> for ParentBlockVariant0Type {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<&String> for ParentBlockVariant0Type {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<String> for ParentBlockVariant0Type {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+#[doc = "ParentBlockVariant0Variant"]
+#[doc = r""]
+#[doc = r" <details><summary>JSON schema</summary>"]
+#[doc = r""]
+#[doc = r" ```json"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"caution\","]
+#[doc = "    \"important\","]
+#[doc = "    \"note\","]
+#[doc = "    \"tip\","]
+#[doc = "    \"warning\""]
+#[doc = "  ]"]
+#[doc = "}"]
+#[doc = r" ```"]
+#[doc = r" </details>"]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ParentBlockVariant0Variant {
+    #[serde(rename = "caution")]
+    Caution,
+    #[serde(rename = "important")]
+    Important,
+    #[serde(rename = "note")]
+    Note,
+    #[serde(rename = "tip")]
+    Tip,
+    #[serde(rename = "warning")]
+    Warning,
+}
+impl From<&ParentBlockVariant0Variant> for ParentBlockVariant0Variant {
+    fn from(value: &ParentBlockVariant0Variant) -> Self {
+        value.clone()
+    }
+}
+impl ToString for ParentBlockVariant0Variant {
+    fn to_string(&self) -> String {
+        match *self {
+            Self::Caution => "caution".to_string(),
+            Self::Important => "important".to_string(),
+            Self::Note => "note".to_string(),
+            Self::Tip => "tip".to_string(),
+            Self::Warning => "warning".to_string(),
+        }
+    }
+}
+impl std::str::FromStr for ParentBlockVariant0Variant {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
+        match value {
+            "caution" => Ok(Self::Caution),
+            "important" => Ok(Self::Important),
+            "note" => Ok(Self::Note),
+            "tip" => Ok(Self::Tip),
+            "warning" => Ok(Self::Warning),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl std::convert::TryFrom<&str> for ParentBlockVariant0Variant {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<&String> for ParentBlockVariant0Variant {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<String> for ParentBlockVariant0Variant {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+#[doc = "ParentBlockVariant1Form"]
+#[doc = r""]
+#[doc = r" <details><summary>JSON schema</summary>"]
+#[doc = r""]
+#[doc = r" ```json"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"delimited\""]
+#[doc = "  ]"]
+#[doc = "}"]
+#[doc = r" ```"]
+#[doc = r" </details>"]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ParentBlockVariant1Form {
+    #[serde(rename = "delimited")]
+    Delimited,
+}
+impl From<&ParentBlockVariant1Form> for ParentBlockVariant1Form {
+    fn from(value: &ParentBlockVariant1Form) -> Self {
+        value.clone()
+    }
+}
+impl ToString for ParentBlockVariant1Form {
+    fn to_string(&self) -> String {
+        match *self {
+            Self::Delimited => "delimited".to_string(),
+        }
+    }
+}
+impl std::str::FromStr for ParentBlockVariant1Form {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
+        match value {
+            "delimited" => Ok(Self::Delimited),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl std::convert::TryFrom<&str> for ParentBlockVariant1Form {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<&String> for ParentBlockVariant1Form {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<String> for ParentBlockVariant1Form {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+#[doc = "ParentBlockVariant1Name"]
+#[doc = r""]
+#[doc = r" <details><summary>JSON schema</summary>"]
+#[doc = r""]
+#[doc = r" ```json"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"admonition\","]
+#[doc = "    \"example\","]
+#[doc = "    \"sidebar\","]
+#[doc = "    \"open\","]
+#[doc = "    \"quote\""]
+#[doc = "  ]"]
+#[doc = "}"]
+#[doc = r" ```"]
+#[doc = r" </details>"]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ParentBlockVariant1Name {
+    #[serde(rename = "admonition")]
+    Admonition,
+    #[serde(rename = "example")]
+    Example,
+    #[serde(rename = "sidebar")]
+    Sidebar,
+    #[serde(rename = "open")]
+    Open,
+    #[serde(rename = "quote")]
+    Quote,
+}
+impl From<&ParentBlockVariant1Name> for ParentBlockVariant1Name {
+    fn from(value: &ParentBlockVariant1Name) -> Self {
+        value.clone()
+    }
+}
+impl ToString for ParentBlockVariant1Name {
+    fn to_string(&self) -> String {
+        match *self {
+            Self::Admonition => "admonition".to_string(),
+            Self::Example => "example".to_string(),
+            Self::Sidebar => "sidebar".to_string(),
+            Self::Open => "open".to_string(),
+            Self::Quote => "quote".to_string(),
+        }
+    }
+}
+impl std::str::FromStr for ParentBlockVariant1Name {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
+        match value {
+            "admonition" => Ok(Self::Admonition),
+            "example" => Ok(Self::Example),
+            "sidebar" => Ok(Self::Sidebar),
+            "open" => Ok(Self::Open),
+            "quote" => Ok(Self::Quote),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl std::convert::TryFrom<&str> for ParentBlockVariant1Name {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<&String> for ParentBlockVariant1Name {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<String> for ParentBlockVariant1Name {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+#[doc = "ParentBlockVariant1Type"]
+#[doc = r""]
+#[doc = r" <details><summary>JSON schema</summary>"]
+#[doc = r""]
+#[doc = r" ```json"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
+#[doc = r" ```"]
+#[doc = r" </details>"]
+#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
+pub enum ParentBlockVariant1Type {
+    #[serde(rename = "block")]
+    Block,
+}
+impl From<&ParentBlockVariant1Type> for ParentBlockVariant1Type {
+    fn from(value: &ParentBlockVariant1Type) -> Self {
+        value.clone()
+    }
+}
+impl ToString for ParentBlockVariant1Type {
+    fn to_string(&self) -> String {
+        match *self {
+            Self::Block => "block".to_string(),
+        }
+    }
+}
+impl std::str::FromStr for ParentBlockVariant1Type {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
+        match value {
+            "block" => Ok(Self::Block),
+            _ => Err("invalid value".into()),
+        }
+    }
+}
+impl std::convert::TryFrom<&str> for ParentBlockVariant1Type {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<&String> for ParentBlockVariant1Type {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
+    }
+}
+impl std::convert::TryFrom<String> for ParentBlockVariant1Type {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
+        value.parse()
     }
 }
 #[doc = "Section"]
