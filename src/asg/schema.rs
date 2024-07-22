@@ -5,12 +5,66 @@
 
 use serde::{Deserialize, Serialize};
 
+#[doc = r" Error types."]
+pub mod error {
+    #[doc = r" Error from a TryFrom or FromStr implementation."]
+    pub struct ConversionError(std::borrow::Cow<'static, str>);
+    impl std::error::Error for ConversionError {}
+    impl std::fmt::Display for ConversionError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+            std::fmt::Display::fmt(&self.0, f)
+        }
+    }
+    impl std::fmt::Debug for ConversionError {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+            std::fmt::Debug::fmt(&self.0, f)
+        }
+    }
+    impl From<&'static str> for ConversionError {
+        fn from(value: &'static str) -> Self {
+            Self(value.into())
+        }
+    }
+    impl From<String> for ConversionError {
+        fn from(value: String) -> Self {
+            Self(value.into())
+        }
+    }
+}
 #[doc = "AbstractBlock"]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"type\"\n  ],\n  \"properties\": {\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"required\": ["]
+#[doc = "    \"type\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"id\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"location\": {"]
+#[doc = "      \"$ref\": \"#/$defs/location\""]
+#[doc = "    },"]
+#[doc = "    \"metadata\": {"]
+#[doc = "      \"$ref\": \"#/$defs/blockMetadata\""]
+#[doc = "    },"]
+#[doc = "    \"reftext\": {"]
+#[doc = "      \"$ref\": \"#/$defs/inlines\""]
+#[doc = "    },"]
+#[doc = "    \"title\": {"]
+#[doc = "      \"$ref\": \"#/$defs/inlines\""]
+#[doc = "    },"]
+#[doc = "    \"type\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"block\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -43,7 +97,12 @@ impl AbstractBlock {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -64,29 +123,29 @@ impl ToString for AbstractBlockType {
     }
 }
 impl std::str::FromStr for AbstractBlockType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for AbstractBlockType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for AbstractBlockType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for AbstractBlockType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -95,7 +154,24 @@ impl std::convert::TryFrom<String> for AbstractBlockType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"level\",\n    \"title\",\n    \"type\"\n  ],\n  \"properties\": {\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"level\": {\n      \"type\": \"integer\",\n      \"minimum\": 0.0\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractBlock\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"level\","]
+#[doc = "    \"title\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"level\": {"]
+#[doc = "      \"type\": \"integer\","]
+#[doc = "      \"minimum\": 0.0"]
+#[doc = "    }"]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -128,7 +204,12 @@ impl AbstractHeading {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -149,29 +230,29 @@ impl ToString for AbstractHeadingType {
     }
 }
 impl std::str::FromStr for AbstractHeadingType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for AbstractHeadingType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for AbstractHeadingType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for AbstractHeadingType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -180,7 +261,31 @@ impl std::convert::TryFrom<String> for AbstractHeadingType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"marker\",\n    \"type\"\n  ],\n  \"properties\": {\n    \"blocks\": {\n      \"$ref\": \"#/$defs/nonSectionBlockBody\"\n    },\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"marker\": {\n      \"type\": \"string\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"principal\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractBlock\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"marker\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"blocks\": {"]
+#[doc = "      \"$ref\": \"#/$defs/nonSectionBlockBody\""]
+#[doc = "    },"]
+#[doc = "    \"marker\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"principal\": {"]
+#[doc = "      \"$ref\": \"#/$defs/inlines\""]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"defaults\": {"]
+#[doc = "    \"blocks\": []"]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -218,7 +323,12 @@ impl AbstractListItem {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -239,29 +349,29 @@ impl ToString for AbstractListItemType {
     }
 }
 impl std::str::FromStr for AbstractListItemType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for AbstractListItemType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for AbstractListItemType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for AbstractListItemType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -270,7 +380,27 @@ impl std::convert::TryFrom<String> for AbstractListItemType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"inlines\",\n    \"type\"\n  ],\n  \"properties\": {\n    \"inlines\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"inline\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"required\": ["]
+#[doc = "    \"inlines\","]
+#[doc = "    \"type\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"inlines\": {"]
+#[doc = "      \"$ref\": \"#/$defs/inlines\""]
+#[doc = "    },"]
+#[doc = "    \"location\": {"]
+#[doc = "      \"$ref\": \"#/$defs/location\""]
+#[doc = "    },"]
+#[doc = "    \"type\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"inline\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -296,7 +426,12 @@ impl AbstractParentInline {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"inline\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"inline\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -317,29 +452,29 @@ impl ToString for AbstractParentInlineType {
     }
 }
 impl std::str::FromStr for AbstractParentInlineType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "inline" => Ok(Self::Inline),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for AbstractParentInlineType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for AbstractParentInlineType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for AbstractParentInlineType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -348,7 +483,83 @@ impl std::convert::TryFrom<String> for AbstractParentInlineType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"$id\": \"https://schemas.asciidoc.org/asg/1-0-0/draft-01\",\n  \"title\": \"AsciiDoc Abstract Semantic Graph (ASG)\",\n  \"description\": \"A structured representation of the semantics in an AsciiDoc document, primarily used for validating the compliance of an AsciiDoc processor.\",\n  \"oneOf\": [\n    {\n      \"$id\": \"https://schemas.asciidoc.org/asg/1-0-0/draft-01\",\n      \"title\": \"AsciiDoc Abstract Semantic Graph (ASG)\",\n      \"description\": \"A structured representation of the semantics in an AsciiDoc document, primarily used for validating the compliance of an AsciiDoc processor.\",\n      \"type\": \"object\",\n      \"required\": [\n        \"name\",\n        \"type\"\n      ],\n      \"properties\": {\n        \"attributes\": {\n          \"type\": \"object\",\n          \"additionalProperties\": {\n            \"oneOf\": [\n              {\n                \"type\": \"string\"\n              },\n              {\n                \"type\": \"null\"\n              }\n            ]\n          }\n        },\n        \"blocks\": {\n          \"$ref\": \"#/$defs/sectionBody\"\n        },\n        \"header\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"authors\": {\n              \"type\": \"array\",\n              \"items\": {\n                \"$ref\": \"#/$defs/author\"\n              },\n              \"minItems\": 1\n            },\n            \"location\": {\n              \"$ref\": \"#/$defs/location\"\n            },\n            \"title\": {\n              \"$ref\": \"#/$defs/inlines\"\n            }\n          },\n          \"additionalProperties\": false\n        },\n        \"location\": {\n          \"$ref\": \"#/$defs/location\"\n        },\n        \"name\": {\n          \"type\": \"string\",\n          \"enum\": [\n            \"document\"\n          ]\n        },\n        \"type\": {\n          \"type\": \"string\",\n          \"enum\": [\n            \"block\"\n          ]\n        }\n      },\n      \"additionalProperties\": false,\n      \"defaults\": {\n        \"blocks\": []\n      }\n    },\n    {\n      \"allOf\": [\n        {\n          \"$id\": \"https://schemas.asciidoc.org/asg/1-0-0/draft-01\",\n          \"title\": \"AsciiDoc Abstract Semantic Graph (ASG)\",\n          \"description\": \"A structured representation of the semantics in an AsciiDoc document, primarily used for validating the compliance of an AsciiDoc processor.\",\n          \"type\": \"object\",\n          \"required\": [\n            \"name\",\n            \"type\"\n          ],\n          \"properties\": {\n            \"attributes\": {\n              \"type\": \"object\",\n              \"additionalProperties\": {\n                \"oneOf\": [\n                  {\n                    \"type\": \"string\"\n                  },\n                  {\n                    \"type\": \"null\"\n                  }\n                ]\n              }\n            },\n            \"blocks\": {\n              \"$ref\": \"#/$defs/sectionBody\"\n            },\n            \"header\": {\n              \"type\": \"object\",\n              \"properties\": {\n                \"authors\": {\n                  \"type\": \"array\",\n                  \"items\": {\n                    \"$ref\": \"#/$defs/author\"\n                  },\n                  \"minItems\": 1\n                },\n                \"location\": {\n                  \"$ref\": \"#/$defs/location\"\n                },\n                \"title\": {\n                  \"$ref\": \"#/$defs/inlines\"\n                }\n              },\n              \"additionalProperties\": false\n            },\n            \"location\": {\n              \"$ref\": \"#/$defs/location\"\n            },\n            \"name\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"document\"\n              ]\n            },\n            \"type\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"block\"\n              ]\n            }\n          },\n          \"additionalProperties\": false,\n          \"defaults\": {\n            \"blocks\": []\n          }\n        },\n        {\n          \"required\": [\n            \"attributes\",\n            \"header\",\n            \"name\",\n            \"type\"\n          ]\n        }\n      ]\n    }\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"$id\": \"https://schemas.asciidoc.org/asg/1-0-0/draft-01\","]
+#[doc = "  \"title\": \"AsciiDoc Abstract Semantic Graph (ASG)\","]
+#[doc = "  \"description\": \"A structured representation of the semantics in an AsciiDoc document, primarily used for validating the compliance of an AsciiDoc processor.\","]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"oneOf\": ["]
+#[doc = "    {},"]
+#[doc = "    {"]
+#[doc = "      \"required\": ["]
+#[doc = "        \"attributes\","]
+#[doc = "        \"header\","]
+#[doc = "        \"name\","]
+#[doc = "        \"type\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"name\","]
+#[doc = "    \"type\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"attributes\": {"]
+#[doc = "      \"type\": \"object\","]
+#[doc = "      \"additionalProperties\": {"]
+#[doc = "        \"oneOf\": ["]
+#[doc = "          {"]
+#[doc = "            \"type\": \"string\""]
+#[doc = "          },"]
+#[doc = "          {"]
+#[doc = "            \"type\": \"null\""]
+#[doc = "          }"]
+#[doc = "        ]"]
+#[doc = "      }"]
+#[doc = "    },"]
+#[doc = "    \"blocks\": {"]
+#[doc = "      \"$ref\": \"#/$defs/sectionBody\""]
+#[doc = "    },"]
+#[doc = "    \"header\": {"]
+#[doc = "      \"type\": \"object\","]
+#[doc = "      \"properties\": {"]
+#[doc = "        \"authors\": {"]
+#[doc = "          \"type\": \"array\","]
+#[doc = "          \"items\": {"]
+#[doc = "            \"$ref\": \"#/$defs/author\""]
+#[doc = "          },"]
+#[doc = "          \"minItems\": 1"]
+#[doc = "        },"]
+#[doc = "        \"location\": {"]
+#[doc = "          \"$ref\": \"#/$defs/location\""]
+#[doc = "        },"]
+#[doc = "        \"title\": {"]
+#[doc = "          \"$ref\": \"#/$defs/inlines\""]
+#[doc = "        }"]
+#[doc = "      },"]
+#[doc = "      \"additionalProperties\": false"]
+#[doc = "    },"]
+#[doc = "    \"location\": {"]
+#[doc = "      \"$ref\": \"#/$defs/location\""]
+#[doc = "    },"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"document\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"type\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"block\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"additionalProperties\": false,"]
+#[doc = "  \"defaults\": {"]
+#[doc = "    \"blocks\": []"]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -360,12 +571,12 @@ pub enum AsciiDocAbstractSemanticGraphAsg {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         blocks: Option<SectionBody>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
-        header: Option<AsciiDocAbstractSemanticGraphAsgHeader>,
+        header: Option<AsciiDocAbstractSemanticGraphAsgVariant0Header>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         location: Option<Location>,
-        name: AsciiDocAbstractSemanticGraphAsgName,
+        name: AsciiDocAbstractSemanticGraphAsgVariant0Name,
         #[serde(rename = "type")]
-        type_: AsciiDocAbstractSemanticGraphAsgType,
+        type_: AsciiDocAbstractSemanticGraphAsgVariant0Type,
     },
     Variant1 {
         attributes: std::collections::HashMap<String, Option<String>>,
@@ -384,17 +595,35 @@ impl From<&AsciiDocAbstractSemanticGraphAsg> for AsciiDocAbstractSemanticGraphAs
         value.clone()
     }
 }
-#[doc = "AsciiDocAbstractSemanticGraphAsgHeader"]
+#[doc = "AsciiDocAbstractSemanticGraphAsgVariant0Header"]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"authors\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"$ref\": \"#/$defs/author\"\n      },\n      \"minItems\": 1\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    }\n  },\n  \"additionalProperties\": false\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"authors\": {"]
+#[doc = "      \"type\": \"array\","]
+#[doc = "      \"items\": {"]
+#[doc = "        \"$ref\": \"#/$defs/author\""]
+#[doc = "      },"]
+#[doc = "      \"minItems\": 1"]
+#[doc = "    },"]
+#[doc = "    \"location\": {"]
+#[doc = "      \"$ref\": \"#/$defs/location\""]
+#[doc = "    },"]
+#[doc = "    \"title\": {"]
+#[doc = "      \"$ref\": \"#/$defs/inlines\""]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"additionalProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
-pub struct AsciiDocAbstractSemanticGraphAsgHeader {
+pub struct AsciiDocAbstractSemanticGraphAsgVariant0Header {
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub authors: Vec<Author>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -402,117 +631,133 @@ pub struct AsciiDocAbstractSemanticGraphAsgHeader {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<Inlines>,
 }
-impl From<&AsciiDocAbstractSemanticGraphAsgHeader> for AsciiDocAbstractSemanticGraphAsgHeader {
-    fn from(value: &AsciiDocAbstractSemanticGraphAsgHeader) -> Self {
+impl From<&AsciiDocAbstractSemanticGraphAsgVariant0Header>
+    for AsciiDocAbstractSemanticGraphAsgVariant0Header
+{
+    fn from(value: &AsciiDocAbstractSemanticGraphAsgVariant0Header) -> Self {
         value.clone()
     }
 }
-impl AsciiDocAbstractSemanticGraphAsgHeader {
-    pub fn builder() -> builder::AsciiDocAbstractSemanticGraphAsgHeader {
+impl AsciiDocAbstractSemanticGraphAsgVariant0Header {
+    pub fn builder() -> builder::AsciiDocAbstractSemanticGraphAsgVariant0Header {
         Default::default()
     }
 }
-#[doc = "AsciiDocAbstractSemanticGraphAsgName"]
+#[doc = "AsciiDocAbstractSemanticGraphAsgVariant0Name"]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"document\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"document\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum AsciiDocAbstractSemanticGraphAsgName {
+pub enum AsciiDocAbstractSemanticGraphAsgVariant0Name {
     #[serde(rename = "document")]
     Document,
 }
-impl From<&AsciiDocAbstractSemanticGraphAsgName> for AsciiDocAbstractSemanticGraphAsgName {
-    fn from(value: &AsciiDocAbstractSemanticGraphAsgName) -> Self {
+impl From<&AsciiDocAbstractSemanticGraphAsgVariant0Name>
+    for AsciiDocAbstractSemanticGraphAsgVariant0Name
+{
+    fn from(value: &AsciiDocAbstractSemanticGraphAsgVariant0Name) -> Self {
         value.clone()
     }
 }
-impl ToString for AsciiDocAbstractSemanticGraphAsgName {
+impl ToString for AsciiDocAbstractSemanticGraphAsgVariant0Name {
     fn to_string(&self) -> String {
         match *self {
             Self::Document => "document".to_string(),
         }
     }
 }
-impl std::str::FromStr for AsciiDocAbstractSemanticGraphAsgName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+impl std::str::FromStr for AsciiDocAbstractSemanticGraphAsgVariant0Name {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "document" => Ok(Self::Document),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
-impl std::convert::TryFrom<&str> for AsciiDocAbstractSemanticGraphAsgName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+impl std::convert::TryFrom<&str> for AsciiDocAbstractSemanticGraphAsgVariant0Name {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
-impl std::convert::TryFrom<&String> for AsciiDocAbstractSemanticGraphAsgName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+impl std::convert::TryFrom<&String> for AsciiDocAbstractSemanticGraphAsgVariant0Name {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
-impl std::convert::TryFrom<String> for AsciiDocAbstractSemanticGraphAsgName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+impl std::convert::TryFrom<String> for AsciiDocAbstractSemanticGraphAsgVariant0Name {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
-#[doc = "AsciiDocAbstractSemanticGraphAsgType"]
+#[doc = "AsciiDocAbstractSemanticGraphAsgVariant0Type"]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum AsciiDocAbstractSemanticGraphAsgType {
+pub enum AsciiDocAbstractSemanticGraphAsgVariant0Type {
     #[serde(rename = "block")]
     Block,
 }
-impl From<&AsciiDocAbstractSemanticGraphAsgType> for AsciiDocAbstractSemanticGraphAsgType {
-    fn from(value: &AsciiDocAbstractSemanticGraphAsgType) -> Self {
+impl From<&AsciiDocAbstractSemanticGraphAsgVariant0Type>
+    for AsciiDocAbstractSemanticGraphAsgVariant0Type
+{
+    fn from(value: &AsciiDocAbstractSemanticGraphAsgVariant0Type) -> Self {
         value.clone()
     }
 }
-impl ToString for AsciiDocAbstractSemanticGraphAsgType {
+impl ToString for AsciiDocAbstractSemanticGraphAsgVariant0Type {
     fn to_string(&self) -> String {
         match *self {
             Self::Block => "block".to_string(),
         }
     }
 }
-impl std::str::FromStr for AsciiDocAbstractSemanticGraphAsgType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+impl std::str::FromStr for AsciiDocAbstractSemanticGraphAsgVariant0Type {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
-impl std::convert::TryFrom<&str> for AsciiDocAbstractSemanticGraphAsgType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+impl std::convert::TryFrom<&str> for AsciiDocAbstractSemanticGraphAsgVariant0Type {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
-impl std::convert::TryFrom<&String> for AsciiDocAbstractSemanticGraphAsgType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+impl std::convert::TryFrom<&String> for AsciiDocAbstractSemanticGraphAsgVariant0Type {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
-impl std::convert::TryFrom<String> for AsciiDocAbstractSemanticGraphAsgType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+impl std::convert::TryFrom<String> for AsciiDocAbstractSemanticGraphAsgVariant0Type {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -521,7 +766,25 @@ impl std::convert::TryFrom<String> for AsciiDocAbstractSemanticGraphAsgType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"authors\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"$ref\": \"#/$defs/author\"\n      },\n      \"minItems\": 1\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    }\n  },\n  \"additionalProperties\": false\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"authors\": {"]
+#[doc = "      \"type\": \"array\","]
+#[doc = "      \"items\": {"]
+#[doc = "        \"$ref\": \"#/$defs/author\""]
+#[doc = "      },"]
+#[doc = "      \"minItems\": 1"]
+#[doc = "    },"]
+#[doc = "    \"location\": {"]
+#[doc = "      \"$ref\": \"#/$defs/location\""]
+#[doc = "    },"]
+#[doc = "    \"title\": {"]
+#[doc = "      \"$ref\": \"#/$defs/inlines\""]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"additionalProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -551,7 +814,12 @@ impl AsciiDocAbstractSemanticGraphAsgVariant1Header {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"document\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"document\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -574,29 +842,29 @@ impl ToString for AsciiDocAbstractSemanticGraphAsgVariant1Name {
     }
 }
 impl std::str::FromStr for AsciiDocAbstractSemanticGraphAsgVariant1Name {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "document" => Ok(Self::Document),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for AsciiDocAbstractSemanticGraphAsgVariant1Name {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for AsciiDocAbstractSemanticGraphAsgVariant1Name {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for AsciiDocAbstractSemanticGraphAsgVariant1Name {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -605,7 +873,12 @@ impl std::convert::TryFrom<String> for AsciiDocAbstractSemanticGraphAsgVariant1N
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -628,29 +901,29 @@ impl ToString for AsciiDocAbstractSemanticGraphAsgVariant1Type {
     }
 }
 impl std::str::FromStr for AsciiDocAbstractSemanticGraphAsgVariant1Type {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for AsciiDocAbstractSemanticGraphAsgVariant1Type {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for AsciiDocAbstractSemanticGraphAsgVariant1Type {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for AsciiDocAbstractSemanticGraphAsgVariant1Type {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -659,7 +932,30 @@ impl std::convert::TryFrom<String> for AsciiDocAbstractSemanticGraphAsgVariant1T
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"address\": {\n      \"type\": \"string\"\n    },\n    \"firstname\": {\n      \"type\": \"string\"\n    },\n    \"fullname\": {\n      \"type\": \"string\"\n    },\n    \"initials\": {\n      \"type\": \"string\"\n    },\n    \"lastname\": {\n      \"type\": \"string\"\n    },\n    \"middlename\": {\n      \"type\": \"string\"\n    }\n  },\n  \"additionalProperties\": false\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"address\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"firstname\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"fullname\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"initials\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"lastname\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"middlename\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"additionalProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -693,7 +989,35 @@ impl Author {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"oneOf\": [\n    {\n      \"$ref\": \"#/$defs/list\"\n    },\n    {\n      \"$ref\": \"#/$defs/dlist\"\n    },\n    {\n      \"$ref\": \"#/$defs/discreteHeading\"\n    },\n    {\n      \"$ref\": \"#/$defs/break\"\n    },\n    {\n      \"$ref\": \"#/$defs/blockMacro\"\n    },\n    {\n      \"$ref\": \"#/$defs/leafBlock\"\n    },\n    {\n      \"$ref\": \"#/$defs/parentBlock\"\n    }\n  ],\n  \"discriminator\": {\n    \"propertyName\": \"name\"\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"oneOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/list\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/dlist\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/discreteHeading\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/break\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/blockMacro\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/leafBlock\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/parentBlock\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"discriminator\": {"]
+#[doc = "    \"propertyName\": \"name\""]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -752,7 +1076,39 @@ impl From<ParentBlock> for Block {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"form\",\n    \"name\",\n    \"type\"\n  ],\n  \"properties\": {\n    \"form\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"macro\"\n      ]\n    },\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"audio\",\n        \"video\",\n        \"image\",\n        \"toc\"\n      ]\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"target\": {\n      \"type\": \"string\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractBlock\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"form\","]
+#[doc = "    \"name\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"form\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"macro\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"audio\","]
+#[doc = "        \"video\","]
+#[doc = "        \"image\","]
+#[doc = "        \"toc\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"target\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -789,7 +1145,12 @@ impl BlockMacro {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"macro\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"macro\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -810,29 +1171,29 @@ impl ToString for BlockMacroForm {
     }
 }
 impl std::str::FromStr for BlockMacroForm {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "macro" => Ok(Self::Macro),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for BlockMacroForm {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for BlockMacroForm {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for BlockMacroForm {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -841,7 +1202,15 @@ impl std::convert::TryFrom<String> for BlockMacroForm {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"audio\",\n    \"video\",\n    \"image\",\n    \"toc\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"audio\","]
+#[doc = "    \"video\","]
+#[doc = "    \"image\","]
+#[doc = "    \"toc\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -871,32 +1240,32 @@ impl ToString for BlockMacroName {
     }
 }
 impl std::str::FromStr for BlockMacroName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "audio" => Ok(Self::Audio),
             "video" => Ok(Self::Video),
             "image" => Ok(Self::Image),
             "toc" => Ok(Self::Toc),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for BlockMacroName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for BlockMacroName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for BlockMacroName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -905,7 +1274,12 @@ impl std::convert::TryFrom<String> for BlockMacroName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -926,29 +1300,29 @@ impl ToString for BlockMacroType {
     }
 }
 impl std::str::FromStr for BlockMacroType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for BlockMacroType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for BlockMacroType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for BlockMacroType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -957,7 +1331,42 @@ impl std::convert::TryFrom<String> for BlockMacroType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"attributes\": {\n      \"type\": \"object\",\n      \"additionalProperties\": {\n        \"oneOf\": [\n          {\n            \"type\": \"string\"\n          }\n        ]\n      }\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"options\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"roles\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    }\n  },\n  \"additionalProperties\": false,\n  \"defaults\": {\n    \"attributes\": {},\n    \"options\": [],\n    \"roles\": []\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"attributes\": {"]
+#[doc = "      \"type\": \"object\","]
+#[doc = "      \"additionalProperties\": {"]
+#[doc = "        \"oneOf\": ["]
+#[doc = "          {"]
+#[doc = "            \"type\": \"string\""]
+#[doc = "          }"]
+#[doc = "        ]"]
+#[doc = "      }"]
+#[doc = "    },"]
+#[doc = "    \"location\": {"]
+#[doc = "      \"$ref\": \"#/$defs/location\""]
+#[doc = "    },"]
+#[doc = "    \"options\": {"]
+#[doc = "      \"type\": \"array\","]
+#[doc = "      \"items\": {"]
+#[doc = "        \"type\": \"string\""]
+#[doc = "      }"]
+#[doc = "    },"]
+#[doc = "    \"roles\": {"]
+#[doc = "      \"type\": \"array\","]
+#[doc = "      \"items\": {"]
+#[doc = "        \"type\": \"string\""]
+#[doc = "      }"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"additionalProperties\": false,"]
+#[doc = "  \"defaults\": {"]
+#[doc = "    \"attributes\": {},"]
+#[doc = "    \"options\": [],"]
+#[doc = "    \"roles\": []"]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -987,7 +1396,34 @@ impl BlockMetadata {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"name\",\n    \"type\",\n    \"variant\"\n  ],\n  \"properties\": {\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"break\"\n      ]\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    },\n    \"variant\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"page\",\n        \"thematic\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractBlock\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"name\","]
+#[doc = "    \"variant\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"break\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"variant\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"page\","]
+#[doc = "        \"thematic\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1022,7 +1458,12 @@ impl Break {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"break\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"break\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1043,29 +1484,29 @@ impl ToString for BreakName {
     }
 }
 impl std::str::FromStr for BreakName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "break" => Ok(Self::Break),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for BreakName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for BreakName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for BreakName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1074,7 +1515,12 @@ impl std::convert::TryFrom<String> for BreakName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1095,29 +1541,29 @@ impl ToString for BreakType {
     }
 }
 impl std::str::FromStr for BreakType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for BreakType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for BreakType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for BreakType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1126,7 +1572,13 @@ impl std::convert::TryFrom<String> for BreakType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"page\",\n    \"thematic\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"page\","]
+#[doc = "    \"thematic\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1150,30 +1602,30 @@ impl ToString for BreakVariant {
     }
 }
 impl std::str::FromStr for BreakVariant {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "page" => Ok(Self::Page),
             "thematic" => Ok(Self::Thematic),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for BreakVariant {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for BreakVariant {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for BreakVariant {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1182,7 +1634,26 @@ impl std::convert::TryFrom<String> for BreakVariant {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"level\",\n    \"name\",\n    \"title\",\n    \"type\"\n  ],\n  \"properties\": {\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"level\": {\n      \"type\": \"integer\",\n      \"minimum\": 0.0\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"heading\"\n      ]\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractHeading\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"name\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"heading\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1216,7 +1687,12 @@ impl DiscreteHeading {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"heading\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"heading\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1237,29 +1713,29 @@ impl ToString for DiscreteHeadingName {
     }
 }
 impl std::str::FromStr for DiscreteHeadingName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "heading" => Ok(Self::Heading),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for DiscreteHeadingName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for DiscreteHeadingName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for DiscreteHeadingName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1268,7 +1744,12 @@ impl std::convert::TryFrom<String> for DiscreteHeadingName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1289,29 +1770,29 @@ impl ToString for DiscreteHeadingType {
     }
 }
 impl std::str::FromStr for DiscreteHeadingType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for DiscreteHeadingType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for DiscreteHeadingType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for DiscreteHeadingType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1320,7 +1801,38 @@ impl std::convert::TryFrom<String> for DiscreteHeadingType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"items\",\n    \"marker\",\n    \"name\",\n    \"type\"\n  ],\n  \"properties\": {\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"items\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"$ref\": \"#/$defs/dlistItem\"\n      },\n      \"minItems\": 1\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"marker\": {\n      \"type\": \"string\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"dlist\"\n      ]\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractBlock\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"items\","]
+#[doc = "    \"marker\","]
+#[doc = "    \"name\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"items\": {"]
+#[doc = "      \"type\": \"array\","]
+#[doc = "      \"items\": {"]
+#[doc = "        \"$ref\": \"#/$defs/dlistItem\""]
+#[doc = "      },"]
+#[doc = "      \"minItems\": 1"]
+#[doc = "    },"]
+#[doc = "    \"marker\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"dlist\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1356,7 +1868,34 @@ impl Dlist {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"marker\",\n    \"name\",\n    \"terms\",\n    \"type\"\n  ],\n  \"properties\": {\n    \"blocks\": {\n      \"$ref\": \"#/$defs/nonSectionBlockBody\"\n    },\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"marker\": {\n      \"type\": \"string\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"dlistItem\"\n      ]\n    },\n    \"principal\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"terms\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"$ref\": \"#/$defs/inlines\"\n      },\n      \"minItems\": 1\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractListItem\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"name\","]
+#[doc = "    \"terms\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"dlistItem\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"terms\": {"]
+#[doc = "      \"type\": \"array\","]
+#[doc = "      \"items\": {"]
+#[doc = "        \"$ref\": \"#/$defs/inlines\""]
+#[doc = "      },"]
+#[doc = "      \"minItems\": 1"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1396,7 +1935,12 @@ impl DlistItem {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"dlistItem\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"dlistItem\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1417,29 +1961,29 @@ impl ToString for DlistItemName {
     }
 }
 impl std::str::FromStr for DlistItemName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "dlistItem" => Ok(Self::DlistItem),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for DlistItemName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for DlistItemName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for DlistItemName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1448,7 +1992,12 @@ impl std::convert::TryFrom<String> for DlistItemName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1469,29 +2018,29 @@ impl ToString for DlistItemType {
     }
 }
 impl std::str::FromStr for DlistItemType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for DlistItemType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for DlistItemType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for DlistItemType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1500,7 +2049,12 @@ impl std::convert::TryFrom<String> for DlistItemType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"dlist\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"dlist\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1521,29 +2075,29 @@ impl ToString for DlistName {
     }
 }
 impl std::str::FromStr for DlistName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "dlist" => Ok(Self::Dlist),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for DlistName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for DlistName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for DlistName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1552,7 +2106,12 @@ impl std::convert::TryFrom<String> for DlistName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1573,29 +2132,29 @@ impl ToString for DlistType {
     }
 }
 impl std::str::FromStr for DlistType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for DlistType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for DlistType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for DlistType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1604,7 +2163,23 @@ impl std::convert::TryFrom<String> for DlistType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"oneOf\": [\n    {\n      \"$ref\": \"#/$defs/inlineSpan\"\n    },\n    {\n      \"$ref\": \"#/$defs/inlineRef\"\n    },\n    {\n      \"$ref\": \"#/$defs/inlineLiteral\"\n    }\n  ],\n  \"discriminator\": {\n    \"propertyName\": \"name\"\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"oneOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/inlineSpan\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/inlineRef\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/inlineLiteral\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"discriminator\": {"]
+#[doc = "    \"propertyName\": \"name\""]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1639,7 +2214,37 @@ impl From<InlineLiteral> for Inline {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"name\",\n    \"type\",\n    \"value\"\n  ],\n  \"properties\": {\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"text\",\n        \"charref\",\n        \"raw\"\n      ]\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"string\"\n      ]\n    },\n    \"value\": {\n      \"type\": \"string\"\n    }\n  },\n  \"additionalProperties\": false\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"required\": ["]
+#[doc = "    \"name\","]
+#[doc = "    \"type\","]
+#[doc = "    \"value\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"location\": {"]
+#[doc = "      \"$ref\": \"#/$defs/location\""]
+#[doc = "    },"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"text\","]
+#[doc = "        \"charref\","]
+#[doc = "        \"raw\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"type\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"string\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"value\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"additionalProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1667,7 +2272,14 @@ impl InlineLiteral {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"text\",\n    \"charref\",\n    \"raw\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"text\","]
+#[doc = "    \"charref\","]
+#[doc = "    \"raw\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1694,31 +2306,31 @@ impl ToString for InlineLiteralName {
     }
 }
 impl std::str::FromStr for InlineLiteralName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "text" => Ok(Self::Text),
             "charref" => Ok(Self::Charref),
             "raw" => Ok(Self::Raw),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for InlineLiteralName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for InlineLiteralName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for InlineLiteralName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1727,7 +2339,12 @@ impl std::convert::TryFrom<String> for InlineLiteralName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"string\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"string\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1748,29 +2365,29 @@ impl ToString for InlineLiteralType {
     }
 }
 impl std::str::FromStr for InlineLiteralType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "string" => Ok(Self::String),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for InlineLiteralType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for InlineLiteralType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for InlineLiteralType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1779,7 +2396,38 @@ impl std::convert::TryFrom<String> for InlineLiteralType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"inlines\",\n    \"name\",\n    \"target\",\n    \"type\",\n    \"variant\"\n  ],\n  \"properties\": {\n    \"inlines\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"ref\"\n      ]\n    },\n    \"target\": {\n      \"type\": \"string\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"inline\"\n      ]\n    },\n    \"variant\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"link\",\n        \"xref\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractParentInline\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"name\","]
+#[doc = "    \"target\","]
+#[doc = "    \"variant\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"ref\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"target\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"variant\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"link\","]
+#[doc = "        \"xref\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1808,7 +2456,12 @@ impl InlineRef {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"ref\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"ref\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1829,29 +2482,29 @@ impl ToString for InlineRefName {
     }
 }
 impl std::str::FromStr for InlineRefName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "ref" => Ok(Self::Ref),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for InlineRefName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for InlineRefName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for InlineRefName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1860,7 +2513,12 @@ impl std::convert::TryFrom<String> for InlineRefName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"inline\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"inline\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1881,29 +2539,29 @@ impl ToString for InlineRefType {
     }
 }
 impl std::str::FromStr for InlineRefType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "inline" => Ok(Self::Inline),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for InlineRefType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for InlineRefType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for InlineRefType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1912,7 +2570,13 @@ impl std::convert::TryFrom<String> for InlineRefType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"link\",\n    \"xref\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"link\","]
+#[doc = "    \"xref\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -1936,30 +2600,30 @@ impl ToString for InlineRefVariant {
     }
 }
 impl std::str::FromStr for InlineRefVariant {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "link" => Ok(Self::Link),
             "xref" => Ok(Self::Xref),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for InlineRefVariant {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for InlineRefVariant {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for InlineRefVariant {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -1968,7 +2632,44 @@ impl std::convert::TryFrom<String> for InlineRefVariant {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"form\",\n    \"inlines\",\n    \"name\",\n    \"type\",\n    \"variant\"\n  ],\n  \"properties\": {\n    \"form\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"constrained\",\n        \"unconstrained\"\n      ]\n    },\n    \"inlines\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"span\"\n      ]\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"inline\"\n      ]\n    },\n    \"variant\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"strong\",\n        \"emphasis\",\n        \"code\",\n        \"mark\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractParentInline\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"form\","]
+#[doc = "    \"name\","]
+#[doc = "    \"variant\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"form\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"constrained\","]
+#[doc = "        \"unconstrained\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"span\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"variant\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"strong\","]
+#[doc = "        \"emphasis\","]
+#[doc = "        \"code\","]
+#[doc = "        \"mark\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -1997,7 +2698,13 @@ impl InlineSpan {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"constrained\",\n    \"unconstrained\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"constrained\","]
+#[doc = "    \"unconstrained\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2021,30 +2728,30 @@ impl ToString for InlineSpanForm {
     }
 }
 impl std::str::FromStr for InlineSpanForm {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "constrained" => Ok(Self::Constrained),
             "unconstrained" => Ok(Self::Unconstrained),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for InlineSpanForm {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for InlineSpanForm {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for InlineSpanForm {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2053,7 +2760,12 @@ impl std::convert::TryFrom<String> for InlineSpanForm {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"span\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"span\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2074,29 +2786,29 @@ impl ToString for InlineSpanName {
     }
 }
 impl std::str::FromStr for InlineSpanName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "span" => Ok(Self::Span),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for InlineSpanName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for InlineSpanName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for InlineSpanName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2105,7 +2817,12 @@ impl std::convert::TryFrom<String> for InlineSpanName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"inline\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"inline\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2126,29 +2843,29 @@ impl ToString for InlineSpanType {
     }
 }
 impl std::str::FromStr for InlineSpanType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "inline" => Ok(Self::Inline),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for InlineSpanType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for InlineSpanType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for InlineSpanType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2157,7 +2874,15 @@ impl std::convert::TryFrom<String> for InlineSpanType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"strong\",\n    \"emphasis\",\n    \"code\",\n    \"mark\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"strong\","]
+#[doc = "    \"emphasis\","]
+#[doc = "    \"code\","]
+#[doc = "    \"mark\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2187,32 +2912,32 @@ impl ToString for InlineSpanVariant {
     }
 }
 impl std::str::FromStr for InlineSpanVariant {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "strong" => Ok(Self::Strong),
             "emphasis" => Ok(Self::Emphasis),
             "code" => Ok(Self::Code),
             "mark" => Ok(Self::Mark),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for InlineSpanVariant {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for InlineSpanVariant {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for InlineSpanVariant {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2221,7 +2946,12 @@ impl std::convert::TryFrom<String> for InlineSpanVariant {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"array\",\n  \"items\": {\n    \"$ref\": \"#/$defs/inline\"\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"array\","]
+#[doc = "  \"items\": {"]
+#[doc = "    \"$ref\": \"#/$defs/inline\""]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -2252,7 +2982,69 @@ impl From<Vec<Inline>> for Inlines {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"oneOf\": [\n    {\n      \"allOf\": [\n        {\n          \"type\": \"object\",\n          \"required\": [\n            \"name\",\n            \"type\"\n          ],\n          \"properties\": {\n            \"id\": {\n              \"type\": \"string\"\n            },\n            \"inlines\": {\n              \"$ref\": \"#/$defs/inlines\"\n            },\n            \"location\": {\n              \"$ref\": \"#/$defs/location\"\n            },\n            \"metadata\": {\n              \"$ref\": \"#/$defs/blockMetadata\"\n            },\n            \"name\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"listing\",\n                \"literal\",\n                \"paragraph\",\n                \"pass\",\n                \"stem\",\n                \"verse\"\n              ]\n            },\n            \"reftext\": {\n              \"$ref\": \"#/$defs/inlines\"\n            },\n            \"title\": {\n              \"$ref\": \"#/$defs/inlines\"\n            },\n            \"type\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"block\"\n              ]\n            }\n          }\n        },\n        {\n          \"required\": [\n            \"delimiter\",\n            \"form\"\n          ],\n          \"properties\": {\n            \"delimiter\": {\n              \"type\": \"string\"\n            },\n            \"form\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"delimited\"\n              ]\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"allOf\": [\n        {\n          \"type\": \"object\",\n          \"required\": [\n            \"name\",\n            \"type\"\n          ],\n          \"properties\": {\n            \"id\": {\n              \"type\": \"string\"\n            },\n            \"inlines\": {\n              \"$ref\": \"#/$defs/inlines\"\n            },\n            \"location\": {\n              \"$ref\": \"#/$defs/location\"\n            },\n            \"metadata\": {\n              \"$ref\": \"#/$defs/blockMetadata\"\n            },\n            \"name\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"listing\",\n                \"literal\",\n                \"paragraph\",\n                \"pass\",\n                \"stem\",\n                \"verse\"\n              ]\n            },\n            \"reftext\": {\n              \"$ref\": \"#/$defs/inlines\"\n            },\n            \"title\": {\n              \"$ref\": \"#/$defs/inlines\"\n            },\n            \"type\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"block\"\n              ]\n            }\n          }\n        },\n        {\n          \"properties\": {\n            \"form\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"indented\",\n                \"paragraph\"\n              ]\n            }\n          }\n        }\n      ]\n    }\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractBlock\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"oneOf\": ["]
+#[doc = "        {"]
+#[doc = "          \"required\": ["]
+#[doc = "            \"delimiter\","]
+#[doc = "            \"form\""]
+#[doc = "          ],"]
+#[doc = "          \"properties\": {"]
+#[doc = "            \"delimiter\": {"]
+#[doc = "              \"type\": \"string\""]
+#[doc = "            },"]
+#[doc = "            \"form\": {"]
+#[doc = "              \"type\": \"string\","]
+#[doc = "              \"enum\": ["]
+#[doc = "                \"delimited\""]
+#[doc = "              ]"]
+#[doc = "            }"]
+#[doc = "          }"]
+#[doc = "        },"]
+#[doc = "        {"]
+#[doc = "          \"properties\": {"]
+#[doc = "            \"form\": {"]
+#[doc = "              \"type\": \"string\","]
+#[doc = "              \"enum\": ["]
+#[doc = "                \"indented\","]
+#[doc = "                \"paragraph\""]
+#[doc = "              ]"]
+#[doc = "            }"]
+#[doc = "          }"]
+#[doc = "        }"]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"name\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"inlines\": {"]
+#[doc = "      \"$ref\": \"#/$defs/inlines\""]
+#[doc = "    },"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"listing\","]
+#[doc = "        \"literal\","]
+#[doc = "        \"paragraph\","]
+#[doc = "        \"pass\","]
+#[doc = "        \"stem\","]
+#[doc = "        \"verse\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"defaults\": {"]
+#[doc = "    \"inlines\": []"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -2278,8 +3070,6 @@ pub enum LeafBlock {
         type_: LeafBlockVariant0Type,
     },
     Variant1 {
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        form: Option<LeafBlockVariant1Form>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         id: Option<String>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -2307,7 +3097,12 @@ impl From<&LeafBlock> for LeafBlock {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"delimited\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"delimited\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2328,29 +3123,29 @@ impl ToString for LeafBlockVariant0Form {
     }
 }
 impl std::str::FromStr for LeafBlockVariant0Form {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "delimited" => Ok(Self::Delimited),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for LeafBlockVariant0Form {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for LeafBlockVariant0Form {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for LeafBlockVariant0Form {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2359,7 +3154,17 @@ impl std::convert::TryFrom<String> for LeafBlockVariant0Form {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"listing\",\n    \"literal\",\n    \"paragraph\",\n    \"pass\",\n    \"stem\",\n    \"verse\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"listing\","]
+#[doc = "    \"literal\","]
+#[doc = "    \"paragraph\","]
+#[doc = "    \"pass\","]
+#[doc = "    \"stem\","]
+#[doc = "    \"verse\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2395,8 +3200,8 @@ impl ToString for LeafBlockVariant0Name {
     }
 }
 impl std::str::FromStr for LeafBlockVariant0Name {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "listing" => Ok(Self::Listing),
             "literal" => Ok(Self::Literal),
@@ -2404,25 +3209,25 @@ impl std::str::FromStr for LeafBlockVariant0Name {
             "pass" => Ok(Self::Pass),
             "stem" => Ok(Self::Stem),
             "verse" => Ok(Self::Verse),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for LeafBlockVariant0Name {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for LeafBlockVariant0Name {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for LeafBlockVariant0Name {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2431,7 +3236,12 @@ impl std::convert::TryFrom<String> for LeafBlockVariant0Name {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2452,85 +3262,29 @@ impl ToString for LeafBlockVariant0Type {
     }
 }
 impl std::str::FromStr for LeafBlockVariant0Type {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for LeafBlockVariant0Type {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for LeafBlockVariant0Type {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for LeafBlockVariant0Type {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-#[doc = "LeafBlockVariant1Form"]
-#[doc = r""]
-#[doc = r" <details><summary>JSON schema</summary>"]
-#[doc = r""]
-#[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"indented\",\n    \"paragraph\"\n  ]\n}"]
-#[doc = r" ```"]
-#[doc = r" </details>"]
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum LeafBlockVariant1Form {
-    #[serde(rename = "indented")]
-    Indented,
-    #[serde(rename = "paragraph")]
-    Paragraph,
-}
-impl From<&LeafBlockVariant1Form> for LeafBlockVariant1Form {
-    fn from(value: &LeafBlockVariant1Form) -> Self {
-        value.clone()
-    }
-}
-impl ToString for LeafBlockVariant1Form {
-    fn to_string(&self) -> String {
-        match *self {
-            Self::Indented => "indented".to_string(),
-            Self::Paragraph => "paragraph".to_string(),
-        }
-    }
-}
-impl std::str::FromStr for LeafBlockVariant1Form {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
-        match value {
-            "indented" => Ok(Self::Indented),
-            "paragraph" => Ok(Self::Paragraph),
-            _ => Err("invalid value"),
-        }
-    }
-}
-impl std::convert::TryFrom<&str> for LeafBlockVariant1Form {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<&String> for LeafBlockVariant1Form {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<String> for LeafBlockVariant1Form {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2539,7 +3293,17 @@ impl std::convert::TryFrom<String> for LeafBlockVariant1Form {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"listing\",\n    \"literal\",\n    \"paragraph\",\n    \"pass\",\n    \"stem\",\n    \"verse\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"listing\","]
+#[doc = "    \"literal\","]
+#[doc = "    \"paragraph\","]
+#[doc = "    \"pass\","]
+#[doc = "    \"stem\","]
+#[doc = "    \"verse\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2575,8 +3339,8 @@ impl ToString for LeafBlockVariant1Name {
     }
 }
 impl std::str::FromStr for LeafBlockVariant1Name {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "listing" => Ok(Self::Listing),
             "literal" => Ok(Self::Literal),
@@ -2584,25 +3348,25 @@ impl std::str::FromStr for LeafBlockVariant1Name {
             "pass" => Ok(Self::Pass),
             "stem" => Ok(Self::Stem),
             "verse" => Ok(Self::Verse),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for LeafBlockVariant1Name {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for LeafBlockVariant1Name {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for LeafBlockVariant1Name {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2611,7 +3375,12 @@ impl std::convert::TryFrom<String> for LeafBlockVariant1Name {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2632,29 +3401,29 @@ impl ToString for LeafBlockVariant1Type {
     }
 }
 impl std::str::FromStr for LeafBlockVariant1Type {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for LeafBlockVariant1Type {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for LeafBlockVariant1Type {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for LeafBlockVariant1Type {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2663,7 +3432,47 @@ impl std::convert::TryFrom<String> for LeafBlockVariant1Type {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"items\",\n    \"marker\",\n    \"name\",\n    \"type\",\n    \"variant\"\n  ],\n  \"properties\": {\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"items\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"$ref\": \"#/$defs/listItem\"\n      },\n      \"minItems\": 1\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"marker\": {\n      \"type\": \"string\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"list\"\n      ]\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    },\n    \"variant\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"callout\",\n        \"ordered\",\n        \"unordered\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractBlock\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"items\","]
+#[doc = "    \"marker\","]
+#[doc = "    \"name\","]
+#[doc = "    \"variant\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"items\": {"]
+#[doc = "      \"type\": \"array\","]
+#[doc = "      \"items\": {"]
+#[doc = "        \"$ref\": \"#/$defs/listItem\""]
+#[doc = "      },"]
+#[doc = "      \"minItems\": 1"]
+#[doc = "    },"]
+#[doc = "    \"marker\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"list\""]
+#[doc = "      ]"]
+#[doc = "    },"]
+#[doc = "    \"variant\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"callout\","]
+#[doc = "        \"ordered\","]
+#[doc = "        \"unordered\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -2700,7 +3509,27 @@ impl List {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"marker\",\n    \"name\",\n    \"principal\",\n    \"type\"\n  ],\n  \"properties\": {\n    \"blocks\": {\n      \"$ref\": \"#/$defs/nonSectionBlockBody\"\n    },\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"marker\": {\n      \"type\": \"string\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"listItem\"\n      ]\n    },\n    \"principal\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractListItem\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"name\","]
+#[doc = "    \"principal\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"listItem\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -2738,7 +3567,12 @@ impl ListItem {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"listItem\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"listItem\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2759,29 +3593,29 @@ impl ToString for ListItemName {
     }
 }
 impl std::str::FromStr for ListItemName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "listItem" => Ok(Self::ListItem),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for ListItemName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for ListItemName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for ListItemName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2790,7 +3624,12 @@ impl std::convert::TryFrom<String> for ListItemName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2811,29 +3650,29 @@ impl ToString for ListItemType {
     }
 }
 impl std::str::FromStr for ListItemType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for ListItemType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for ListItemType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for ListItemType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2842,7 +3681,12 @@ impl std::convert::TryFrom<String> for ListItemType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"list\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"list\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2863,29 +3707,29 @@ impl ToString for ListName {
     }
 }
 impl std::str::FromStr for ListName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "list" => Ok(Self::List),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for ListName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for ListName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for ListName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2894,7 +3738,12 @@ impl std::convert::TryFrom<String> for ListName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2915,29 +3764,29 @@ impl ToString for ListType {
     }
 }
 impl std::str::FromStr for ListType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for ListType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for ListType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for ListType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -2946,7 +3795,14 @@ impl std::convert::TryFrom<String> for ListType {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"callout\",\n    \"ordered\",\n    \"unordered\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"callout\","]
+#[doc = "    \"ordered\","]
+#[doc = "    \"unordered\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -2973,31 +3829,31 @@ impl ToString for ListVariant {
     }
 }
 impl std::str::FromStr for ListVariant {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "callout" => Ok(Self::Callout),
             "ordered" => Ok(Self::Ordered),
             "unordered" => Ok(Self::Unordered),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for ListVariant {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for ListVariant {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for ListVariant {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -3006,7 +3862,19 @@ impl std::convert::TryFrom<String> for ListVariant {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"array\",\n  \"maxItems\": 2,\n  \"minItems\": 2,\n  \"prefixItems\": [\n    {\n      \"$ref\": \"#/$defs/locationBoundary\"\n    },\n    {\n      \"$ref\": \"#/$defs/locationBoundary\"\n    }\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"array\","]
+#[doc = "  \"maxItems\": 2,"]
+#[doc = "  \"minItems\": 2,"]
+#[doc = "  \"prefixItems\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/locationBoundary\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/locationBoundary\""]
+#[doc = "    }"]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -3037,7 +3905,31 @@ impl From<[serde_json::Value; 2usize]> for Location {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"col\",\n    \"line\"\n  ],\n  \"properties\": {\n    \"col\": {\n      \"type\": \"integer\",\n      \"minimum\": 0.0\n    },\n    \"file\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      },\n      \"minItems\": 1\n    },\n    \"line\": {\n      \"type\": \"integer\",\n      \"minimum\": 1.0\n    }\n  },\n  \"additionalProperties\": false\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"required\": ["]
+#[doc = "    \"col\","]
+#[doc = "    \"line\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"col\": {"]
+#[doc = "      \"type\": \"integer\","]
+#[doc = "      \"minimum\": 0.0"]
+#[doc = "    },"]
+#[doc = "    \"file\": {"]
+#[doc = "      \"type\": \"array\","]
+#[doc = "      \"items\": {"]
+#[doc = "        \"type\": \"string\""]
+#[doc = "      },"]
+#[doc = "      \"minItems\": 1"]
+#[doc = "    },"]
+#[doc = "    \"line\": {"]
+#[doc = "      \"type\": \"integer\","]
+#[doc = "      \"minimum\": 1.0"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"additionalProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -3063,7 +3955,12 @@ impl LocationBoundary {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"array\",\n  \"items\": {\n    \"$ref\": \"#/$defs/block\"\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"array\","]
+#[doc = "  \"items\": {"]
+#[doc = "    \"$ref\": \"#/$defs/block\""]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -3094,447 +3991,309 @@ impl From<Vec<Block>> for NonSectionBlockBody {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"oneOf\": [\n    {\n      \"allOf\": [\n        {\n          \"type\": \"object\",\n          \"required\": [\n            \"delimiter\",\n            \"form\",\n            \"type\"\n          ],\n          \"properties\": {\n            \"blocks\": {\n              \"$ref\": \"#/$defs/nonSectionBlockBody\"\n            },\n            \"delimiter\": {\n              \"type\": \"string\"\n            },\n            \"form\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"delimited\"\n              ]\n            },\n            \"id\": {\n              \"type\": \"string\"\n            },\n            \"location\": {\n              \"$ref\": \"#/$defs/location\"\n            },\n            \"metadata\": {\n              \"$ref\": \"#/$defs/blockMetadata\"\n            },\n            \"reftext\": {\n              \"$ref\": \"#/$defs/inlines\"\n            },\n            \"title\": {\n              \"$ref\": \"#/$defs/inlines\"\n            },\n            \"type\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"block\"\n              ]\n            }\n          }\n        },\n        {\n          \"required\": [\n            \"name\"\n          ],\n          \"properties\": {\n            \"name\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"example\",\n                \"sidebar\",\n                \"open\",\n                \"quote\"\n              ]\n            }\n          }\n        }\n      ]\n    },\n    {\n      \"allOf\": [\n        {\n          \"type\": \"object\",\n          \"required\": [\n            \"delimiter\",\n            \"form\",\n            \"type\"\n          ],\n          \"properties\": {\n            \"blocks\": {\n              \"$ref\": \"#/$defs/nonSectionBlockBody\"\n            },\n            \"delimiter\": {\n              \"type\": \"string\"\n            },\n            \"form\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"delimited\"\n              ]\n            },\n            \"id\": {\n              \"type\": \"string\"\n            },\n            \"location\": {\n              \"$ref\": \"#/$defs/location\"\n            },\n            \"metadata\": {\n              \"$ref\": \"#/$defs/blockMetadata\"\n            },\n            \"reftext\": {\n              \"$ref\": \"#/$defs/inlines\"\n            },\n            \"title\": {\n              \"$ref\": \"#/$defs/inlines\"\n            },\n            \"type\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"block\"\n              ]\n            }\n          }\n        },\n        {\n          \"required\": [\n            \"name\",\n            \"variant\"\n          ],\n          \"properties\": {\n            \"name\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"admonition\"\n              ]\n            },\n            \"variant\": {\n              \"type\": \"string\",\n              \"enum\": [\n                \"caution\",\n                \"important\",\n                \"note\",\n                \"tip\",\n                \"warning\"\n              ]\n            }\n          }\n        }\n      ]\n    }\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractBlock\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"oneOf\": ["]
+#[doc = "        {"]
+#[doc = "          \"required\": ["]
+#[doc = "            \"name\""]
+#[doc = "          ],"]
+#[doc = "          \"properties\": {"]
+#[doc = "            \"name\": {"]
+#[doc = "              \"type\": \"string\","]
+#[doc = "              \"enum\": ["]
+#[doc = "                \"example\","]
+#[doc = "                \"sidebar\","]
+#[doc = "                \"open\","]
+#[doc = "                \"quote\""]
+#[doc = "              ]"]
+#[doc = "            }"]
+#[doc = "          }"]
+#[doc = "        },"]
+#[doc = "        {"]
+#[doc = "          \"required\": ["]
+#[doc = "            \"name\","]
+#[doc = "            \"variant\""]
+#[doc = "          ],"]
+#[doc = "          \"properties\": {"]
+#[doc = "            \"name\": {"]
+#[doc = "              \"type\": \"string\","]
+#[doc = "              \"enum\": ["]
+#[doc = "                \"admonition\""]
+#[doc = "              ]"]
+#[doc = "            },"]
+#[doc = "            \"variant\": {"]
+#[doc = "              \"type\": \"string\","]
+#[doc = "              \"enum\": ["]
+#[doc = "                \"caution\","]
+#[doc = "                \"important\","]
+#[doc = "                \"note\","]
+#[doc = "                \"tip\","]
+#[doc = "                \"warning\""]
+#[doc = "              ]"]
+#[doc = "            }"]
+#[doc = "          }"]
+#[doc = "        }"]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"delimiter\","]
+#[doc = "    \"form\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"blocks\": {"]
+#[doc = "      \"$ref\": \"#/$defs/nonSectionBlockBody\""]
+#[doc = "    },"]
+#[doc = "    \"delimiter\": {"]
+#[doc = "      \"type\": \"string\""]
+#[doc = "    },"]
+#[doc = "    \"form\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"delimited\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"defaults\": {"]
+#[doc = "    \"blocks\": []"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(untagged)]
 pub enum ParentBlock {
-    Variant0 {
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        blocks: Option<NonSectionBlockBody>,
-        delimiter: String,
-        form: ParentBlockVariant0Form,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        id: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        location: Option<Location>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        metadata: Option<BlockMetadata>,
-        name: ParentBlockVariant0Name,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        reftext: Option<Inlines>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        title: Option<Inlines>,
-        #[serde(rename = "type")]
-        type_: ParentBlockVariant0Type,
-    },
-    Variant1 {
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        blocks: Option<NonSectionBlockBody>,
-        delimiter: String,
-        form: ParentBlockVariant1Form,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        id: Option<String>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        location: Option<Location>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        metadata: Option<BlockMetadata>,
-        name: ParentBlockVariant1Name,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        reftext: Option<Inlines>,
-        #[serde(default, skip_serializing_if = "Option::is_none")]
-        title: Option<Inlines>,
-        #[serde(rename = "type")]
-        type_: ParentBlockVariant1Type,
-        variant: ParentBlockVariant1Variant,
-    },
+    Variant0(ParentBlockVariant0),
+    Variant1(ParentBlockVariant1),
 }
 impl From<&ParentBlock> for ParentBlock {
     fn from(value: &ParentBlock) -> Self {
         value.clone()
     }
 }
-#[doc = "ParentBlockVariant0Form"]
+impl From<ParentBlockVariant0> for ParentBlock {
+    fn from(value: ParentBlockVariant0) -> Self {
+        Self::Variant0(value)
+    }
+}
+impl From<ParentBlockVariant1> for ParentBlock {
+    fn from(value: ParentBlockVariant1) -> Self {
+        Self::Variant1(value)
+    }
+}
+#[doc = "ParentBlockVariant0"]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"delimited\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"type\": \"object\","]
+#[doc = "      \"required\": ["]
+#[doc = "        \"delimiter\","]
+#[doc = "        \"form\","]
+#[doc = "        \"type\""]
+#[doc = "      ],"]
+#[doc = "      \"properties\": {"]
+#[doc = "        \"blocks\": {"]
+#[doc = "          \"$ref\": \"#/$defs/nonSectionBlockBody\""]
+#[doc = "        },"]
+#[doc = "        \"delimiter\": {"]
+#[doc = "          \"type\": \"string\""]
+#[doc = "        },"]
+#[doc = "        \"form\": {"]
+#[doc = "          \"type\": \"string\","]
+#[doc = "          \"enum\": ["]
+#[doc = "            \"delimited\""]
+#[doc = "          ]"]
+#[doc = "        },"]
+#[doc = "        \"id\": {"]
+#[doc = "          \"type\": \"string\""]
+#[doc = "        },"]
+#[doc = "        \"location\": {"]
+#[doc = "          \"$ref\": \"#/$defs/location\""]
+#[doc = "        },"]
+#[doc = "        \"metadata\": {"]
+#[doc = "          \"$ref\": \"#/$defs/blockMetadata\""]
+#[doc = "        },"]
+#[doc = "        \"reftext\": {"]
+#[doc = "          \"$ref\": \"#/$defs/inlines\""]
+#[doc = "        },"]
+#[doc = "        \"title\": {"]
+#[doc = "          \"$ref\": \"#/$defs/inlines\""]
+#[doc = "        },"]
+#[doc = "        \"type\": {"]
+#[doc = "          \"type\": \"string\","]
+#[doc = "          \"enum\": ["]
+#[doc = "            \"block\""]
+#[doc = "          ]"]
+#[doc = "        }"]
+#[doc = "      }"]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"required\": ["]
+#[doc = "        \"name\""]
+#[doc = "      ],"]
+#[doc = "      \"properties\": {"]
+#[doc = "        \"name\": {"]
+#[doc = "          \"type\": \"string\","]
+#[doc = "          \"enum\": ["]
+#[doc = "            \"example\","]
+#[doc = "            \"sidebar\","]
+#[doc = "            \"open\","]
+#[doc = "            \"quote\""]
+#[doc = "          ]"]
+#[doc = "        }"]
+#[doc = "      }"]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"not\": {"]
+#[doc = "        \"required\": ["]
+#[doc = "          \"name\","]
+#[doc = "          \"variant\""]
+#[doc = "        ],"]
+#[doc = "        \"properties\": {"]
+#[doc = "          \"name\": {"]
+#[doc = "            \"type\": \"string\","]
+#[doc = "            \"enum\": ["]
+#[doc = "              \"admonition\""]
+#[doc = "            ]"]
+#[doc = "          },"]
+#[doc = "          \"variant\": {"]
+#[doc = "            \"type\": \"string\","]
+#[doc = "            \"enum\": ["]
+#[doc = "              \"caution\","]
+#[doc = "              \"important\","]
+#[doc = "              \"note\","]
+#[doc = "              \"tip\","]
+#[doc = "              \"warning\""]
+#[doc = "            ]"]
+#[doc = "          }"]
+#[doc = "        }"]
+#[doc = "      }"]
+#[doc = "    }"]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum ParentBlockVariant0Form {
-    #[serde(rename = "delimited")]
-    Delimited,
-}
-impl From<&ParentBlockVariant0Form> for ParentBlockVariant0Form {
-    fn from(value: &ParentBlockVariant0Form) -> Self {
+#[serde(deny_unknown_fields)]
+pub enum ParentBlockVariant0 {}
+impl From<&ParentBlockVariant0> for ParentBlockVariant0 {
+    fn from(value: &ParentBlockVariant0) -> Self {
         value.clone()
     }
 }
-impl ToString for ParentBlockVariant0Form {
-    fn to_string(&self) -> String {
-        match *self {
-            Self::Delimited => "delimited".to_string(),
-        }
-    }
-}
-impl std::str::FromStr for ParentBlockVariant0Form {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
-        match value {
-            "delimited" => Ok(Self::Delimited),
-            _ => Err("invalid value"),
-        }
-    }
-}
-impl std::convert::TryFrom<&str> for ParentBlockVariant0Form {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<&String> for ParentBlockVariant0Form {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<String> for ParentBlockVariant0Form {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-#[doc = "ParentBlockVariant0Name"]
+#[doc = "ParentBlockVariant1"]
 #[doc = r""]
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"example\",\n    \"sidebar\",\n    \"open\",\n    \"quote\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"type\": \"object\","]
+#[doc = "      \"required\": ["]
+#[doc = "        \"delimiter\","]
+#[doc = "        \"form\","]
+#[doc = "        \"type\""]
+#[doc = "      ],"]
+#[doc = "      \"properties\": {"]
+#[doc = "        \"blocks\": {"]
+#[doc = "          \"$ref\": \"#/$defs/nonSectionBlockBody\""]
+#[doc = "        },"]
+#[doc = "        \"delimiter\": {"]
+#[doc = "          \"type\": \"string\""]
+#[doc = "        },"]
+#[doc = "        \"form\": {"]
+#[doc = "          \"type\": \"string\","]
+#[doc = "          \"enum\": ["]
+#[doc = "            \"delimited\""]
+#[doc = "          ]"]
+#[doc = "        },"]
+#[doc = "        \"id\": {"]
+#[doc = "          \"type\": \"string\""]
+#[doc = "        },"]
+#[doc = "        \"location\": {"]
+#[doc = "          \"$ref\": \"#/$defs/location\""]
+#[doc = "        },"]
+#[doc = "        \"metadata\": {"]
+#[doc = "          \"$ref\": \"#/$defs/blockMetadata\""]
+#[doc = "        },"]
+#[doc = "        \"reftext\": {"]
+#[doc = "          \"$ref\": \"#/$defs/inlines\""]
+#[doc = "        },"]
+#[doc = "        \"title\": {"]
+#[doc = "          \"$ref\": \"#/$defs/inlines\""]
+#[doc = "        },"]
+#[doc = "        \"type\": {"]
+#[doc = "          \"type\": \"string\","]
+#[doc = "          \"enum\": ["]
+#[doc = "            \"block\""]
+#[doc = "          ]"]
+#[doc = "        }"]
+#[doc = "      }"]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"required\": ["]
+#[doc = "        \"name\","]
+#[doc = "        \"variant\""]
+#[doc = "      ],"]
+#[doc = "      \"properties\": {"]
+#[doc = "        \"name\": {"]
+#[doc = "          \"type\": \"string\","]
+#[doc = "          \"enum\": ["]
+#[doc = "            \"admonition\""]
+#[doc = "          ]"]
+#[doc = "        },"]
+#[doc = "        \"variant\": {"]
+#[doc = "          \"type\": \"string\","]
+#[doc = "          \"enum\": ["]
+#[doc = "            \"caution\","]
+#[doc = "            \"important\","]
+#[doc = "            \"note\","]
+#[doc = "            \"tip\","]
+#[doc = "            \"warning\""]
+#[doc = "          ]"]
+#[doc = "        }"]
+#[doc = "      }"]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"not\": {"]
+#[doc = "        \"required\": ["]
+#[doc = "          \"name\""]
+#[doc = "        ],"]
+#[doc = "        \"properties\": {"]
+#[doc = "          \"name\": {"]
+#[doc = "            \"type\": \"string\","]
+#[doc = "            \"enum\": ["]
+#[doc = "              \"example\","]
+#[doc = "              \"sidebar\","]
+#[doc = "              \"open\","]
+#[doc = "              \"quote\""]
+#[doc = "            ]"]
+#[doc = "          }"]
+#[doc = "        }"]
+#[doc = "      }"]
+#[doc = "    }"]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum ParentBlockVariant0Name {
-    #[serde(rename = "example")]
-    Example,
-    #[serde(rename = "sidebar")]
-    Sidebar,
-    #[serde(rename = "open")]
-    Open,
-    #[serde(rename = "quote")]
-    Quote,
-}
-impl From<&ParentBlockVariant0Name> for ParentBlockVariant0Name {
-    fn from(value: &ParentBlockVariant0Name) -> Self {
+#[serde(deny_unknown_fields)]
+pub enum ParentBlockVariant1 {}
+impl From<&ParentBlockVariant1> for ParentBlockVariant1 {
+    fn from(value: &ParentBlockVariant1) -> Self {
         value.clone()
-    }
-}
-impl ToString for ParentBlockVariant0Name {
-    fn to_string(&self) -> String {
-        match *self {
-            Self::Example => "example".to_string(),
-            Self::Sidebar => "sidebar".to_string(),
-            Self::Open => "open".to_string(),
-            Self::Quote => "quote".to_string(),
-        }
-    }
-}
-impl std::str::FromStr for ParentBlockVariant0Name {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
-        match value {
-            "example" => Ok(Self::Example),
-            "sidebar" => Ok(Self::Sidebar),
-            "open" => Ok(Self::Open),
-            "quote" => Ok(Self::Quote),
-            _ => Err("invalid value"),
-        }
-    }
-}
-impl std::convert::TryFrom<&str> for ParentBlockVariant0Name {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<&String> for ParentBlockVariant0Name {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<String> for ParentBlockVariant0Name {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-#[doc = "ParentBlockVariant0Type"]
-#[doc = r""]
-#[doc = r" <details><summary>JSON schema</summary>"]
-#[doc = r""]
-#[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
-#[doc = r" ```"]
-#[doc = r" </details>"]
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum ParentBlockVariant0Type {
-    #[serde(rename = "block")]
-    Block,
-}
-impl From<&ParentBlockVariant0Type> for ParentBlockVariant0Type {
-    fn from(value: &ParentBlockVariant0Type) -> Self {
-        value.clone()
-    }
-}
-impl ToString for ParentBlockVariant0Type {
-    fn to_string(&self) -> String {
-        match *self {
-            Self::Block => "block".to_string(),
-        }
-    }
-}
-impl std::str::FromStr for ParentBlockVariant0Type {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
-        match value {
-            "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
-        }
-    }
-}
-impl std::convert::TryFrom<&str> for ParentBlockVariant0Type {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<&String> for ParentBlockVariant0Type {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<String> for ParentBlockVariant0Type {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-#[doc = "ParentBlockVariant1Form"]
-#[doc = r""]
-#[doc = r" <details><summary>JSON schema</summary>"]
-#[doc = r""]
-#[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"delimited\"\n  ]\n}"]
-#[doc = r" ```"]
-#[doc = r" </details>"]
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum ParentBlockVariant1Form {
-    #[serde(rename = "delimited")]
-    Delimited,
-}
-impl From<&ParentBlockVariant1Form> for ParentBlockVariant1Form {
-    fn from(value: &ParentBlockVariant1Form) -> Self {
-        value.clone()
-    }
-}
-impl ToString for ParentBlockVariant1Form {
-    fn to_string(&self) -> String {
-        match *self {
-            Self::Delimited => "delimited".to_string(),
-        }
-    }
-}
-impl std::str::FromStr for ParentBlockVariant1Form {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
-        match value {
-            "delimited" => Ok(Self::Delimited),
-            _ => Err("invalid value"),
-        }
-    }
-}
-impl std::convert::TryFrom<&str> for ParentBlockVariant1Form {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<&String> for ParentBlockVariant1Form {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<String> for ParentBlockVariant1Form {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-#[doc = "ParentBlockVariant1Name"]
-#[doc = r""]
-#[doc = r" <details><summary>JSON schema</summary>"]
-#[doc = r""]
-#[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"admonition\"\n  ]\n}"]
-#[doc = r" ```"]
-#[doc = r" </details>"]
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum ParentBlockVariant1Name {
-    #[serde(rename = "admonition")]
-    Admonition,
-}
-impl From<&ParentBlockVariant1Name> for ParentBlockVariant1Name {
-    fn from(value: &ParentBlockVariant1Name) -> Self {
-        value.clone()
-    }
-}
-impl ToString for ParentBlockVariant1Name {
-    fn to_string(&self) -> String {
-        match *self {
-            Self::Admonition => "admonition".to_string(),
-        }
-    }
-}
-impl std::str::FromStr for ParentBlockVariant1Name {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
-        match value {
-            "admonition" => Ok(Self::Admonition),
-            _ => Err("invalid value"),
-        }
-    }
-}
-impl std::convert::TryFrom<&str> for ParentBlockVariant1Name {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<&String> for ParentBlockVariant1Name {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<String> for ParentBlockVariant1Name {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-#[doc = "ParentBlockVariant1Type"]
-#[doc = r""]
-#[doc = r" <details><summary>JSON schema</summary>"]
-#[doc = r""]
-#[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
-#[doc = r" ```"]
-#[doc = r" </details>"]
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum ParentBlockVariant1Type {
-    #[serde(rename = "block")]
-    Block,
-}
-impl From<&ParentBlockVariant1Type> for ParentBlockVariant1Type {
-    fn from(value: &ParentBlockVariant1Type) -> Self {
-        value.clone()
-    }
-}
-impl ToString for ParentBlockVariant1Type {
-    fn to_string(&self) -> String {
-        match *self {
-            Self::Block => "block".to_string(),
-        }
-    }
-}
-impl std::str::FromStr for ParentBlockVariant1Type {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
-        match value {
-            "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
-        }
-    }
-}
-impl std::convert::TryFrom<&str> for ParentBlockVariant1Type {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<&String> for ParentBlockVariant1Type {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<String> for ParentBlockVariant1Type {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-#[doc = "ParentBlockVariant1Variant"]
-#[doc = r""]
-#[doc = r" <details><summary>JSON schema</summary>"]
-#[doc = r""]
-#[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"caution\",\n    \"important\",\n    \"note\",\n    \"tip\",\n    \"warning\"\n  ]\n}"]
-#[doc = r" ```"]
-#[doc = r" </details>"]
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
-pub enum ParentBlockVariant1Variant {
-    #[serde(rename = "caution")]
-    Caution,
-    #[serde(rename = "important")]
-    Important,
-    #[serde(rename = "note")]
-    Note,
-    #[serde(rename = "tip")]
-    Tip,
-    #[serde(rename = "warning")]
-    Warning,
-}
-impl From<&ParentBlockVariant1Variant> for ParentBlockVariant1Variant {
-    fn from(value: &ParentBlockVariant1Variant) -> Self {
-        value.clone()
-    }
-}
-impl ToString for ParentBlockVariant1Variant {
-    fn to_string(&self) -> String {
-        match *self {
-            Self::Caution => "caution".to_string(),
-            Self::Important => "important".to_string(),
-            Self::Note => "note".to_string(),
-            Self::Tip => "tip".to_string(),
-            Self::Warning => "warning".to_string(),
-        }
-    }
-}
-impl std::str::FromStr for ParentBlockVariant1Variant {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
-        match value {
-            "caution" => Ok(Self::Caution),
-            "important" => Ok(Self::Important),
-            "note" => Ok(Self::Note),
-            "tip" => Ok(Self::Tip),
-            "warning" => Ok(Self::Warning),
-            _ => Err("invalid value"),
-        }
-    }
-}
-impl std::convert::TryFrom<&str> for ParentBlockVariant1Variant {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<&String> for ParentBlockVariant1Variant {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
-        value.parse()
-    }
-}
-impl std::convert::TryFrom<String> for ParentBlockVariant1Variant {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
-        value.parse()
     }
 }
 #[doc = "Section"]
@@ -3542,7 +4301,32 @@ impl std::convert::TryFrom<String> for ParentBlockVariant1Variant {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"required\": [\n    \"level\",\n    \"name\",\n    \"title\",\n    \"type\"\n  ],\n  \"properties\": {\n    \"blocks\": {\n      \"$ref\": \"#/$defs/sectionBody\"\n    },\n    \"id\": {\n      \"type\": \"string\"\n    },\n    \"level\": {\n      \"type\": \"integer\",\n      \"minimum\": 0.0\n    },\n    \"location\": {\n      \"$ref\": \"#/$defs/location\"\n    },\n    \"metadata\": {\n      \"$ref\": \"#/$defs/blockMetadata\"\n    },\n    \"name\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"section\"\n      ]\n    },\n    \"reftext\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"title\": {\n      \"$ref\": \"#/$defs/inlines\"\n    },\n    \"type\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"block\"\n      ]\n    }\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"allOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/abstractHeading\""]
+#[doc = "    }"]
+#[doc = "  ],"]
+#[doc = "  \"required\": ["]
+#[doc = "    \"name\""]
+#[doc = "  ],"]
+#[doc = "  \"properties\": {"]
+#[doc = "    \"blocks\": {"]
+#[doc = "      \"$ref\": \"#/$defs/sectionBody\""]
+#[doc = "    },"]
+#[doc = "    \"name\": {"]
+#[doc = "      \"type\": \"string\","]
+#[doc = "      \"enum\": ["]
+#[doc = "        \"section\""]
+#[doc = "      ]"]
+#[doc = "    }"]
+#[doc = "  },"]
+#[doc = "  \"defaults\": {"]
+#[doc = "    \"blocks\": []"]
+#[doc = "  },"]
+#[doc = "  \"unevaluatedProperties\": false"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -3578,7 +4362,20 @@ impl Section {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"array\",\n  \"items\": {\n    \"type\": \"object\",\n    \"oneOf\": [\n      {\n        \"$ref\": \"#/$defs/block\"\n      },\n      {\n        \"$ref\": \"#/$defs/section\"\n      }\n    ]\n  }\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"array\","]
+#[doc = "  \"items\": {"]
+#[doc = "    \"type\": \"object\","]
+#[doc = "    \"oneOf\": ["]
+#[doc = "      {"]
+#[doc = "        \"$ref\": \"#/$defs/block\""]
+#[doc = "      },"]
+#[doc = "      {"]
+#[doc = "        \"$ref\": \"#/$defs/section\""]
+#[doc = "      }"]
+#[doc = "    ]"]
+#[doc = "  }"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -3609,7 +4406,17 @@ impl From<Vec<SectionBodyItem>> for SectionBody {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"object\",\n  \"oneOf\": [\n    {\n      \"$ref\": \"#/$defs/block\"\n    },\n    {\n      \"$ref\": \"#/$defs/section\"\n    }\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"object\","]
+#[doc = "  \"oneOf\": ["]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/block\""]
+#[doc = "    },"]
+#[doc = "    {"]
+#[doc = "      \"$ref\": \"#/$defs/section\""]
+#[doc = "    }"]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -3638,7 +4445,12 @@ impl From<Section> for SectionBodyItem {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"section\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"section\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -3659,29 +4471,29 @@ impl ToString for SectionName {
     }
 }
 impl std::str::FromStr for SectionName {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "section" => Ok(Self::Section),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for SectionName {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for SectionName {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for SectionName {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
@@ -3690,7 +4502,12 @@ impl std::convert::TryFrom<String> for SectionName {
 #[doc = r" <details><summary>JSON schema</summary>"]
 #[doc = r""]
 #[doc = r" ```json"]
-#[doc = "{\n  \"type\": \"string\",\n  \"enum\": [\n    \"block\"\n  ]\n}"]
+#[doc = "{"]
+#[doc = "  \"type\": \"string\","]
+#[doc = "  \"enum\": ["]
+#[doc = "    \"block\""]
+#[doc = "  ]"]
+#[doc = "}"]
 #[doc = r" ```"]
 #[doc = r" </details>"]
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
@@ -3711,32 +4528,33 @@ impl ToString for SectionType {
     }
 }
 impl std::str::FromStr for SectionType {
-    type Err = &'static str;
-    fn from_str(value: &str) -> Result<Self, &'static str> {
+    type Err = self::error::ConversionError;
+    fn from_str(value: &str) -> Result<Self, self::error::ConversionError> {
         match value {
             "block" => Ok(Self::Block),
-            _ => Err("invalid value"),
+            _ => Err("invalid value".into()),
         }
     }
 }
 impl std::convert::TryFrom<&str> for SectionType {
-    type Error = &'static str;
-    fn try_from(value: &str) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &str) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<&String> for SectionType {
-    type Error = &'static str;
-    fn try_from(value: &String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: &String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
 impl std::convert::TryFrom<String> for SectionType {
-    type Error = &'static str;
-    fn try_from(value: String) -> Result<Self, &'static str> {
+    type Error = self::error::ConversionError;
+    fn try_from(value: String) -> Result<Self, self::error::ConversionError> {
         value.parse()
     }
 }
+#[doc = r" Types for composing complex structures."]
 pub mod builder {
     #[derive(Clone, Debug)]
     pub struct AbstractBlock {
@@ -3822,8 +4640,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<AbstractBlock> for super::AbstractBlock {
-        type Error = String;
-        fn try_from(value: AbstractBlock) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: AbstractBlock) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 id: value.id?,
                 location: value.location?,
@@ -3942,8 +4760,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<AbstractHeading> for super::AbstractHeading {
-        type Error = String;
-        fn try_from(value: AbstractHeading) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: AbstractHeading) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 id: value.id?,
                 level: value.level?,
@@ -4088,8 +4906,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<AbstractListItem> for super::AbstractListItem {
-        type Error = String;
-        fn try_from(value: AbstractListItem) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: AbstractListItem) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 blocks: value.blocks?,
                 id: value.id?,
@@ -4166,8 +4984,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<AbstractParentInline> for super::AbstractParentInline {
-        type Error = String;
-        fn try_from(value: AbstractParentInline) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: AbstractParentInline) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 inlines: value.inlines?,
                 location: value.location?,
@@ -4185,12 +5003,12 @@ pub mod builder {
         }
     }
     #[derive(Clone, Debug)]
-    pub struct AsciiDocAbstractSemanticGraphAsgHeader {
+    pub struct AsciiDocAbstractSemanticGraphAsgVariant0Header {
         authors: Result<Vec<super::Author>, String>,
         location: Result<Option<super::Location>, String>,
         title: Result<Option<super::Inlines>, String>,
     }
-    impl Default for AsciiDocAbstractSemanticGraphAsgHeader {
+    impl Default for AsciiDocAbstractSemanticGraphAsgVariant0Header {
         fn default() -> Self {
             Self {
                 authors: Ok(Default::default()),
@@ -4199,7 +5017,7 @@ pub mod builder {
             }
         }
     }
-    impl AsciiDocAbstractSemanticGraphAsgHeader {
+    impl AsciiDocAbstractSemanticGraphAsgVariant0Header {
         pub fn authors<T>(mut self, value: T) -> Self
         where
             T: std::convert::TryInto<Vec<super::Author>>,
@@ -4231,11 +5049,13 @@ pub mod builder {
             self
         }
     }
-    impl std::convert::TryFrom<AsciiDocAbstractSemanticGraphAsgHeader>
-        for super::AsciiDocAbstractSemanticGraphAsgHeader
+    impl std::convert::TryFrom<AsciiDocAbstractSemanticGraphAsgVariant0Header>
+        for super::AsciiDocAbstractSemanticGraphAsgVariant0Header
     {
-        type Error = String;
-        fn try_from(value: AsciiDocAbstractSemanticGraphAsgHeader) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(
+            value: AsciiDocAbstractSemanticGraphAsgVariant0Header,
+        ) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 authors: value.authors?,
                 location: value.location?,
@@ -4243,10 +5063,10 @@ pub mod builder {
             })
         }
     }
-    impl From<super::AsciiDocAbstractSemanticGraphAsgHeader>
-        for AsciiDocAbstractSemanticGraphAsgHeader
+    impl From<super::AsciiDocAbstractSemanticGraphAsgVariant0Header>
+        for AsciiDocAbstractSemanticGraphAsgVariant0Header
     {
-        fn from(value: super::AsciiDocAbstractSemanticGraphAsgHeader) -> Self {
+        fn from(value: super::AsciiDocAbstractSemanticGraphAsgVariant0Header) -> Self {
             Self {
                 authors: Ok(value.authors),
                 location: Ok(value.location),
@@ -4304,8 +5124,10 @@ pub mod builder {
     impl std::convert::TryFrom<AsciiDocAbstractSemanticGraphAsgVariant1Header>
         for super::AsciiDocAbstractSemanticGraphAsgVariant1Header
     {
-        type Error = String;
-        fn try_from(value: AsciiDocAbstractSemanticGraphAsgVariant1Header) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(
+            value: AsciiDocAbstractSemanticGraphAsgVariant1Header,
+        ) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 authors: value.authors?,
                 location: value.location?,
@@ -4408,8 +5230,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<Author> for super::Author {
-        type Error = String;
-        fn try_from(value: Author) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: Author) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 address: value.address?,
                 firstname: value.firstname?,
@@ -4552,8 +5374,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<BlockMacro> for super::BlockMacro {
-        type Error = String;
-        fn try_from(value: BlockMacro) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: BlockMacro) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 form: value.form?,
                 id: value.id?,
@@ -4642,8 +5464,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<BlockMetadata> for super::BlockMetadata {
-        type Error = String;
-        fn try_from(value: BlockMetadata) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: BlockMetadata) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 attributes: value.attributes?,
                 location: value.location?,
@@ -4770,8 +5592,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<Break> for super::Break {
-        type Error = String;
-        fn try_from(value: Break) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: Break) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 id: value.id?,
                 location: value.location?,
@@ -4906,8 +5728,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<DiscreteHeading> for super::DiscreteHeading {
-        type Error = String;
-        fn try_from(value: DiscreteHeading) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: DiscreteHeading) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 id: value.id?,
                 level: value.level?,
@@ -5054,8 +5876,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<Dlist> for super::Dlist {
-        type Error = String;
-        fn try_from(value: Dlist) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: Dlist) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 id: value.id?,
                 items: value.items?,
@@ -5228,8 +6050,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<DlistItem> for super::DlistItem {
-        type Error = String;
-        fn try_from(value: DlistItem) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: DlistItem) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 blocks: value.blocks?,
                 id: value.id?,
@@ -5322,8 +6144,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<InlineLiteral> for super::InlineLiteral {
-        type Error = String;
-        fn try_from(value: InlineLiteral) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: InlineLiteral) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 location: value.location?,
                 name: value.name?,
@@ -5426,8 +6248,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<InlineRef> for super::InlineRef {
-        type Error = String;
-        fn try_from(value: InlineRef) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: InlineRef) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 inlines: value.inlines?,
                 location: value.location?,
@@ -5534,8 +6356,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<InlineSpan> for super::InlineSpan {
-        type Error = String;
-        fn try_from(value: InlineSpan) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: InlineSpan) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 form: value.form?,
                 inlines: value.inlines?,
@@ -5690,8 +6512,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<List> for super::List {
-        type Error = String;
-        fn try_from(value: List) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: List) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 id: value.id?,
                 items: value.items?,
@@ -5854,8 +6676,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<ListItem> for super::ListItem {
-        type Error = String;
-        fn try_from(value: ListItem) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: ListItem) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 blocks: value.blocks?,
                 id: value.id?,
@@ -5934,8 +6756,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<LocationBoundary> for super::LocationBoundary {
-        type Error = String;
-        fn try_from(value: LocationBoundary) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: LocationBoundary) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 col: value.col?,
                 file: value.file?,
@@ -6072,8 +6894,8 @@ pub mod builder {
         }
     }
     impl std::convert::TryFrom<Section> for super::Section {
-        type Error = String;
-        fn try_from(value: Section) -> Result<Self, String> {
+        type Error = super::error::ConversionError;
+        fn try_from(value: Section) -> Result<Self, super::error::ConversionError> {
             Ok(Self {
                 blocks: value.blocks?,
                 id: value.id?,
