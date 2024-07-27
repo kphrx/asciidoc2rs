@@ -2,7 +2,7 @@
 pub enum Token {
     NewLine,
     Comment,
-    CommentDelimiter,        // `////`
+    CommentDelimiter(usize), // `////`
     ExampleDelimiter(usize), // `====`
     SidebarDelimiter(usize), // `****`
     QuoteDelimiter(usize),   // `____`

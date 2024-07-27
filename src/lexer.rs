@@ -34,7 +34,7 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
                 }
 
                 if chars.peek().is_none() && col >= 4 {
-                    tokens.push(Token::CommentDelimiter);
+                    tokens.push(Token::CommentDelimiter(col));
                     *comment_delimiter = col;
 
                     break;
@@ -51,7 +51,7 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
                 }
 
                 if chars.peek().is_none() && col == cd {
-                    tokens.push(Token::CommentDelimiter);
+                    tokens.push(Token::CommentDelimiter(col));
                     *comment_delimiter = 0;
                 }
             }
@@ -548,11 +548,11 @@ mod tests {
             Token::Text("Heading 2".to_string()),
             Token::NewLine,
             Token::NewLine,
-            Token::CommentDelimiter,
+            Token::CommentDelimiter(5),
             Token::NewLine,
             Token::NewLine,
             Token::NewLine,
-            Token::CommentDelimiter,
+            Token::CommentDelimiter(5),
         ];
 
         assert_eq!(lex(input), expected_output);
