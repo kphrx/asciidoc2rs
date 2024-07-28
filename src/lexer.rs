@@ -1,5 +1,54 @@
 use crate::token::Token;
 
+use lexgen::lexer;
+
+lexer! {
+    Lexer -> Token;
+
+    let eol = ['\r' '\n'];
+    let word_character = ['a'-'z' 'A'-'Z' '0'-'9' '_'];
+
+    rule Init {
+        ("\r\n" | $eol)+ $,
+        ("\r\n" | $eol) => |lexer| lexer.return_(Token::NewLine),
+
+        '='+ > ' ' => |lexer| {
+            let count = lexer.match_().to_owned().chars().count();
+            lexer.switch_and_return(LexerRule::Inline, Token::Heading(count))
+        },
+
+        ':' => |lexer| lexer.switch(LexerRule::Attributes),
+
+        _ => |lexer| lexer.switch(LexerRule::Inline),
+    }
+
+    rule Attributes {
+        '!' $word_character ($word_character | '-')* ':' > ($eol+ | $) => |lexer| {
+            let text = lexer.match_().trim_matches(&['!', ':']).to_owned();
+            lexer.switch_and_return(LexerRule::Init, Token::AttributeEntry(text, true))
+        },
+
+        $word_character ($word_character | '-')* ':' > ($eol+ | $) => |lexer| {
+            let text = lexer.match_().trim_matches(':').to_owned();
+            lexer.switch_and_return(LexerRule::Init, Token::AttributeEntry(text, false))
+        },
+
+        $word_character ($word_character | '-')* ':' > (' ') => |lexer| {
+            let text = lexer.match_().trim_matches(':').to_owned();
+            lexer.switch_and_return(LexerRule::Inline, Token::AttributeEntry(text, false))
+        },
+
+        _ => |lexer| lexer.switch(LexerRule::Inline),
+    }
+
+    rule Inline {
+        (_ # $eol)+ > ($eol+ | $) => |lexer| {
+            let text = lexer.match_().trim_matches(' ').to_owned();
+            lexer.switch_and_return(LexerRule::Init, Token::Text(text))
+        },
+    }
+}
+
 pub fn lex(input: &str) -> Vec<Token> {
     let mut tokens = Vec::<Token>::new();
     let mut comment_delimiter = 0;
@@ -319,7 +368,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_lex_attribute_entry() {
+    fn lexer_attribute_entry() {
         let input = "= Document Header\n:notitle:\n:description: test document.\n:!showtitle:\n\nprincipal text.\n";
         let expected_output = vec![
             Token::Heading(1),
@@ -336,7 +385,16 @@ mod tests {
             Token::Text("principal text.".to_string()),
         ];
 
-        assert_eq!(lex(input), expected_output);
+        let mut lexer = Lexer::new(input);
+        let mut tokens = vec![];
+        while let Some(res) = lexer.next() {
+            match res {
+                Ok((_, token, _)) => tokens.push(token),
+                Err(err) => panic!("{err:?}"),
+            }
+        }
+
+        assert_eq!(tokens, expected_output);
     }
 
     #[test]
