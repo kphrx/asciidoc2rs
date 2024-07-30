@@ -6,14 +6,15 @@ lexer! {
     Lexer -> Token;
 
     let eol = ['\r' '\n'];
+    let inline_marks = ['`' '_' '*' '~' '^' '#'];
     let word_character = ['a'-'z' 'A'-'Z' '0'-'9' '_'];
 
     rule Init {
         ("\r\n" | $eol)+ $,
         ("\r\n" | $eol) => |lexer| lexer.return_(Token::NewLine),
 
-        '='+ > ' ' => |lexer| {
-            let count = lexer.match_().to_owned().chars().count();
+        '='+ ' '+ => |lexer| {
+            let count = lexer.match_().trim_end_matches(' ').to_owned().chars().count();
             lexer.switch_and_return(LexerRule::Inline, Token::Heading(count))
         },
 
@@ -33,8 +34,8 @@ lexer! {
             lexer.switch_and_return(LexerRule::Init, Token::AttributeEntry(text, false))
         },
 
-        $word_character ($word_character | '-')* ':' > (' ') => |lexer| {
-            let text = lexer.match_().trim_matches(':').to_owned();
+        $word_character ($word_character | '-')* ':' ' '+ => |lexer| {
+            let text = lexer.match_().trim_end_matches(' ').trim_matches(':').to_owned();
             lexer.switch_and_return(LexerRule::Inline, Token::AttributeEntry(text, false))
         },
 
@@ -42,8 +43,73 @@ lexer! {
     }
 
     rule Inline {
-        (_ # $eol)+ > ($eol+ | $) => |lexer| {
-            let text = lexer.match_().trim_matches(' ').to_owned();
+        '`' > ' ' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Code(false, true))
+        },
+
+        '`' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Code(true, false))
+        },
+
+        '_' > ' ' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Emphasis(false, true))
+        },
+
+        '_' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Emphasis(true, false))
+        },
+
+        '*' > ' ' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Strong(false, true))
+        },
+
+        '*' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Strong(true, false))
+        },
+
+        '~' > ' ' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Subscript(false, true))
+        },
+
+        '~' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Subscript(true, false))
+        },
+
+        '^' > ' ' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Superscript(false, true))
+        },
+
+        '^' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Superscript(true, false))
+        },
+
+        '#' > ' ' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Mark(false, true))
+        },
+
+        '#' => |lexer| {
+            lexer.reset_match();
+            lexer.return_(Token::Mark(true, false))
+        },
+
+        (_ # ($inline_marks | $eol))+ > $inline_marks => |lexer| {
+            let text = lexer.match_().to_owned();
+            lexer.return_(Token::Text(text))
+        },
+
+        (_ # ($inline_marks | $eol))+ > ($eol | $) => |lexer| {
+            let text = lexer.match_().to_owned();
             lexer.switch_and_return(LexerRule::Init, Token::Text(text))
         },
     }
@@ -398,7 +464,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lex_constrained_mark() {
+    fn lexer_constrained_mark() {
         let input = "== Heading 2\n\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.\n";
         let expected_output = vec![
             Token::Heading(2),
@@ -432,7 +498,16 @@ mod tests {
             Token::Text(" text.".to_string()),
         ];
 
-        assert_eq!(lex(input), expected_output);
+        let mut lexer = Lexer::new(input);
+        let mut tokens = vec![];
+        while let Some(res) = lexer.next() {
+            match res {
+                Ok((_, token, _)) => tokens.push(token),
+                Err(err) => panic!("{err:?}"),
+            }
+        }
+
+        assert_eq!(tokens, expected_output);
     }
 
     #[test]
