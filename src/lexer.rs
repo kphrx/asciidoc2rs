@@ -2,8 +2,20 @@ use crate::token::Token;
 
 use lexgen::lexer;
 
+struct LexerState {
+    prev_space_like: bool,
+}
+
+impl Default for LexerState {
+    fn default() -> Self {
+        Self {
+            prev_space_like: true,
+        }
+    }
+}
+
 lexer! {
-    Lexer -> Token;
+    Lexer(LexerState) -> Token;
 
     let eol = ['\r' '\n'];
     let inline_marks = ['`' '_' '*' '~' '^' '#'];
@@ -43,68 +55,107 @@ lexer! {
     }
 
     rule Inline {
-        '`' > ' ' => |lexer| {
+        '`' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Code(false, true))
+            lexer.return_(Token::Code(prev_is_space_like, true))
         },
 
         '`' => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
             lexer.reset_match();
-            lexer.return_(Token::Code(true, false))
+            lexer.return_(Token::Code(prev_is_space_like, false))
         },
 
-        '_' > ' ' => |lexer| {
+        '_' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Emphasis(false, true))
+            lexer.return_(Token::Emphasis(prev_is_space_like, true))
         },
 
         '_' => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Emphasis(true, false))
+            lexer.return_(Token::Emphasis(prev_is_space_like, false))
         },
 
-        '*' > ' ' => |lexer| {
+        '*' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Strong(false, true))
+            lexer.return_(Token::Strong(prev_is_space_like, true))
         },
 
         '*' => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Strong(true, false))
+                lexer.return_(Token::Strong(prev_is_space_like, false))
         },
 
-        '~' > ' ' => |lexer| {
+        '~' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Subscript(false, true))
+            lexer.return_(Token::Subscript(prev_is_space_like, true))
         },
 
         '~' => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Subscript(true, false))
+                lexer.return_(Token::Subscript(prev_is_space_like, false))
         },
 
-        '^' > ' ' => |lexer| {
+        '^' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Superscript(false, true))
+            lexer.return_(Token::Superscript(prev_is_space_like, true))
         },
 
         '^' => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Superscript(true, false))
+                lexer.return_(Token::Superscript(prev_is_space_like, false))
         },
 
-        '#' > ' ' => |lexer| {
+        '#' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
             lexer.reset_match();
-            lexer.return_(Token::Mark(false, true))
+            lexer.return_(Token::Mark(prev_is_space_like, true))
         },
 
         '#' => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Mark(true, false))
+            lexer.return_(Token::Mark(prev_is_space_like, false))
+        },
+
+        (_ # ($inline_marks | $eol))* [' ' '(' ')'] $inline_marks+ > [' ' '(' ')'] => |lexer| {
+            lexer.state().prev_space_like = true;
+            lexer.continue_()
+        },
+
+        (_ # ($inline_marks | $eol))* (_ # ([' ' '(' ')'] | $inline_marks)) $inline_marks+ > (_ # ([' ' '(' ')'] | $inline_marks)) => |lexer| {
+            lexer.state().prev_space_like = true;
+            lexer.continue_()
         },
 
         (_ # ($inline_marks | $eol))+ > $inline_marks => |lexer| {
             let text = lexer.match_().to_owned();
+
+            lexer.state().prev_space_like = if let Some(' ' | '(' | ')' | '`' | '_' | '*' | '~' | '^' | '#') = text.clone().pop() {
+                true
+            } else {
+                false
+            };
+
             lexer.return_(Token::Text(text))
         },
 
@@ -511,7 +562,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lex_constrained_mark_edge() {
+    fn lexer_constrained_mark_edge() {
         let input = "== Heading 2\n\nMore **constrain*ed * bold* and _constrain_ed _ italic__ and ` `constrain`ed(`monospace`)` and #constrain#ed highlight# # and ~constrain~ed ~ subscript~ and ^constrain^ed ^ superscript^ text.\n";
         let expected_output = vec![
             Token::Heading(2),
@@ -534,9 +585,7 @@ mod tests {
             Token::Code(true, false),
             Token::Text("monospace".to_string()),
             Token::Code(false, true),
-            Token::Text(")".to_string()),
-            Token::Code(true, true),
-            Token::Text(" and ".to_string()),
+            Token::Text(")` and ".to_string()),
             Token::Mark(true, false),
             Token::Text("constrain#ed highlight".to_string()),
             Token::Mark(false, true),
@@ -551,7 +600,16 @@ mod tests {
             Token::Text(" text.".to_string()),
         ];
 
-        assert_eq!(lex(input), expected_output);
+        let mut lexer = Lexer::new(input);
+        let mut tokens = vec![];
+        while let Some(res) = lexer.next() {
+            match res {
+                Ok((_, token, _)) => tokens.push(token),
+                Err(err) => panic!("{err:?}"),
+            }
+        }
+
+        assert_eq!(tokens, expected_output);
     }
 
     #[test]
