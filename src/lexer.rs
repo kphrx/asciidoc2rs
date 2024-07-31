@@ -32,6 +32,11 @@ lexer! {
             lexer.switch_and_return(LexerRule::Inline, Token::Heading(count))
         },
 
+        "====" '='* > ($eol | $) => |lexer| {
+            let count = lexer.match_().chars().count();
+            lexer.return_(Token::ExampleDelimiter(count))
+        },
+
         "****" '*'* > ($eol | $) => |lexer| {
             let count = lexer.match_().chars().count();
             lexer.return_(Token::SidebarDelimiter(count))
@@ -774,7 +779,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lex_examples_block_delimiter() {
+    fn lexer_examples_block_delimiter() {
         let input =
             "== Heading 2\n\n====\n= Block heading 1\n\nMore *bold* and _italic_ text.\n====\n";
         let expected_output = vec![
@@ -801,11 +806,20 @@ mod tests {
             Token::ExampleDelimiter(4),
         ];
 
-        assert_eq!(lex(input), expected_output);
+        let lexer = Lexer::new(input);
+        let mut tokens = vec![];
+        for res in lexer {
+            match res {
+                Ok((_, token, _)) => tokens.push(token),
+                Err(err) => panic!("{err:?}"),
+            }
+        }
+
+        assert_eq!(tokens, expected_output);
     }
 
     #[test]
-    fn test_lex_sidebars_block_delimiter() {
+    fn lexer_sidebars_block_delimiter() {
         let input =
             "== Heading 2\n\n****\n= Block heading 1\n\nMore *bold* and _italic_ text.\n****\n";
         let expected_output = vec![
@@ -832,7 +846,16 @@ mod tests {
             Token::SidebarDelimiter(4),
         ];
 
-        assert_eq!(lex(input), expected_output);
+        let lexer = Lexer::new(input);
+        let mut tokens = vec![];
+        for res in lexer {
+            match res {
+                Ok((_, token, _)) => tokens.push(token),
+                Err(err) => panic!("{err:?}"),
+            }
+        }
+
+        assert_eq!(tokens, expected_output);
     }
 
     #[test]
