@@ -4,12 +4,14 @@ use lexgen::lexer;
 
 struct LexerState {
     prev_space_like: bool,
+    opened_comment_block: usize,
 }
 
 impl Default for LexerState {
     fn default() -> Self {
         Self {
             prev_space_like: true,
+            opened_comment_block: 0,
         }
     }
 }
@@ -26,6 +28,14 @@ lexer! {
     rule Init {
         ("\r\n" | $eol)+ $,
         "\r\n" | $eol => |lexer| lexer.return_(Token::NewLine),
+
+        "//" (_ # '/') (_ # $eol | $)* > ($eol | $) => |lexer| lexer.return_(Token::Comment),
+
+        "////" '/'* > ($eol | $) => |lexer| {
+            let count = lexer.match_().chars().count();
+            lexer.state().opened_comment_block = count;
+            lexer.switch_and_return(LexerRule::Comment, Token::CommentDelimiter(count))
+        },
 
         '='+ ' '+ => |lexer| {
             let count = lexer.match_().trim_end_matches(' ').chars().count();
@@ -133,6 +143,26 @@ lexer! {
         },
 
         _ => |lexer| lexer.switch(LexerRule::Inline),
+    }
+
+    rule Comment {
+        ("\r\n" | $eol)+ $,
+        "\r\n" | $eol => |lexer| lexer.return_(Token::NewLine),
+
+        "////" '/'* > ($eol | $) => |lexer| {
+            let count = lexer.match_().chars().count();
+            if lexer.state().opened_comment_block == count {
+                lexer.switch_and_return(LexerRule::Init, Token::CommentDelimiter(count))
+            } else {
+                lexer.reset_match();
+                lexer.continue_()
+            }
+        },
+
+        (_ # $eol)* > ($eol | $) => |lexer| {
+            lexer.reset_match();
+            lexer.continue_()
+        },
     }
 
     rule Attributes {
@@ -859,7 +889,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lex_comment_out() {
+    fn lexer_comment_out() {
         let input = "// comment\n== Heading 2\n\n/////\nMore *bold* and _italic_ and `monospace` and #highlight# and ~subscript~ and ^superscript^ text.\n////\n/////\n";
         let expected_output = vec![
             Token::Comment,
@@ -875,6 +905,15 @@ mod tests {
             Token::CommentDelimiter(5),
         ];
 
-        assert_eq!(lex(input), expected_output);
+        let lexer = Lexer::new(input);
+        let mut tokens = vec![];
+        for res in lexer {
+            match res {
+                Ok((_, token, _)) => tokens.push(token),
+                Err(err) => panic!("{err:?}"),
+            }
+        }
+
+        assert_eq!(tokens, expected_output);
     }
 }
