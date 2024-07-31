@@ -66,6 +66,7 @@ lexer! {
 
         '`' => |lexer| {
             let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
             lexer.return_(Token::Code(prev_is_space_like, false))
         },
@@ -95,7 +96,7 @@ lexer! {
             let prev_is_space_like = lexer.state().prev_space_like;
             lexer.state().prev_space_like = true;
             lexer.reset_match();
-                lexer.return_(Token::Strong(prev_is_space_like, false))
+            lexer.return_(Token::Strong(prev_is_space_like, false))
         },
 
         '~' => |lexer| {
@@ -105,28 +106,26 @@ lexer! {
         },
 
         '~' => |lexer| {
-            let prev_is_space_like = lexer.state().prev_space_like;
             lexer.state().prev_space_like = true;
             lexer.reset_match();
-                lexer.return_(Token::Subscript)
+            lexer.return_(Token::Subscript)
         },
 
         '^' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
-            let prev_is_space_like = lexer.state().prev_space_like;
             lexer.state().prev_space_like = true;
             lexer.reset_match();
             lexer.return_(Token::Superscript)
         },
 
         '^' => |lexer| {
-            let prev_is_space_like = lexer.state().prev_space_like;
             lexer.state().prev_space_like = true;
             lexer.reset_match();
-                lexer.return_(Token::Superscript)
+            lexer.return_(Token::Superscript)
         },
 
         '#' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
             let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
             lexer.reset_match();
             lexer.return_(Token::Mark(prev_is_space_like, true))
         },
@@ -150,18 +149,13 @@ lexer! {
 
         (_ # ($inline_marks | $eol))+ > $inline_marks => |lexer| {
             let text = lexer.match_().to_owned();
-
-            lexer.state().prev_space_like = if let Some(' ' | '(' | ')' | '`' | '_' | '*' | '~' | '^' | '#') = text.clone().pop() {
-                true
-            } else {
-                false
-            };
-
+            lexer.state().prev_space_like = matches!(text.clone().pop(), Some(' ' | '(' | ')' | '`' | '_' | '*' | '~' | '^' | '#'));
             lexer.return_(Token::Text(text))
         },
 
         (_ # ($inline_marks | $eol))+ > ($eol | $) => |lexer| {
             let text = lexer.match_().to_owned();
+            lexer.state().prev_space_like = true;
             lexer.switch_and_return(LexerRule::Init, Token::Text(text))
         },
     }
@@ -503,9 +497,9 @@ mod tests {
             Token::Text("principal text.".to_string()),
         ];
 
-        let mut lexer = Lexer::new(input);
+        let lexer = Lexer::new(input);
         let mut tokens = vec![];
-        while let Some(res) = lexer.next() {
+        for res in lexer {
             match res {
                 Ok((_, token, _)) => tokens.push(token),
                 Err(err) => panic!("{err:?}"),
@@ -550,9 +544,9 @@ mod tests {
             Token::Text(" text.".to_string()),
         ];
 
-        let mut lexer = Lexer::new(input);
+        let lexer = Lexer::new(input);
         let mut tokens = vec![];
-        while let Some(res) = lexer.next() {
+        for res in lexer {
             match res {
                 Ok((_, token, _)) => tokens.push(token),
                 Err(err) => panic!("{err:?}"),
@@ -609,9 +603,9 @@ mod tests {
             Token::Text(" text.".to_string()),
         ];
 
-        let mut lexer = Lexer::new(input);
+        let lexer = Lexer::new(input);
         let mut tokens = vec![];
-        while let Some(res) = lexer.next() {
+        for res in lexer {
             match res {
                 Ok((_, token, _)) => tokens.push(token),
                 Err(err) => panic!("{err:?}"),
