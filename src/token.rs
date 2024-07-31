@@ -23,6 +23,6 @@ pub enum Token {
     Emphasis(bool, bool),
     Code(bool, bool),
     Mark(bool, bool),
-    Subscript(bool, bool),
-    Superscript(bool, bool),
+    Subscript,
+    Superscript,
 }

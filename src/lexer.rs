@@ -18,7 +18,9 @@ lexer! {
     Lexer(LexerState) -> Token;
 
     let eol = ['\r' '\n'];
-    let inline_marks = ['`' '_' '*' '~' '^' '#'];
+    let unconstrained_marks = ['~' '^'];
+    let constrained_marks = ['`' '_' '*' '#'];
+    let inline_marks = $constrained_marks | $unconstrained_marks;
     let word_character = ['a'-'z' 'A'-'Z' '0'-'9' '_'];
 
     rule Init {
@@ -96,32 +98,31 @@ lexer! {
                 lexer.return_(Token::Strong(prev_is_space_like, false))
         },
 
-        '~' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
-            let prev_is_space_like = lexer.state().prev_space_like;
+        '~' => |lexer| {
             lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Subscript(prev_is_space_like, true))
+            lexer.return_(Token::Subscript)
         },
 
         '~' => |lexer| {
             let prev_is_space_like = lexer.state().prev_space_like;
             lexer.state().prev_space_like = true;
             lexer.reset_match();
-                lexer.return_(Token::Subscript(prev_is_space_like, false))
+                lexer.return_(Token::Subscript)
         },
 
         '^' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
             let prev_is_space_like = lexer.state().prev_space_like;
             lexer.state().prev_space_like = true;
             lexer.reset_match();
-            lexer.return_(Token::Superscript(prev_is_space_like, true))
+            lexer.return_(Token::Superscript)
         },
 
         '^' => |lexer| {
             let prev_is_space_like = lexer.state().prev_space_like;
             lexer.state().prev_space_like = true;
             lexer.reset_match();
-                lexer.return_(Token::Superscript(prev_is_space_like, false))
+                lexer.return_(Token::Superscript)
         },
 
         '#' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
@@ -137,12 +138,12 @@ lexer! {
             lexer.return_(Token::Mark(prev_is_space_like, false))
         },
 
-        (_ # ($inline_marks | $eol))* [' ' '(' ')'] $inline_marks+ > [' ' '(' ')'] => |lexer| {
+        (_ # ($inline_marks | $eol))* [' ' '(' ')'] $constrained_marks+ > [' ' '(' ')'] => |lexer| {
             lexer.state().prev_space_like = true;
             lexer.continue_()
         },
 
-        (_ # ($inline_marks | $eol))* (_ # ([' ' '(' ')'] | $inline_marks)) $inline_marks+ > (_ # ([' ' '(' ')'] | $inline_marks)) => |lexer| {
+        (_ # ($inline_marks | $eol))* (_ # ([' ' '(' ')'] | $constrained_marks)) $constrained_marks+ > (_ # ([' ' '(' ')'] | $constrained_marks)) => |lexer| {
             lexer.state().prev_space_like = true;
             lexer.continue_()
         },
@@ -385,7 +386,7 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
                         buffer.clear();
                     }
 
-                    tokens.push(Token::Subscript(!is_wordy_prev, !is_wordy_next));
+                    tokens.push(Token::Subscript);
                 }
             },
             ('^', None | Some(' '), None | Some(' '), 0) => {
@@ -404,7 +405,7 @@ fn lex_line(line: &str, tokens: &mut Vec<Token>, comment_delimiter: &mut usize) 
                         buffer.clear();
                     }
 
-                    tokens.push(Token::Superscript(!is_wordy_prev, !is_wordy_next));
+                    tokens.push(Token::Superscript);
                 }
             },
             (':', None, next, 0) => {
@@ -539,13 +540,13 @@ mod tests {
             Token::Text("highlight".to_string()),
             Token::Mark(false, true),
             Token::Text(" and ".to_string()),
-            Token::Subscript(true, false),
+            Token::Subscript,
             Token::Text("subscript".to_string()),
-            Token::Subscript(false, true),
+            Token::Subscript,
             Token::Text(" and ".to_string()),
-            Token::Superscript(true, false),
+            Token::Superscript,
             Token::Text("superscript".to_string()),
-            Token::Superscript(false, true),
+            Token::Superscript,
             Token::Text(" text.".to_string()),
         ];
 
@@ -590,13 +591,21 @@ mod tests {
             Token::Text("constrain#ed highlight".to_string()),
             Token::Mark(false, true),
             Token::Text(" # and ".to_string()),
-            Token::Subscript(true, false),
-            Token::Text("constrain~ed ~ subscript".to_string()),
-            Token::Subscript(false, true),
+            Token::Subscript,
+            Token::Text("constrain".to_string()),
+            Token::Subscript,
+            Token::Text("ed ".to_string()),
+            Token::Subscript,
+            Token::Text(" subscript".to_string()),
+            Token::Subscript,
             Token::Text(" and ".to_string()),
-            Token::Superscript(true, false),
-            Token::Text("constrain^ed ^ superscript".to_string()),
-            Token::Superscript(false, true),
+            Token::Superscript,
+            Token::Text("constrain".to_string()),
+            Token::Superscript,
+            Token::Text("ed ".to_string()),
+            Token::Superscript,
+            Token::Text(" superscript".to_string()),
+            Token::Superscript,
             Token::Text(" text.".to_string()),
         ];
 
