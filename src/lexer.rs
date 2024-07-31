@@ -32,6 +32,11 @@ lexer! {
             lexer.switch_and_return(LexerRule::Inline, Token::Heading(count))
         },
 
+        '*'+ ' '+ => |lexer| {
+            let count = lexer.match_().trim_end_matches(' ').to_owned().chars().count();
+            lexer.switch_and_return(LexerRule::Inline, Token::UnorderedList(count))
+        },
+
         ':' => |lexer| lexer.switch(LexerRule::Attributes),
 
         _ => |lexer| lexer.switch(LexerRule::Inline),
@@ -616,7 +621,7 @@ mod tests {
     }
 
     #[test]
-    fn test_lex_unordered_lists() {
+    fn lexer_unordered_lists() {
         let input =
             "== Heading 2\n\n*** Unordered level 3 list item\n* Unordered level 1 list item\n** Unordered level 2 list item\n**** Unordered level 4 list item\n";
         let expected_output = vec![
@@ -637,7 +642,16 @@ mod tests {
             Token::Text("Unordered level 4 list item".to_string()),
         ];
 
-        assert_eq!(lex(input), expected_output);
+        let lexer = Lexer::new(input);
+        let mut tokens = vec![];
+        for res in lexer {
+            match res {
+                Ok((_, token, _)) => tokens.push(token),
+                Err(err) => panic!("{err:?}"),
+            }
+        }
+
+        assert_eq!(tokens, expected_output);
     }
 
     #[test]
