@@ -25,30 +25,118 @@ lexer! {
 
     rule Init {
         ("\r\n" | $eol)+ $,
-        ("\r\n" | $eol) => |lexer| lexer.return_(Token::NewLine),
+        "\r\n" | $eol => |lexer| lexer.return_(Token::NewLine),
 
         '='+ ' '+ => |lexer| {
-            let count = lexer.match_().trim_end_matches(' ').to_owned().chars().count();
+            let count = lexer.match_().trim_end_matches(' ').chars().count();
             lexer.switch_and_return(LexerRule::Inline, Token::Heading(count))
         },
 
+        "****" '*'* > ($eol | $) => |lexer| {
+            let count = lexer.match_().chars().count();
+            lexer.return_(Token::SidebarDelimiter(count))
+        },
+
         '*'+ ' '+ => |lexer| {
-            let count = lexer.match_().trim_end_matches(' ').to_owned().chars().count();
+            let count = lexer.match_().trim_end_matches(' ').chars().count();
             lexer.switch_and_return(LexerRule::Inline, Token::UnorderedList(count))
         },
 
         ':' => |lexer| lexer.switch(LexerRule::Attributes),
 
+        '`' > ([' ' '(' ')'] | $inline_marks) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
+            lexer.reset_match();
+            lexer.switch_and_return(LexerRule::Inline, Token::Code(prev_is_space_like, true))
+        },
+
+        '`' > (_ # $eol) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
+            lexer.reset_match();
+            lexer.switch_and_return(LexerRule::Inline, Token::Code(prev_is_space_like, false))
+        },
+
+        '_' > ([' ' '(' ')'] | $inline_marks) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
+            lexer.reset_match();
+            lexer.switch_and_return(LexerRule::Inline, Token::Emphasis(prev_is_space_like, true))
+        },
+
+        '_' > (_ # $eol) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
+            lexer.reset_match();
+            lexer.switch_and_return(LexerRule::Inline, Token::Emphasis(prev_is_space_like, false))
+        },
+
+        '*' > ([' ' '(' ')'] | $inline_marks) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
+            lexer.reset_match();
+            lexer.switch_and_return(LexerRule::Inline, Token::Strong(prev_is_space_like, true))
+        },
+
+        '*' > (_ # $eol) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
+            lexer.reset_match();
+            lexer.switch_and_return(LexerRule::Inline, Token::Strong(prev_is_space_like, false))
+        },
+
+        '~' > (_ # $eol) => |lexer| {
+            lexer.state().prev_space_like = true;
+            lexer.reset_match();
+            lexer.switch_and_return(LexerRule::Inline, Token::Subscript)
+        },
+
+        '^' > (_ # $eol) => |lexer| {
+            lexer.state().prev_space_like = true;
+            lexer.reset_match();
+            lexer.switch_and_return(LexerRule::Inline, Token::Superscript)
+        },
+
+        '#' > ([' ' '(' ')'] | $inline_marks) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
+            lexer.reset_match();
+            lexer.switch_and_return(LexerRule::Inline, Token::Mark(prev_is_space_like, true))
+        },
+
+        '#' > (_ # $eol) => |lexer| {
+            let prev_is_space_like = lexer.state().prev_space_like;
+            lexer.state().prev_space_like = true;
+            lexer.reset_match();
+            lexer.switch_and_return(LexerRule::Inline, Token::Mark(prev_is_space_like, false))
+        },
+
+        (_ # ($inline_marks | $eol))* [' ' '(' ')'] $constrained_marks+ > [' ' '(' ')'] => |lexer| {
+            lexer.state().prev_space_like = true;
+            lexer.switch(LexerRule::Inline)
+        },
+
+        (_ # ($inline_marks | $eol))* (_ # ([' ' '(' ')'] | $constrained_marks | $eol)) $constrained_marks+ > (_ # ([' ' '(' ')'] | $constrained_marks | $eol)) => |lexer| {
+            lexer.state().prev_space_like = true;
+            lexer.switch(LexerRule::Inline)
+        },
+
+        _ > ($eol | $) => |lexer| {
+            let text = lexer.match_().to_owned();
+            lexer.return_(Token::Text(text))
+        },
+
         _ => |lexer| lexer.switch(LexerRule::Inline),
     }
 
     rule Attributes {
-        '!' $word_character ($word_character | '-')* ':' > ($eol+ | $) => |lexer| {
+        '!' $word_character ($word_character | '-')* ':' > ($eol | $) => |lexer| {
             let text = lexer.match_().trim_matches(&['!', ':']).to_owned();
             lexer.switch_and_return(LexerRule::Init, Token::AttributeEntry(text, true))
         },
 
-        $word_character ($word_character | '-')* ':' > ($eol+ | $) => |lexer| {
+        $word_character ($word_character | '-')* ':' > ($eol | $) => |lexer| {
             let text = lexer.match_().trim_matches(':').to_owned();
             lexer.switch_and_return(LexerRule::Init, Token::AttributeEntry(text, false))
         },
@@ -62,6 +150,9 @@ lexer! {
     }
 
     rule Inline {
+        ("\r\n" | $eol)+ $,
+        "\r\n" | $eol => |lexer| lexer.switch_and_return(LexerRule::Init, Token::NewLine),
+
         '`' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
             let prev_is_space_like = lexer.state().prev_space_like;
             lexer.state().prev_space_like = true;
@@ -110,18 +201,6 @@ lexer! {
             lexer.return_(Token::Subscript)
         },
 
-        '~' => |lexer| {
-            lexer.state().prev_space_like = true;
-            lexer.reset_match();
-            lexer.return_(Token::Subscript)
-        },
-
-        '^' > ([' ' '(' ')'] | $inline_marks | $eol | $) => |lexer| {
-            lexer.state().prev_space_like = true;
-            lexer.reset_match();
-            lexer.return_(Token::Superscript)
-        },
-
         '^' => |lexer| {
             lexer.state().prev_space_like = true;
             lexer.reset_match();
@@ -147,7 +226,7 @@ lexer! {
             lexer.continue_()
         },
 
-        (_ # ($inline_marks | $eol))* (_ # ([' ' '(' ')'] | $constrained_marks)) $constrained_marks+ > (_ # ([' ' '(' ')'] | $constrained_marks)) => |lexer| {
+        (_ # ($inline_marks | $eol))* (_ # ([' ' '(' ')'] | $constrained_marks | $eol)) $constrained_marks+ > (_ # ([' ' '(' ')'] | $constrained_marks | $eol)) => |lexer| {
             lexer.state().prev_space_like = true;
             lexer.continue_()
         },
@@ -655,9 +734,9 @@ mod tests {
     }
 
     #[test]
-    fn test_lex_asterisk_edge() {
+    fn lexer_asterisk_edge() {
         let input =
-            "== Heading 2\n\n* Unordered level 1 list item\n*\n*****\n***\n****strong mark\n";
+            "== Heading 2\n\n* Unordered level 1 list item\n*\n*****\n***\n\n****strong mark\n";
         let expected_output = vec![
             Token::Heading(2),
             Token::Text("Heading 2".to_string()),
@@ -674,6 +753,7 @@ mod tests {
             Token::Strong(true, true),
             Token::Strong(true, true),
             Token::NewLine,
+            Token::NewLine,
             Token::Strong(true, true),
             Token::Strong(true, true),
             Token::Strong(true, true),
@@ -681,7 +761,16 @@ mod tests {
             Token::Text("strong mark".to_string()),
         ];
 
-        assert_eq!(lex(input), expected_output);
+        let lexer = Lexer::new(input);
+        let mut tokens = vec![];
+        for res in lexer {
+            match res {
+                Ok((_, token, _)) => tokens.push(token),
+                Err(err) => panic!("{err:?}"),
+            }
+        }
+
+        assert_eq!(tokens, expected_output);
     }
 
     #[test]
