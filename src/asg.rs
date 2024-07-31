@@ -1,3 +1,5 @@
+pub mod schema;
+
 pub(crate) mod block;
 mod inlines;
 
