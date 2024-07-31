@@ -52,6 +52,33 @@ lexer! {
             lexer.return_(Token::SidebarDelimiter(count))
         },
 
+        "____" '_'* > ($eol | $) => |lexer| {
+            let count = lexer.match_().chars().count();
+            lexer.return_(Token::QuoteDelimiter(count))
+        },
+
+        "----" '-'* > ($eol | $) => |lexer| {
+            let count = lexer.match_().chars().count();
+            lexer.return_(Token::ListingDelimiter(count))
+        },
+
+        "...." '.'* > ($eol | $) => |lexer| {
+            let count = lexer.match_().chars().count();
+            lexer.return_(Token::LiteralDelimiter(count))
+        },
+
+        "++++" '+'* > ($eol | $) => |lexer| {
+            let count = lexer.match_().chars().count();
+            lexer.return_(Token::PassDelimiter(count))
+        },
+
+        "~~~~" '~'* > ($eol | $) => |lexer| {
+            let count = lexer.match_().chars().count();
+            lexer.return_(Token::OpenDelimiter(count))
+        },
+
+        "--" > ($eol | $) => |lexer| lexer.return_(Token::LegacyOpenDelimiter),
+
         '*'+ ' '+ => |lexer| {
             let count = lexer.match_().trim_end_matches(' ').chars().count();
             lexer.switch_and_return(LexerRule::Inline, Token::UnorderedList(count))
@@ -495,9 +522,9 @@ mod tests {
     }
 
     #[test]
-    fn lexer_examples_block_delimiter() {
+    fn lexer_block_delimiter() {
         let input =
-            "== Heading 2\n\n====\n= Block heading 1\n\nMore *bold* and _italic_ text.\n====\n";
+            "== Heading 2\n\n====\n*****\n~~~~~~\n*bold*\n----\n_italic_\n++++++\n___\n_____\n`monospace`\n......\n--\n";
         let expected_output = vec![
             Token::Heading(2),
             Token::Text("Heading 2".to_string()),
@@ -505,61 +532,35 @@ mod tests {
             Token::NewLine,
             Token::ExampleDelimiter(4),
             Token::NewLine,
-            Token::Heading(1),
-            Token::Text("Block heading 1".to_string()),
+            Token::SidebarDelimiter(5),
             Token::NewLine,
+            Token::OpenDelimiter(6),
             Token::NewLine,
-            Token::Text("More ".to_string()),
             Token::Strong(true, false),
             Token::Text("bold".to_string()),
             Token::Strong(false, true),
-            Token::Text(" and ".to_string()),
+            Token::NewLine,
+            Token::ListingDelimiter(4),
+            Token::NewLine,
             Token::Emphasis(true, false),
             Token::Text("italic".to_string()),
             Token::Emphasis(false, true),
-            Token::Text(" text.".to_string()),
             Token::NewLine,
-            Token::ExampleDelimiter(4),
-        ];
-
-        let lexer = Lexer::new(input);
-        let mut tokens = vec![];
-        for res in lexer {
-            match res {
-                Ok((_, token, _)) => tokens.push(token),
-                Err(err) => panic!("{err:?}"),
-            }
-        }
-
-        assert_eq!(tokens, expected_output);
-    }
-
-    #[test]
-    fn lexer_sidebars_block_delimiter() {
-        let input =
-            "== Heading 2\n\n****\n= Block heading 1\n\nMore *bold* and _italic_ text.\n****\n";
-        let expected_output = vec![
-            Token::Heading(2),
-            Token::Text("Heading 2".to_string()),
+            Token::PassDelimiter(6),
             Token::NewLine,
+            Token::Emphasis(true, true),
+            Token::Emphasis(true, true),
+            Token::Emphasis(true, true),
             Token::NewLine,
-            Token::SidebarDelimiter(4),
+            Token::QuoteDelimiter(5),
             Token::NewLine,
-            Token::Heading(1),
-            Token::Text("Block heading 1".to_string()),
+            Token::Code(true, false),
+            Token::Text("monospace".to_string()),
+            Token::Code(false, true),
             Token::NewLine,
+            Token::LiteralDelimiter(6),
             Token::NewLine,
-            Token::Text("More ".to_string()),
-            Token::Strong(true, false),
-            Token::Text("bold".to_string()),
-            Token::Strong(false, true),
-            Token::Text(" and ".to_string()),
-            Token::Emphasis(true, false),
-            Token::Text("italic".to_string()),
-            Token::Emphasis(false, true),
-            Token::Text(" text.".to_string()),
-            Token::NewLine,
-            Token::SidebarDelimiter(4),
+            Token::LegacyOpenDelimiter,
         ];
 
         let lexer = Lexer::new(input);
