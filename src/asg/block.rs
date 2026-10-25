@@ -220,7 +220,7 @@ impl TrimIndent for str {
 #[serde(untagged)]
 pub enum SectionBody {
     Block(Block),
-    Section(Section),
+    Section(Box<Section>),
 }
 
 type NonSectionBlockBody = Block;

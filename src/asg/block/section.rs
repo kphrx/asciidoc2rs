@@ -157,7 +157,7 @@ impl Section {
                 if level == last.level {
                     self.previous_line = line.to_owned();
                     let section = Section::new(level, &title);
-                    self.blocks.push(SectionBody::Section(section));
+                    self.blocks.push(SectionBody::Section(Box::new(section)));
 
                     return Ok(());
                 }
@@ -200,7 +200,7 @@ impl Section {
                 if level == self.level + 1 {
                     self.previous_line = line.to_owned();
                     let section = Section::new(level, &title);
-                    self.blocks.push(SectionBody::Section(section));
+                    self.blocks.push(SectionBody::Section(Box::new(section)));
 
                     return Ok(());
                 }

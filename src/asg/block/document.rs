@@ -234,7 +234,7 @@ impl Document {
                 if level == 0 && !matches!(self.doctype, Doctype::Book) {
                     self.previous_line = line.to_owned();
                     let section = Section::new(0, &title);
-                    self.blocks.push(SectionBody::Section(section));
+                    self.blocks.push(SectionBody::Section(Box::new(section)));
 
                     return Err("level 0 sections can only be used when doctype is book".into());
                 }
@@ -242,7 +242,7 @@ impl Document {
                 if level <= last.level {
                     self.previous_line = line.to_owned();
                     let section = Section::new(level, &title);
-                    self.blocks.push(SectionBody::Section(section));
+                    self.blocks.push(SectionBody::Section(Box::new(section)));
 
                     return Ok(());
                 }
@@ -300,7 +300,7 @@ impl Document {
 
                 self.previous_line = line.to_owned();
                 let section = Section::new(level, &title);
-                self.blocks.push(SectionBody::Section(section));
+                self.blocks.push(SectionBody::Section(Box::new(section)));
 
                 Ok(())
             }
