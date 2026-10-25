@@ -51,19 +51,19 @@ impl BlockMacroBody {
 }
 
 impl Block {
-    fn new_audio() -> Self {
+    pub fn new_audio() -> Self {
         Self::BlockMacro(BlockMacro::new_audio())
     }
 
-    fn new_video() -> Self {
+    pub fn new_video() -> Self {
         Self::BlockMacro(BlockMacro::new_video())
     }
 
-    fn new_image() -> Self {
+    pub fn new_image() -> Self {
         Self::BlockMacro(BlockMacro::new_image())
     }
 
-    fn new_toc() -> Self {
+    pub fn new_toc() -> Self {
         Self::BlockMacro(BlockMacro::new_toc())
     }
 }

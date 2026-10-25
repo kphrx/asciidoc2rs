@@ -45,7 +45,7 @@ impl BlockLeaf {
     pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
         match self {
             Self::Paragraph(body) => {
-                body.inlines = Inline::append(body.inlines.clone(), line);
+                body.inlines = Inline::append(body.inlines(), line);
 
                 Ok(())
             }
@@ -103,27 +103,27 @@ impl BlockLeafBody {
 }
 
 impl Block {
-    fn new_listing() -> Self {
+    pub fn new_listing() -> Self {
         Self::BlockLeaf(BlockLeaf::new_listing())
     }
 
-    fn new_literal() -> Self {
+    pub fn new_literal() -> Self {
         Self::BlockLeaf(BlockLeaf::new_literal())
     }
 
-    pub(crate) fn new_paragraph(line: &str) -> Self {
+    pub fn new_paragraph(line: &str) -> Self {
         Self::BlockLeaf(BlockLeaf::new_paragraph(line))
     }
 
-    fn new_pass() -> Self {
+    pub fn new_pass() -> Self {
         Self::BlockLeaf(BlockLeaf::new_pass())
     }
 
-    fn new_stem() -> Self {
+    pub fn new_stem() -> Self {
         Self::BlockLeaf(BlockLeaf::new_stem())
     }
 
-    fn new_verse() -> Self {
+    pub fn new_verse() -> Self {
         Self::BlockLeaf(BlockLeaf::new_verse())
     }
 }
