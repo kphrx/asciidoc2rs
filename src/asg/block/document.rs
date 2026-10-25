@@ -224,31 +224,28 @@ impl Document {
         }
 
         if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
-            match LineKind::parse(line.to_owned()) {
-                LineKind::HeadingMarker { level, title } => {
-                    if !self.previous_line.is_empty() {
-                        self.previous_line = line.to_owned();
+            if let LineKind::HeadingMarker { level, title } = LineKind::parse(line.to_owned()) {
+                if !self.previous_line.is_empty() {
+                    self.previous_line = line.to_owned();
 
-                        return last.push(line);
-                    }
-
-                    if level == 0 && !matches!(self.doctype, Doctype::Book) {
-                        self.previous_line = line.to_owned();
-                        let section = Section::new(0, &title);
-                        self.blocks.push(SectionBody::Section(section));
-
-                        return Err("level 0 sections can only be used when doctype is book".into());
-                    }
-
-                    if level <= last.level {
-                        self.previous_line = line.to_owned();
-                        let section = Section::new(level, &title);
-                        self.blocks.push(SectionBody::Section(section));
-
-                        return Ok(());
-                    }
+                    return last.push(line);
                 }
-                _ => {}
+
+                if level == 0 && !matches!(self.doctype, Doctype::Book) {
+                    self.previous_line = line.to_owned();
+                    let section = Section::new(0, &title);
+                    self.blocks.push(SectionBody::Section(section));
+
+                    return Err("level 0 sections can only be used when doctype is book".into());
+                }
+
+                if level <= last.level {
+                    self.previous_line = line.to_owned();
+                    let section = Section::new(level, &title);
+                    self.blocks.push(SectionBody::Section(section));
+
+                    return Ok(());
+                }
             }
 
             self.previous_line = line.to_owned();
