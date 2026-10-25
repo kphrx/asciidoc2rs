@@ -11,6 +11,6 @@
   "author": "kPherox <kphrx@kpherox.dev>",
   "license": "CC-BY-4.0",
   "devDependencies": {
-    "honkit": "^5.1.1"
+    "honkit": "^6.2.5"
   }
 }
