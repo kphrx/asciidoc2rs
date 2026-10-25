@@ -7,16 +7,12 @@ use asg::Inline;
 
 use std::error::Error;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub enum Doctype {
+    #[default]
     Article,
     Book,
     Manpage,
-}
-impl Default for Doctype {
-    fn default() -> Self {
-        Self::Article
-    }
 }
 
 pub struct Parser<'input> {
