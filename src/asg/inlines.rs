@@ -13,10 +13,7 @@ pub enum Inline {
 }
 impl Inline {
     pub(crate) fn new(line: &str) -> Vec<Self> {
-        let mut inlines = Vec::with_capacity(0);
-        inlines.push(Inline::new_text(line));
-
-        inlines
+        vec![Inline::new_text(line)]
     }
 
     pub(crate) fn append(mut inlines: Vec<Self>, line: &str) -> Vec<Self> {

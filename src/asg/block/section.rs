@@ -147,23 +147,20 @@ impl Section {
         }
 
         if let Some(SectionBody::Section(last)) = self.blocks.last_mut() {
-            match LineKind::parse(line.to_owned()) {
-                LineKind::HeadingMarker { level, title } => {
-                    if !self.previous_line.is_empty() {
-                        self.previous_line = line.to_owned();
+            if let LineKind::HeadingMarker { level, title } = LineKind::parse(line.to_owned()) {
+                if !self.previous_line.is_empty() {
+                    self.previous_line = line.to_owned();
 
-                        return last.push(line);
-                    }
-
-                    if level == last.level {
-                        self.previous_line = line.to_owned();
-                        let section = Section::new(level, &title);
-                        self.blocks.push(SectionBody::Section(section));
-
-                        return Ok(());
-                    }
+                    return last.push(line);
                 }
-                _ => {}
+
+                if level == last.level {
+                    self.previous_line = line.to_owned();
+                    let section = Section::new(level, &title);
+                    self.blocks.push(SectionBody::Section(Box::new(section)));
+
+                    return Ok(());
+                }
             }
 
             self.previous_line = line.to_owned();
@@ -203,7 +200,7 @@ impl Section {
                 if level == self.level + 1 {
                     self.previous_line = line.to_owned();
                     let section = Section::new(level, &title);
-                    self.blocks.push(SectionBody::Section(section));
+                    self.blocks.push(SectionBody::Section(Box::new(section)));
 
                     return Ok(());
                 }
