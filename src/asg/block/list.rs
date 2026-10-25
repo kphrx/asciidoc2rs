@@ -40,8 +40,7 @@ pub enum ListVariant {
 }
 impl AnyList {
     fn new_callout_list(marker: String, principal: String) -> Self {
-        let mut items = Vec::with_capacity(1);
-        items.push(ListItem::new(marker.clone(), Inline::new(&principal)));
+        let items = vec![ListItem::new(marker.clone(), Inline::new(&principal))];
 
         Self::List {
             node_type: NodeType::Block,
@@ -54,8 +53,7 @@ impl AnyList {
     }
 
     fn new_ordered_list(marker: String, principal: String) -> Self {
-        let mut items = Vec::with_capacity(1);
-        items.push(ListItem::new(marker.clone(), Inline::new(&principal)));
+        let items = vec![ListItem::new(marker.clone(), Inline::new(&principal))];
 
         Self::List {
             node_type: NodeType::Block,
@@ -68,8 +66,7 @@ impl AnyList {
     }
 
     fn new_unordered_list(marker: String, principal: String) -> Self {
-        let mut items = Vec::with_capacity(1);
-        items.push(ListItem::new(marker.clone(), Inline::new(&principal)));
+        let items = vec![ListItem::new(marker.clone(), Inline::new(&principal))];
 
         Self::List {
             node_type: NodeType::Block,
@@ -83,8 +80,7 @@ impl AnyList {
 
     fn new_description_list(marker: String, term: String, principal: Option<String>) -> Self {
         let mut items = Vec::with_capacity(1);
-        let mut current_terms = Vec::with_capacity(1);
-        current_terms.push(term.clone());
+        let current_terms = vec![term.clone()];
         if let Some(principal) = principal {
             items.push(DlistItem::new(
                 marker.clone(),
