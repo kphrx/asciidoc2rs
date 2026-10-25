@@ -80,7 +80,7 @@ jobs:
           reviewdog -runners=clippy \
             -reporter=${{ needs.opts.outputs.reporter }} \
             -filter-mode=${{ needs.opts.outputs.filter-mode }} \
-            -fail-on-error
+            -fail-level=error
 
 
   actionlint:
