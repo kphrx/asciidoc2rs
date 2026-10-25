@@ -27,11 +27,12 @@ jobs:
         run: git clone --depth=1 https://gitlab.eclipse.org/eclipse/asciidoc-lang/asciidoc-tck.git asciidoc-tck
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 26
       - name: Install dependencies
         working-directory: asciidoc-tck
         run: |
           npm ci
+          npm run dist
           {
             echo 'import {inspect} from "node:util";'
             echo 'inspect.defaultOptions.depth = null;'
@@ -44,7 +45,7 @@ jobs:
         env:
           NODE_OPTIONS: --import ./depth.js
         run: |
-          npx asciidoc-tck cli -c ${{ github.workspace }}/target/debug/asciidoc2rs | tee output.txt
+          node harness/bin/asciidoc-tck.js cli --adapter-command ${{ github.workspace }}/target/debug/asciidoc2rs | tee output.txt
           grep 'ℹ' output.txt | awk '{print $2"="$3}' >> "$GITHUB_OUTPUT"
           sed -i'' '/^ℹ/d' output.txt
 
