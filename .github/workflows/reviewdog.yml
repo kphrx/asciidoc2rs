@@ -46,7 +46,7 @@ jobs:
     if: github.event_name == 'pull_request'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup Rust stable
         run: rustup update stable && rustup default stable
 
@@ -66,7 +66,7 @@ jobs:
     needs: opts
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Setup Rust stable
         run: rustup update stable && rustup default stable && rustup component add clippy
 
@@ -89,7 +89,7 @@ jobs:
     needs: opts
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: reviewdog/action-actionlint@v1
         with:
           reporter: ${{ needs.opts.outputs.reporter }}
