@@ -49,6 +49,13 @@ jobs:
           grep 'ℹ' output.txt | awk '{print $2"="$3}' >> "$GITHUB_OUTPUT"
           sed -i'' '/^ℹ/d' output.txt
 
+      - name: Summary header
+        run: |
+          {
+            echo '# TCK result'
+            echo '![TCK passed count](https://a11y-shields-badge.kphrx.workers.dev/badge/TCK%20passed-${{ steps.tck.outputs.pass }}-success?style=flat-square) ![TCK passed count](https://a11y-shields-badge.kphrx.workers.dev/badge/TCK%20failed-${{ steps.tck.outputs.fail }}-important?style=flat-square)'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Generate summary
         continue-on-error: true
         uses: actions/github-script@v9
@@ -63,132 +70,185 @@ jobs:
               crlfDelay: Infinity,
             });
 
-            const currentDescribes = [];
-            const sections = [];
-            const listBuffers = [];
-            let tableBuffers = [];
-            let codeBuffer = '';
-            let codeIndend = 0;
-            for await (const line of lineStream) {
-              if (line.length === 0) {
-                continue;
-              }
+            const summary = () => Object.create(Object.getPrototypeOf(core.summary)).emptyBuffer();
 
-              const lastDescribe = currentDescribes.toReversed()[0];
-              const lastDescribePosition = line.indexOf(`▶ ${lastDescribe} (`);
-              if (lastDescribePosition !== -1 && currentDescribes.length > 2) {
-                currentDescribes.pop();
-                const name = line.slice(lastDescribePosition + 2);
-                const child = listBuffers.pop();
-                let el;
-                if (child.length > 0) {
-                  el = core.summary.addRaw(`<p>${name}</p>`, true).addList(child).stringify();
-                } else {
-                  if (codeIndend > 0) {
-                    const label = core.summary.stringify();
-                    core.summary.emptyBuffer();
-                    const content = core.summary.addCodeBlock(codeBuffer, 'js').stringify();
-                    core.summary.emptyBuffer();
-                    tableBuffers.toReversed()[0].push(core.summary.addDetails(label, content).stringify());
-                    core.summary.emptyBuffer();
-                    codeIndend = 0;
-                    codeBuffer = '';
-                  }
-                  core.summary.addTable(tableBuffers);
-                  tableBuffers = [];
-                  const child = core.summary.stringify();
-                  core.summary.emptyBuffer();
-                  el = core.summary.addRaw(`<p>${name}</p>`, true).addRaw(child).stringify();
-                }
-                core.summary.emptyBuffer();
-                listBuffers.toReversed()[0].push(el);
-                continue;
-              }
-              if (lastDescribePosition !== -1 && currentDescribes.length === 2) {
-                sections.push([currentDescribes.pop(), listBuffers.pop()]);
-                continue;
-              }
-              if (lastDescribePosition !== -1) {
-                currentDescribes.pop();
+            const currentDescribes = [];
+            const tests = [];
+            const suites = [];
+            const table = [[{data: 'Status', header: true}, {data: 'Test Case', header: true}, {data: 'Execution time', header: true}]];
+            let codeBuffer = '';
+            let currentFailedResult;
+            for await (const line of lineStream) {
+              if (line.length === 0 && codeBuffer.length === 0) {
                 continue;
               }
 
               const describePosition = line.indexOf('▶');
-              if (describePosition !== -1 && currentDescribes.length < 1) {
-                const name = line.slice(describePosition + 2);
-                currentDescribes.push(name);
-                continue;
-              }
               if (describePosition !== -1) {
                 const name = line.slice(describePosition + 2);
                 currentDescribes.push(name);
-                listBuffers.push([]);
                 continue;
               }
 
-              if (tableBuffers.length === 0) {
-                tableBuffers.push([{data: 'Status', header: true}, {data: 'Test Case', header: true}, {data: 'Message', header: true}]);
-              }
+              if (currentDescribes.length > 0) {
+                const currentDescribe = currentDescribes.toReversed()[0];
 
-              const passedItPosition = line.indexOf('✔');
-              if (passedItPosition !== -1) {
-                if (codeIndend > 0) {
-                  const label = core.summary.stringify();
-                  core.summary.emptyBuffer();
-                  const content = core.summary.addCodeBlock(codeBuffer, 'js').stringify();
-                  core.summary.emptyBuffer();
-                  tableBuffers.toReversed()[0].push(core.summary.addDetails(label, content).stringify());
-                  core.summary.emptyBuffer();
-                  codeIndend = 0;
-                  codeBuffer = '';
+                const endPassedDescribePosition = line.indexOf(`✔ ${currentDescribe} (`);
+                const endFailedDescribePosition = line.indexOf(`✖ ${currentDescribe} (`);
+                if (endPassedDescribePosition !== -1 || endFailedDescribePosition !== -1) {
+                  const time = line.slice(endPassedDescribePosition + endFailedDescribePosition + 5 + currentDescribe.length).replace(')', '');
+                  suites.push({status: endPassedDescribePosition !== -1, name: currentDescribes.join('.'), time});
+                  currentDescribes.pop();
+                  continue;
                 }
-                const name = line.slice(passedItPosition + 2);
-                tableBuffers.push(['Pass&nbsp;✅', name, ''])
+
+                const passedItPosition = line.indexOf('✔');
+                const failedItPosition = line.indexOf('✖');
+                if (passedItPosition !== -1 || failedItPosition !== -1) {
+                  const [name, time] = line.slice(passedItPosition + failedItPosition + 3).replace(')', '').split(' (');
+                  tests.push({status: passedItPosition !== -1, suite: currentDescribes.join('.'), name, time});
+                  table.push([passedItPosition !== -1 ? 'Pass&nbsp;✅' : 'Fail&nbsp;❌', name, time]);
+                  continue;
+                }
+
                 continue;
               }
 
-              const failedItPosition = line.indexOf('✖');
-              if (failedItPosition !== -1) {
-                if (codeIndend > 0) {
-                  const label = core.summary.stringify();
-                  core.summary.emptyBuffer();
-                  const content = core.summary.addCodeBlock(codeBuffer, 'js').stringify();
-                  core.summary.emptyBuffer();
-                  tableBuffers.toReversed()[0].push(core.summary.addDetails(label, content).stringify());
-                  core.summary.emptyBuffer();
-                  codeBuffer = '';
+              if (line.startsWith('✖ failing tests:')) {
+                const time = suites.find(suite => suite.name === 'tests').time;
+                core.summary.addRaw(`Execution time: ${time}`, true);
+                await core.summary.write();
+
+                core.summary.addDetails('Test Cases', summary().addTable(table).stringify());
+                await core.summary.write();
+                continue;
+              }
+
+              if (line.startsWith('test at harness/lib/test-framework.js')) {
+                continue;
+              }
+
+              const failedTestResultMarker = line.indexOf('✖');
+              if (line.indexOf('✖') !== -1) {
+                if (codeBuffer.length > 0) {
+                  tests.find(test => {
+                    return test.name === currentFailedResult.name && test.suite === currentFailedResult.suite;
+                  }).detail = {
+                    message: currentFailedResult.message,
+                    diff: currentFailedResult.diff,
+                    info: codeBuffer,
+                  };
                 }
-                codeIndend = failedItPosition + 2;
-                const name = line.slice(codeIndend);
-                tableBuffers.push(['Fail&nbsp;❌', name])
+                codeBuffer = '';
+                currentFailedResult = {name: line.slice(2).split(' (')[0]};
                 continue;
               }
 
               if (line.indexOf('AssertionError') !== -1) {
                 const message = line.split(']: ')[1];
-                let [errMsg, code] = message.split('] {');
-                let [msg, name] = errMsg.split('for');
-                msg = msg.trim();
-                if (name != null) {
-                  msg += ` for <code>${name.trim()}</code>`;
-                }
-                core.summary.addRaw(msg);
-                codeBuffer += `{${code}\n`;
+                const [msg, name] = message.split(' for ');
+                currentFailedResult.suite = name.split('/').slice(0, -1).join('.');
+                currentFailedResult.message = `${msg.trim()} for <code>${name.trim()}</code>`;
                 continue;
               }
 
-              const code = line.slice(codeIndend);
+              const code = line.slice(2);
+              if (code === '') {
+                continue;
+              }
+              if (code === '+ actual - expected') {
+                codeBuffer += '+ actual\n- expected\n';
+                continue;
+              }
+              if (code === '] {') {
+                if (codeBuffer.length > 0) {
+                  currentFailedResult.diff = codeBuffer;
+                }
+                codeBuffer = `{\n`;
+                continue;
+              }
               codeBuffer += `${code}\n`;
             }
 
-            core.summary
-              .addHeading('TCK result')
-              .addImage('https://a11y-shields-badge.kphrx.workers.dev/badge/TCK%20passed-${{ steps.tck.outputs.pass }}-success', 'TCK passed count')
-              .addImage('https://a11y-shields-badge.kphrx.workers.dev/badge/TCK%20failed-${{ steps.tck.outputs.fail }}-important', 'TCK failed count');
-            for (const [section, bodyList] of sections) {
-              core.summary.addHeading(section, 2).addList(bodyList);
+            if (codeBuffer.length > 0) {
+              tests.find(test => {
+                return test.name === currentFailedResult.name && test.suite === currentFailedResult.suite;
+              }).detail = {
+                message: currentFailedResult.message,
+                diff: currentFailedResult.diff,
+                info: codeBuffer,
+              };
             }
-            await core.summary.write();
+            codeBuffer = '';
+
+            const suiteTrees = [];
+            const createNestedList = (tree, tests, time, status) => {
+              const name = tree.shift();
+              if (tree.length === 0) {
+                return [name, {tests, time, status}];
+              }
+              return [name, {children: [createNestedList(tree, tests, time, status)]}];
+            };
+            const createSuiteTree = (list, tree, tests, time, status) => {
+              const current = list.toReversed()[0];
+              if (current == null || current[0] !== tree[0]) {
+                list.push(createNestedList(tree, tests, time, status));
+                return;
+              }
+              if (tree.length === 1) {
+                current[1].tests = tests;
+                current[1].time = time;
+                current[1].status = status;
+                return;
+              }
+              createSuiteTree(current[1].children, tree.slice(1), tests, time, status);
+            };
+            for (const suite of suites) {
+              const currentSuiteTests = tests.filter(test => test.suite === suite.name);
+              createSuiteTree(suiteTrees, suite.name.split('.').slice(1), currentSuiteTests, suite.time, suite.status);
+            }
+
+            const createList = (children) => {
+              return children.map(([name, info]) => {
+                const list = summary().addRaw(`${info.status ? '✅' : '❌'} ${name}: ${info.time}`, true);
+                if (info.children?.length > 0) {
+                  return list.addList(createList(info.children)).stringify();
+                }
+
+                const tableBuffers = [[
+                  {data: 'Status', header: true},
+                  {data: 'Test Case', header: true},
+                  {data: 'Execution Time', header: true}
+                ]];
+                if (!info.status) {
+                  tableBuffers[0].push({data: '', header: true});
+                }
+                for (const test of info.tests) {
+                  const tableBuffer = [test.status ? 'Pass&nbsp;✅' : 'Fail&nbsp;❌', test.name, test.time];
+                  if (!info.status) {
+                    tableBuffer.push(
+                      test.status ? '' : summary()
+                        .addRaw(test.detail.message, true)
+                        .addDetails('Error Info', summary()
+                          .addCodeBlock(test.detail.diff, 'diff')
+                          .addCodeBlock(test.detail.info, 'js')
+                          .stringify())
+                        .stringify());
+                  };
+                  tableBuffers.push(tableBuffer);
+                }
+                list.addTable(tableBuffers);
+
+                return list.stringify();
+              });
+            };
+            for (const [section, suiteTree] of suiteTrees) {
+              if (section == null) {
+                continue;
+              }
+              core.summary.addHeading(section, 2).addList(createList(suiteTree.children));
+              await core.summary.write();
+            }
 
 
   dynamic-badges:
