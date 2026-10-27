@@ -44,7 +44,7 @@ impl<'input> Parser<'input> {
     }
 
     pub fn parse_from_asg(self) -> Result<Document, Box<dyn Error>> {
-        let doc = serde_json::from_str(self.text)?;
+        let doc = nanoserde::DeJson::deserialize_json(self.text)?;
 
         Ok(doc)
     }

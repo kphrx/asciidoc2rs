@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use nanoserde::{DeJson, SerJson};
 
 use asciidoc2rs::Parser;
 
@@ -8,14 +8,14 @@ use std::io;
 use std::io::prelude::*;
 use std::{env, process};
 
-#[derive(Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
+#[derive(SerJson, DeJson)]
+#[nserde(tag = "type", rename_all = "lowercase")]
 pub enum Stdin {
     Block(InputBody),
     Inline(InputBody),
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(SerJson, DeJson)]
 pub struct InputBody {
     contents: String,
     path: String,
@@ -64,11 +64,11 @@ fn run_for_tck() -> Result<String, Box<dyn Error>> {
     match read_stdin() {
         Ok(input) => {
             let (Stdin::Block(content) | Stdin::Inline(content)) =
-                serde_json::from_str(input.as_str())?;
+                DeJson::deserialize_json(input.as_str())?;
             let InputBody { contents: text, .. } = content;
             let parser = Parser::new(text.as_str());
             let doc = parser.parse_to_asg()?;
-            Ok((serde_json::to_string(&doc)?).to_string())
+            Ok(doc.serialize_json().to_string())
         }
         err => err,
     }

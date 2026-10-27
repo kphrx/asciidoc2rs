@@ -1,27 +1,25 @@
-use serde::{Deserialize, Serialize};
-use serde_with_macros::skip_serializing_none;
+use nanoserde::{DeJson, SerJson};
 
 use super::{Block, LineKind, SectionBody};
 use crate::asg::{Inline, Location, NodeType};
 
 use std::error::Error;
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(SerJson, DeJson, Debug)]
 pub struct Section {
     name: String,
-    #[serde(rename = "type")]
+    #[nserde(rename = "type")]
     node_type: NodeType,
     title: Vec<Inline>,
     pub(crate) level: usize,
     blocks: Vec<SectionBody>,
     location: Option<Location>,
 
-    #[serde(skip)]
+    #[nserde(skip)]
     current_block: Option<Block>,
-    #[serde(skip)]
+    #[nserde(skip)]
     comment_delimiter: Option<String>,
-    #[serde(skip)]
+    #[nserde(skip)]
     previous_line: String,
 }
 impl Section {

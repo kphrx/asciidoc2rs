@@ -14,7 +14,7 @@ pub use document::*;
 pub use list::*;
 pub use section::*;
 
-use serde::{Deserialize, Serialize};
+use nanoserde::{DeJson, SerJson};
 
 use std::error::Error;
 
@@ -216,8 +216,8 @@ impl TrimIndent for str {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(untagged)]
+#[derive(SerJson, DeJson, Debug)]
+#[nserde(untagged)]
 pub enum SectionBody {
     Block(Block),
     Section(Box<Section>),
@@ -225,8 +225,8 @@ pub enum SectionBody {
 
 type NonSectionBlockBody = Block;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(untagged)]
+#[derive(SerJson, DeJson, Debug, Clone)]
+#[nserde(untagged)]
 pub enum Block {
     BlockParent(BlockParent),
     BlockLeaf(BlockLeaf),

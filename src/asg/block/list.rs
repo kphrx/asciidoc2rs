@@ -1,17 +1,15 @@
 use std::error::Error;
 
-use serde::{Deserialize, Serialize};
-use serde_with_macros::skip_serializing_none;
+use nanoserde::{DeJson, SerJson};
 
 use super::{Block, NonSectionBlockBody, TrimIndent};
 use crate::asg::{Inline, Location, NodeType};
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[derive(SerJson, DeJson, Debug, Clone)]
+#[nserde(tag = "name", rename_all = "camelCase")]
 pub enum AnyList {
     List {
-        #[serde(rename = "type")]
+        #[nserde(rename = "type")]
         node_type: NodeType,
         variant: ListVariant,
         marker: String,
@@ -20,19 +18,19 @@ pub enum AnyList {
         items: Vec<ListItem>,
     },
     Dlist {
-        #[serde(rename = "type")]
+        #[nserde(rename = "type")]
         node_type: NodeType,
         marker: String,
         title: Option<Vec<Inline>>,
         location: Option<Location>,
         items: Vec<DlistItem>,
 
-        #[serde(skip)]
+        #[nserde(skip)]
         current_terms: Vec<String>,
     },
 }
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
+#[derive(SerJson, DeJson, Debug, Clone)]
+#[nserde(rename_all = "camelCase")]
 pub enum ListVariant {
     Callout,
     Ordered,
@@ -181,11 +179,10 @@ impl AnyList {
     }
 }
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(SerJson, DeJson, Debug, Clone)]
 pub struct ListItem {
     name: String,
-    #[serde(rename = "type")]
+    #[nserde(rename = "type")]
     node_type: NodeType,
     marker: String,
     principal: Vec<Inline>,
@@ -209,11 +206,10 @@ impl ListItem {
     }
 }
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(SerJson, DeJson, Debug, Clone)]
 pub struct DlistItem {
     name: String,
-    #[serde(rename = "type")]
+    #[nserde(rename = "type")]
     node_type: NodeType,
     marker: String,
     principal: Vec<Inline>,

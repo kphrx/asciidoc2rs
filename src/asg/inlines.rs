@@ -1,10 +1,9 @@
-use serde::{Deserialize, Serialize};
-use serde_with_macros::skip_serializing_none;
+use nanoserde::{DeJson, SerJson};
 
 use crate::asg::{Location, NodeType};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[derive(SerJson, DeJson, Debug, Clone, PartialEq)]
+#[nserde(tag = "name", rename_all = "camelCase")]
 pub enum Inline {
     Span(InlineParent),
     Text(InlineLiteral),
@@ -31,19 +30,17 @@ impl Inline {
     }
 }
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(SerJson, DeJson, Debug, Clone, PartialEq)]
 pub struct InlineParent {
-    #[serde(rename = "type")]
+    #[nserde(rename = "type")]
     node_type: NodeType,
     inlines: Vec<Inline>,
     location: Option<Location>,
 }
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(SerJson, DeJson, Debug, Clone, PartialEq)]
 pub struct InlineLiteral {
-    #[serde(rename = "type")]
+    #[nserde(rename = "type")]
     node_type: NodeType,
     value: String,
     location: Option<Location>,

@@ -1,11 +1,10 @@
-use serde::{Deserialize, Serialize};
-use serde_with_macros::skip_serializing_none;
+use nanoserde::{DeJson, SerJson};
 
 use super::Block;
 use crate::asg::{Inline, Location, NodeType};
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[derive(SerJson, DeJson, Debug, Clone)]
+#[nserde(tag = "name", rename_all = "camelCase")]
 pub enum BlockMacro {
     Audio(BlockMacroBody),
     Video(BlockMacroBody),
@@ -30,10 +29,9 @@ impl BlockMacro {
     }
 }
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(SerJson, DeJson, Debug, Clone)]
 pub struct BlockMacroBody {
-    #[serde(rename = "type")]
+    #[nserde(rename = "type")]
     node_type: NodeType,
     target: Option<String>,
     title: Option<Vec<Inline>>,

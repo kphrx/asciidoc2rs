@@ -1,15 +1,13 @@
-use serde::{Deserialize, Serialize};
-use serde_with_macros::skip_serializing_none;
+use nanoserde::{DeJson, SerJson};
 
 use super::{Block, NonSectionBlockBody};
 use crate::asg::{Inline, Location, NodeType};
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[derive(SerJson, DeJson, Debug, Clone)]
+#[nserde(tag = "name", rename_all = "camelCase")]
 pub enum BlockParent {
     Admonition {
-        #[serde(rename = "type")]
+        #[nserde(rename = "type")]
         node_type: NodeType,
         delimiter: Option<String>,
         title: Option<Vec<Inline>>,
@@ -22,7 +20,7 @@ pub enum BlockParent {
     Open(BlockParentBody),
     Quote(BlockParentBody),
 }
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(SerJson, DeJson, Debug, Clone)]
 pub enum AdmonitionVariant {
     Caution,
     Important,
@@ -69,10 +67,9 @@ impl BlockParent {
     }
 }
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(SerJson, DeJson, Debug, Clone)]
 pub struct BlockParentBody {
-    #[serde(rename = "type")]
+    #[nserde(rename = "type")]
     node_type: NodeType,
     delimiter: Option<String>,
     title: Option<Vec<Inline>>,

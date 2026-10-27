@@ -3,25 +3,23 @@ mod inlines;
 
 pub use inlines::*;
 
-use serde::{Deserialize, Serialize};
-use serde_with_macros::skip_serializing_none;
+use nanoserde::{DeJson, SerJson};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(SerJson, DeJson, Debug, Clone, PartialEq)]
 pub struct Location {
     start: LocationBoundary,
     end: LocationBoundary,
 }
 
-#[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(SerJson, DeJson, Debug, Clone, PartialEq)]
 struct LocationBoundary {
     line: usize,
     column: usize,
     source: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[derive(SerJson, DeJson, Debug, Clone, PartialEq)]
+#[nserde(rename_all = "camelCase")]
 pub enum NodeType {
     Block,
     Inline,
