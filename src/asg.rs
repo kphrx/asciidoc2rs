@@ -24,6 +24,4 @@ struct LocationBoundary {
 #[serde(rename_all = "camelCase")]
 pub enum NodeType {
     Block,
-    Inline,
-    String,
 }
