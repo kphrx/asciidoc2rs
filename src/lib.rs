@@ -29,8 +29,8 @@ impl<'input> Parser<'input> {
         Self { text, doctype }
     }
 
-    pub fn parse_inline(text: &'input str) -> Vec<Inline> {
-        Inline::new(text)
+    pub fn parse_to_inline(self) -> Vec<Inline> {
+        Inline::new(self.text)
     }
 
     pub fn parse_to_asg(self) -> Result<Document, Box<dyn Error>> {
@@ -43,8 +43,8 @@ impl<'input> Parser<'input> {
         Ok(doc)
     }
 
-    pub fn parse_from_asg(self) -> Result<Document, Box<dyn Error>> {
-        let doc = serde_json::from_str(self.text)?;
+    pub fn parse_from_asg(text: &'input str) -> Result<Document, Box<dyn Error>> {
+        let doc = serde_json::from_str(text)?;
 
         Ok(doc)
     }
