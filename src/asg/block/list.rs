@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use super::{Block, NonSectionBlockBody, TrimIndent};
-use crate::asg::{Inline, Location, NodeType};
+use crate::asg::{Inlines, Location, NodeType};
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -15,7 +15,7 @@ pub enum AnyList {
         node_type: NodeType,
         variant: ListVariant,
         marker: String,
-        title: Option<Vec<Inline>>,
+        title: Option<Inlines>,
         location: Option<Location>,
         items: Vec<ListItem>,
     },
@@ -23,7 +23,7 @@ pub enum AnyList {
         #[serde(rename = "type")]
         node_type: NodeType,
         marker: String,
-        title: Option<Vec<Inline>>,
+        title: Option<Inlines>,
         location: Option<Location>,
         items: Vec<DlistItem>,
 
@@ -40,7 +40,10 @@ pub enum ListVariant {
 }
 impl AnyList {
     fn new_callout_list(marker: String, principal: String) -> Self {
-        let items = vec![ListItem::new(marker.clone(), Inline::new(&principal))];
+        let items = vec![ListItem::new(
+            marker.clone(),
+            Inlines::new_with_line(&principal),
+        )];
 
         Self::List {
             node_type: NodeType::Block,
@@ -53,7 +56,10 @@ impl AnyList {
     }
 
     fn new_ordered_list(marker: String, principal: String) -> Self {
-        let items = vec![ListItem::new(marker.clone(), Inline::new(&principal))];
+        let items = vec![ListItem::new(
+            marker.clone(),
+            Inlines::new_with_line(&principal),
+        )];
 
         Self::List {
             node_type: NodeType::Block,
@@ -66,7 +72,10 @@ impl AnyList {
     }
 
     fn new_unordered_list(marker: String, principal: String) -> Self {
-        let items = vec![ListItem::new(marker.clone(), Inline::new(&principal))];
+        let items = vec![ListItem::new(
+            marker.clone(),
+            Inlines::new_with_line(&principal),
+        )];
 
         Self::List {
             node_type: NodeType::Block,
@@ -85,7 +94,7 @@ impl AnyList {
             items.push(DlistItem::new(
                 marker.clone(),
                 current_terms.to_owned(),
-                Inline::new(&principal),
+                Inlines::new_with_line(&principal),
             ));
         }
 
@@ -104,7 +113,10 @@ impl AnyList {
             Self::List { marker, items, .. } => {
                 let prefix = marker.to_owned() + " ";
                 if let Some(principal) = line.trim_indent().strip_prefix(&prefix) {
-                    items.push(ListItem::new(marker.to_owned(), Inline::new(principal)));
+                    items.push(ListItem::new(
+                        marker.to_owned(),
+                        Inlines::new_with_line(principal),
+                    ));
 
                     return Ok(());
                 }
@@ -130,7 +142,7 @@ impl AnyList {
                         items.push(DlistItem::new(
                             marker.clone(),
                             current_terms.to_owned(),
-                            Inline::new(principal),
+                            Inlines::new_with_line(principal),
                         ));
                         current_terms.clear();
 
@@ -147,7 +159,7 @@ impl AnyList {
                     items.push(DlistItem::new(
                         marker.clone(),
                         current_terms.to_owned(),
-                        Inline::new(principal),
+                        Inlines::new_with_line(principal),
                     ));
                     current_terms.clear();
 
@@ -159,7 +171,7 @@ impl AnyList {
                     items.push(DlistItem::new(
                         marker.clone(),
                         vec![term.to_owned()],
-                        Inline::new(principal),
+                        Inlines::new_with_line(principal),
                     ));
 
                     return Ok(());
@@ -188,12 +200,12 @@ pub struct ListItem {
     #[serde(rename = "type")]
     node_type: NodeType,
     marker: String,
-    principal: Vec<Inline>,
+    principal: Inlines,
     blocks: Option<Vec<NonSectionBlockBody>>,
     location: Option<Location>,
 }
 impl ListItem {
-    fn new(marker: String, principal: Vec<Inline>) -> Self {
+    fn new(marker: String, principal: Inlines) -> Self {
         Self {
             name: "listItem".to_owned(),
             node_type: NodeType::Block,
@@ -216,13 +228,13 @@ pub struct DlistItem {
     #[serde(rename = "type")]
     node_type: NodeType,
     marker: String,
-    principal: Vec<Inline>,
+    principal: Inlines,
     blocks: Option<Vec<NonSectionBlockBody>>,
     location: Option<Location>,
-    terms: Vec<Vec<Inline>>,
+    terms: Vec<Inlines>,
 }
 impl DlistItem {
-    fn new(marker: String, _terms: Vec<String>, principal: Vec<Inline>) -> Self {
+    fn new(marker: String, _terms: Vec<String>, principal: Inlines) -> Self {
         Self {
             name: "dlistItem".to_owned(),
             node_type: NodeType::Block,
@@ -291,9 +303,9 @@ mod tests {
         let item_2 = items.pop().unwrap();
         let item_1 = items.pop().unwrap();
 
-        assert_eq!(Inline::new("item 1"), item_1.principal);
-        assert_eq!(Inline::new("item 2"), item_2.principal);
-        assert_eq!(Inline::new("item 3"), item_3.principal);
+        assert_eq!(Inlines::new_with_line("item 1"), item_1.principal);
+        assert_eq!(Inlines::new_with_line("item 2"), item_2.principal);
+        assert_eq!(Inlines::new_with_line("item 3"), item_3.principal);
     }
 
     #[test]
@@ -321,8 +333,8 @@ mod tests {
         let item_2 = items.pop().unwrap();
         let item_1 = items.pop().unwrap();
 
-        assert_eq!(Inline::new("description 1"), item_1.principal);
-        assert_eq!(Inline::new("description 2"), item_2.principal);
-        assert_eq!(Inline::new("description 3-4"), item_3.principal);
+        assert_eq!(Inlines::new_with_line("description 1"), item_1.principal);
+        assert_eq!(Inlines::new_with_line("description 2"), item_2.principal);
+        assert_eq!(Inlines::new_with_line("description 3-4"), item_3.principal);
     }
 }

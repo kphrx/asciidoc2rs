@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use super::Block;
-use crate::asg::{Inline, Location, NodeType};
+use crate::asg::{Inlines, Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
@@ -44,11 +44,7 @@ impl BlockLeaf {
 
     pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
         match self {
-            Self::Paragraph(body) => {
-                body.inlines = Inline::append(body.inlines(), line);
-
-                Ok(())
-            }
+            Self::Paragraph(body) => body.inlines.push(line),
             _ => Err("not implemented".into()),
         }
     }
@@ -71,8 +67,8 @@ pub struct BlockLeafBody {
     #[serde(rename = "type")]
     node_type: NodeType,
     delimiter: Option<String>,
-    title: Option<Vec<Inline>>,
-    inlines: Vec<Inline>,
+    title: Option<Inlines>,
+    pub(crate) inlines: Inlines,
     location: Option<Location>,
 }
 
@@ -82,7 +78,7 @@ impl BlockLeafBody {
             node_type: NodeType::Block,
             delimiter: None,
             title: None,
-            inlines: Vec::with_capacity(0),
+            inlines: Inlines::new(),
             location: None,
         }
     }
@@ -92,13 +88,9 @@ impl BlockLeafBody {
             node_type: NodeType::Block,
             delimiter: None,
             title: None,
-            inlines: Inline::new(line),
+            inlines: Inlines::new_with_line(line),
             location: None,
         }
-    }
-
-    pub(crate) fn inlines(&self) -> Vec<Inline> {
-        self.inlines.clone()
     }
 }
 

@@ -69,7 +69,7 @@ fn run_for_tck() -> Result<String, Box<dyn Error>> {
         }
         Stdin::Inline(InputBody { contents: text, .. }) => {
             let parser = Parser::new(text.as_str());
-            let doc = parser.parse_to_inline();
+            let doc = parser.parse_to_inlines()?;
             Ok((serde_json::to_string(&doc)?).to_string())
         }
     }

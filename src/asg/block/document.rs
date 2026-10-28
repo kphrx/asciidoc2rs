@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use super::{Block, LineKind, Section, SectionBody};
-use crate::asg::{Inline, Location, NodeType};
+use crate::asg::{Inlines, Location, NodeType};
 use crate::Doctype;
 
 use std::collections::HashMap;
@@ -35,7 +35,7 @@ pub struct Document {
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DocumentHeader {
-    title: Vec<Inline>,
+    title: Inlines,
     location: Option<Location>,
 }
 impl Document {
@@ -89,7 +89,7 @@ impl Document {
                     return Ok(());
                 }
                 HeaderLineKind::Title(document_title) => {
-                    let title = Inline::new(&document_title);
+                    let title = Inlines::new_with_line(&document_title);
                     self.header = Some(DocumentHeader {
                         title,
                         location: None,
@@ -701,7 +701,7 @@ mod tests {
         let document = parse("// this comment line is ignored\n= Document Title\nKismet R. Lee <kismet@asciidoctor.org>\n:description: The document's description.\n:sectanchors:\n:url-repo: https://my-git-repo.com\n\nThe document body starts here.").unwrap();
 
         assert_eq!(
-            Some(Inline::new("Document Title")),
+            Some(Inlines::new_with_line("Document Title")),
             document.header.map(|h| h.title)
         );
         let mut attrs = HashMap::new();
@@ -733,7 +733,7 @@ mod tests {
                 .unwrap();
 
         assert_eq!(
-            Some(Inline::new("The Intrepid Chronicles")),
+            Some(Inlines::new_with_line("The Intrepid Chronicles")),
             document.header.map(|h| h.title)
         );
         let mut attrs = HashMap::new();
@@ -749,7 +749,7 @@ mod tests {
         let document = parse("= The Intrepid Chronicles\nKismet Lee\nv7.5").unwrap();
 
         assert_eq!(
-            Some(Inline::new("The Intrepid Chronicles")),
+            Some(Inlines::new_with_line("The Intrepid Chronicles")),
             document.header.map(|h| h.title)
         );
         let mut attrs = HashMap::new();
@@ -765,7 +765,7 @@ mod tests {
                 .unwrap();
 
         assert_eq!(
-            Some(Inline::new("The Intrepid Chronicles")),
+            Some(Inlines::new_with_line("The Intrepid Chronicles")),
             document.header.map(|h| h.title)
         );
         let mut attrs = HashMap::new();
