@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
 use super::{Block, LineKind, SectionBody};
-use crate::asg::{Inline, Location, NodeType};
+use crate::asg::{Inlines, Location, NodeType};
 
 use std::error::Error;
 
@@ -12,7 +12,7 @@ pub struct Section {
     name: String,
     #[serde(rename = "type")]
     node_type: NodeType,
-    title: Vec<Inline>,
+    title: Inlines,
     pub(crate) level: usize,
     blocks: Vec<SectionBody>,
     location: Option<Location>,
@@ -29,7 +29,7 @@ impl Section {
         Self {
             name: "section".to_owned(),
             node_type: NodeType::Block,
-            title: Inline::new(heading),
+            title: Inlines::new_with_line(heading),
             level,
             blocks: Vec::with_capacity(0),
             location: None,
@@ -310,7 +310,7 @@ impl Section {
 
 #[cfg(test)]
 mod tests {
-    use crate::asg::{block::BlockLeaf, inlines::Inline};
+    use crate::asg::{block::BlockLeaf, inlines::Inlines};
 
     use super::*;
 
@@ -334,34 +334,49 @@ mod tests {
         let Some(SectionBody::Section(level1_section)) = section.blocks.first() else {
             panic!("cannot call");
         };
-        assert_eq!(Inline::new("Level 1 Section Title"), level1_section.title);
+        assert_eq!(
+            Inlines::new_with_line("Level 1 Section Title"),
+            level1_section.title
+        );
         assert_eq!(1, level1_section.blocks.len());
         let Some(SectionBody::Section(level2_section)) = level1_section.blocks.first() else {
             panic!("cannot call");
         };
-        assert_eq!(Inline::new("Level 2 Section Title"), level2_section.title);
+        assert_eq!(
+            Inlines::new_with_line("Level 2 Section Title"),
+            level2_section.title
+        );
         assert_eq!(1, level2_section.blocks.len());
         let Some(SectionBody::Section(level3_section)) = level2_section.blocks.first() else {
             panic!("cannot call");
         };
-        assert_eq!(Inline::new("Level 3 Section Title"), level3_section.title);
+        assert_eq!(
+            Inlines::new_with_line("Level 3 Section Title"),
+            level3_section.title
+        );
         assert_eq!(1, level3_section.blocks.len());
         let Some(SectionBody::Section(level4_section)) = level3_section.blocks.first() else {
             panic!("cannot call");
         };
-        assert_eq!(Inline::new("Level 4 Section Title"), level4_section.title);
+        assert_eq!(
+            Inlines::new_with_line("Level 4 Section Title"),
+            level4_section.title
+        );
         assert_eq!(1, level4_section.blocks.len());
         let Some(SectionBody::Section(level5_section)) = level4_section.blocks.first() else {
             panic!("cannot call");
         };
-        assert_eq!(Inline::new("Level 5 Section Title"), level5_section.title);
+        assert_eq!(
+            Inlines::new_with_line("Level 5 Section Title"),
+            level5_section.title
+        );
         assert_eq!(0, level5_section.blocks.len());
 
         let Some(SectionBody::Section(another_level1_section)) = section.blocks.last() else {
             panic!("cannot call");
         };
         assert_eq!(
-            Inline::new("Another Level 1 Section Title"),
+            Inlines::new_with_line("Another Level 1 Section Title"),
             another_level1_section.title
         );
         assert_eq!(0, another_level1_section.blocks.len());
@@ -376,7 +391,7 @@ mod tests {
         let Some(SectionBody::Section(first_section)) = section.blocks.first() else {
             panic!("cannot call");
         };
-        assert_eq!(Inline::new("First Section"), first_section.title);
+        assert_eq!(Inlines::new_with_line("First Section"), first_section.title);
         assert_eq!(2, first_section.blocks.len());
         let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(
             content_of_first_section,
@@ -385,14 +400,17 @@ mod tests {
             panic!("cannot call");
         };
         assert_eq!(
-            Inline::new("Content of first section"),
-            content_of_first_section.inlines()
+            Inlines::new_with_line("Content of first section"),
+            content_of_first_section.inlines
         );
 
         let Some(SectionBody::Section(nested_section)) = first_section.blocks.last() else {
             panic!("cannot call");
         };
-        assert_eq!(Inline::new("Nested Section"), nested_section.title);
+        assert_eq!(
+            Inlines::new_with_line("Nested Section"),
+            nested_section.title
+        );
         assert_eq!(1, nested_section.blocks.len());
         let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(
             content_of_nested_section,
@@ -401,14 +419,17 @@ mod tests {
             panic!("cannot call");
         };
         assert_eq!(
-            Inline::new("Content of nested section"),
-            content_of_nested_section.inlines()
+            Inlines::new_with_line("Content of nested section"),
+            content_of_nested_section.inlines
         );
 
         let Some(SectionBody::Section(second_section)) = section.blocks.last() else {
             panic!("cannot call");
         };
-        assert_eq!(Inline::new("Second Section"), second_section.title);
+        assert_eq!(
+            Inlines::new_with_line("Second Section"),
+            second_section.title
+        );
         assert_eq!(1, second_section.blocks.len());
         let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(
             content_of_second_section,
@@ -417,8 +438,8 @@ mod tests {
             panic!("cannot call");
         };
         assert_eq!(
-            Inline::new("Content of second section"),
-            content_of_second_section.inlines()
+            Inlines::new_with_line("Content of second section"),
+            content_of_second_section.inlines
         );
     }
 

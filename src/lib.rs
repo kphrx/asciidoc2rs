@@ -3,7 +3,7 @@
 pub mod asg;
 
 use asg::block::Document;
-use asg::Inline;
+use asg::Inlines;
 
 use std::error::Error;
 
@@ -29,8 +29,13 @@ impl<'input> Parser<'input> {
         Self { text, doctype }
     }
 
-    pub fn parse_inline(text: &'input str) -> Vec<Inline> {
-        Inline::new(text)
+    pub fn parse_to_inlines(self) -> Result<Inlines, Box<dyn Error>> {
+        let mut inlines = Inlines::new();
+        for line in self.text.lines() {
+            inlines.push(line)?;
+        }
+
+        Ok(inlines)
     }
 
     pub fn parse_to_asg(self) -> Result<Document, Box<dyn Error>> {
@@ -43,8 +48,8 @@ impl<'input> Parser<'input> {
         Ok(doc)
     }
 
-    pub fn parse_from_asg(self) -> Result<Document, Box<dyn Error>> {
-        let doc = serde_json::from_str(self.text)?;
+    pub fn parse_from_asg(text: &'input str) -> Result<Document, Box<dyn Error>> {
+        let doc = serde_json::from_str(text)?;
 
         Ok(doc)
     }

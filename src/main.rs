@@ -52,8 +52,7 @@ fn main() {
 fn run_with_arguments(args: &[String]) -> Result<String, Box<dyn Error>> {
     match read_file(args[1].clone()) {
         Ok(json) => {
-            let parser = Parser::new(json.as_str());
-            let doc = parser.parse_from_asg()?;
+            let doc = Parser::parse_from_asg(json.as_str())?;
             Ok(format!("{:#?}", doc))
         }
         err => err,
@@ -61,16 +60,18 @@ fn run_with_arguments(args: &[String]) -> Result<String, Box<dyn Error>> {
 }
 
 fn run_for_tck() -> Result<String, Box<dyn Error>> {
-    match read_stdin() {
-        Ok(input) => {
-            let (Stdin::Block(content) | Stdin::Inline(content)) =
-                serde_json::from_str(input.as_str())?;
-            let InputBody { contents: text, .. } = content;
+    let input = read_stdin()?;
+    match serde_json::from_str(input.as_str())? {
+        Stdin::Block(InputBody { contents: text, .. }) => {
             let parser = Parser::new(text.as_str());
             let doc = parser.parse_to_asg()?;
             Ok((serde_json::to_string(&doc)?).to_string())
         }
-        err => err,
+        Stdin::Inline(InputBody { contents: text, .. }) => {
+            let parser = Parser::new(text.as_str());
+            let doc = parser.parse_to_inlines()?;
+            Ok((serde_json::to_string(&doc)?).to_string())
+        }
     }
 }
 
