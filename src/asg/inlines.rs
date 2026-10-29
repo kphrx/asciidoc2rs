@@ -17,7 +17,7 @@ impl Inlines {
     }
 
     pub fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
-        if let Some(Inline::String(InlineLiteral::Text(last))) = self.0.last_mut() {
+        if let Some(Inline::Literal(InlineLiteral::Text(last))) = self.0.last_mut() {
             last.value.push_str(line);
             Ok(())
         } else {
@@ -34,26 +34,28 @@ impl Default for Inlines {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(tag = "type", rename_all = "camelCase")]
+#[serde(tag = "type")]
 pub enum Inline {
-    Inline(ParentInline),
-    String(InlineLiteral),
+    #[serde(rename = "inline")]
+    Parent(ParentInline),
+    #[serde(rename = "string")]
+    Literal(InlineLiteral),
 }
 impl Inline {
     fn new_text(value: &str) -> Self {
-        Self::String(InlineLiteral::Text(LiteralValue::new(value.to_owned())))
+        Self::Literal(InlineLiteral::Text(LiteralValue::new(value.to_owned())))
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[serde(tag = "name", rename_all = "lowercase")]
 pub enum ParentInline {
     Span(InlineSpan),
     Ref(InlineRef),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(tag = "variant", rename_all = "camelCase")]
+#[serde(tag = "variant", rename_all = "lowercase")]
 pub enum InlineSpan {
     Strong(SpanBody),
     Emphasis(SpanBody),
@@ -77,7 +79,7 @@ pub enum SpanForm {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(tag = "variant", rename_all = "camelCase")]
+#[serde(tag = "variant", rename_all = "lowercase")]
 pub enum InlineRef {
     Link(RefBody),
     Xref(RefBody),
@@ -92,7 +94,7 @@ pub struct RefBody {
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[serde(tag = "name", rename_all = "lowercase")]
 pub enum InlineLiteral {
     Text(LiteralValue),
     Charref(LiteralValue),
