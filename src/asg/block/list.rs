@@ -3,7 +3,7 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, NonSectionBlockBody, TrimIndent};
+use super::{Block, NonSectionBlockBody};
 use crate::asg::{Inlines, Location, NodeType};
 
 #[skip_serializing_none]
@@ -112,7 +112,8 @@ impl AnyList {
         match self {
             Self::List { marker, items, .. } => {
                 let prefix = marker.to_owned() + " ";
-                if let Some(principal) = line.trim_indent().strip_prefix(&prefix) {
+                if let Some(principal) = line.trim_start_matches(['\t', ' ']).strip_prefix(&prefix)
+                {
                     items.push(ListItem::new(
                         marker.to_owned(),
                         Inlines::new_with_line(principal),
@@ -155,7 +156,7 @@ impl AnyList {
                         return Ok(());
                     }
 
-                    let principal = line.trim_indent();
+                    let principal = line.trim_start_matches(['\t', ' ']);
                     items.push(DlistItem::new(
                         marker.clone(),
                         current_terms.to_owned(),
