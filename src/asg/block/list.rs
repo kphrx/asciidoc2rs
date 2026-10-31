@@ -40,10 +40,10 @@ pub enum ListVariant {
 }
 impl AnyList {
     fn new_callout_list(marker: String, principal: String) -> Self {
-        let items = NonEmptyVec(vec![ListItem::new(
+        let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
             Inlines::new_with_line(&principal),
-        )]);
+        ));
 
         Self::List {
             node_type: NodeType::Block,
@@ -56,10 +56,10 @@ impl AnyList {
     }
 
     fn new_ordered_list(marker: String, principal: String) -> Self {
-        let items = NonEmptyVec(vec![ListItem::new(
+        let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
             Inlines::new_with_line(&principal),
-        )]);
+        ));
 
         Self::List {
             node_type: NodeType::Block,
@@ -72,10 +72,10 @@ impl AnyList {
     }
 
     fn new_unordered_list(marker: String, principal: String) -> Self {
-        let items = NonEmptyVec(vec![ListItem::new(
+        let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
             Inlines::new_with_line(&principal),
-        )]);
+        ));
 
         Self::List {
             node_type: NodeType::Block,
