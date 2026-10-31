@@ -1,23 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use crate::asg::{Location, NodeType};
+use crate::asg::Location;
 
 use std::error::Error;
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-#[serde(tag = "name", rename_all = "camelCase")]
-pub enum Inline {
-    Span(InlineParent),
-    Text(InlineLiteral),
-    Charref(InlineLiteral),
-    Raw(InlineLiteral),
-}
-impl Inline {
-    fn new_text(value: &str) -> Self {
-        Self::Text(InlineLiteral::new(value.to_owned()))
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Inlines(Vec<Inline>);
@@ -31,7 +17,7 @@ impl Inlines {
     }
 
     pub fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
-        if let Some(Inline::Text(last)) = self.0.last_mut() {
+        if let Some(Inline::Literal(InlineLiteral::Text(last))) = self.0.last_mut() {
             last.value.push_str(line);
             Ok(())
         } else {
@@ -47,27 +33,83 @@ impl Default for Inlines {
     }
 }
 
-#[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct InlineParent {
-    #[serde(rename = "type")]
-    node_type: NodeType,
-    inlines: Vec<Inline>,
-    location: Option<Location>,
+#[serde(tag = "type")]
+pub enum Inline {
+    #[serde(rename = "inline")]
+    Parent(ParentInline),
+    #[serde(rename = "string")]
+    Literal(InlineLiteral),
+}
+impl Inline {
+    fn new_text(value: &str) -> Self {
+        Self::Literal(InlineLiteral::Text(LiteralValue::new(value.to_owned())))
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(tag = "name", rename_all = "lowercase")]
+pub enum ParentInline {
+    Span(InlineSpan),
+    Ref(InlineRef),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(tag = "variant", rename_all = "lowercase")]
+pub enum InlineSpan {
+    Strong(SpanBody),
+    Emphasis(SpanBody),
+    Code(SpanBody),
+    Mark(SpanBody),
 }
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct InlineLiteral {
-    #[serde(rename = "type")]
-    node_type: NodeType,
+pub struct SpanBody {
+    inlines: Vec<Inline>,
+    location: Option<Location>,
+    form: SpanForm,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum SpanForm {
+    Constrained,
+    Unconstrained,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(tag = "variant", rename_all = "lowercase")]
+pub enum InlineRef {
+    Link(RefBody),
+    Xref(RefBody),
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct RefBody {
+    inlines: Vec<Inline>,
+    location: Option<Location>,
+    target: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(tag = "name", rename_all = "lowercase")]
+pub enum InlineLiteral {
+    Text(LiteralValue),
+    Charref(LiteralValue),
+    Raw(LiteralValue),
+}
+
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct LiteralValue {
     value: String,
     location: Option<Location>,
 }
-impl InlineLiteral {
+impl LiteralValue {
     fn new(value: String) -> Self {
         Self {
-            node_type: NodeType::String,
             value,
             location: None,
         }

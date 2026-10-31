@@ -112,7 +112,7 @@ impl LineKind {
         }
 
         if let Some((list_marker, principal)) = line.split_once("* ") {
-            let mut marker = list_marker.trim_indent().to_owned();
+            let mut marker = list_marker.trim_start_matches(['\t', ' ']).to_owned();
             let principal = principal.trim_start_matches(' ').to_owned();
             if marker.is_empty() || !marker.contains(|c: char| c != '*') {
                 marker.push('*');
@@ -121,7 +121,7 @@ impl LineKind {
         }
 
         if let Some((list_marker, principal)) = line.split_once("- ") {
-            let mut marker = list_marker.trim_indent().to_owned();
+            let mut marker = list_marker.trim_start_matches(['\t', ' ']).to_owned();
             let principal = principal.trim_start_matches(' ').to_owned();
             // Unknown `-` list marker can be repeated infinitely.
             if marker.is_empty() {
@@ -131,7 +131,7 @@ impl LineKind {
         }
 
         if let Some((list_marker, principal)) = line.split_once(". ") {
-            let mut marker = list_marker.trim_indent().to_owned();
+            let mut marker = list_marker.trim_start_matches(['\t', ' ']).to_owned();
             let principal = principal.trim_start_matches(' ').to_owned();
             if marker.is_empty() || !marker.contains(|c: char| c != '.') {
                 marker.push('.');
@@ -145,7 +145,11 @@ impl LineKind {
         }
 
         if let Some((list_marker, principal)) = line.split_once("> ") {
-            if let Some(marker) = list_marker.trim_indent().strip_prefix('<').to_owned() {
+            if let Some(marker) = list_marker
+                .trim_start_matches(['\t', ' '])
+                .strip_prefix('<')
+                .to_owned()
+            {
                 let principal = principal.trim_start_matches(' ').to_owned();
                 if marker == "." {
                     return Self::CalloutListMarker {
@@ -164,7 +168,7 @@ impl LineKind {
         }
 
         if let Some((dlist_term, primary_text)) = line.split_once(":: ") {
-            let dlist_term = dlist_term.trim_indent();
+            let dlist_term = dlist_term.trim_start_matches(['\t', ' ']);
             let term = dlist_term.trim_end_matches(':').to_owned();
             let principal = Some(primary_text.trim_start_matches(' ').to_owned());
             if !term.ends_with(' ') {
@@ -179,7 +183,7 @@ impl LineKind {
         }
 
         if line.ends_with("::") {
-            let dlist_term = line.trim_indent();
+            let dlist_term = line.trim_start_matches(['\t', ' ']);
             let term = dlist_term.trim_end_matches(':').to_owned();
             let marker = ":".repeat(dlist_term.len() - term.len());
 
@@ -207,15 +211,6 @@ impl LineKind {
     }
 }
 
-trait TrimIndent {
-    fn trim_indent(&self) -> &str;
-}
-impl TrimIndent for str {
-    fn trim_indent(&self) -> &str {
-        self.trim_start_matches('\t').trim_start_matches(' ')
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum SectionBody {
@@ -237,7 +232,7 @@ pub enum Block {
 impl Block {
     fn is_delimited_block(&self) -> bool {
         match self {
-            Block::BlockParent(parent) => parent.delimiter().is_some(),
+            Block::BlockParent(_) => true,
             Block::BlockLeaf(leaf) => leaf.delimiter().is_some(),
             _ => false,
         }
@@ -245,7 +240,7 @@ impl Block {
 
     fn delimiter(&self) -> Option<String> {
         match self {
-            Block::BlockParent(parent) => parent.delimiter(),
+            Block::BlockParent(parent) => Some(parent.delimiter()),
             Block::BlockLeaf(leaf) => leaf.delimiter(),
             _ => None,
         }
