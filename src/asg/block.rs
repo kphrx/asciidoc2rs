@@ -232,7 +232,7 @@ pub enum Block {
 impl Block {
     fn is_delimited_block(&self) -> bool {
         match self {
-            Block::BlockParent(parent) => parent.delimiter().is_some(),
+            Block::BlockParent(_) => true,
             Block::BlockLeaf(leaf) => leaf.delimiter().is_some(),
             _ => false,
         }
@@ -240,7 +240,7 @@ impl Block {
 
     fn delimiter(&self) -> Option<String> {
         match self {
-            Block::BlockParent(parent) => parent.delimiter(),
+            Block::BlockParent(parent) => Some(parent.delimiter()),
             Block::BlockLeaf(leaf) => leaf.delimiter(),
             _ => None,
         }

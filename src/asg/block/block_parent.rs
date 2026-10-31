@@ -8,64 +8,67 @@ use crate::asg::{Inlines, Location, NodeType};
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "camelCase")]
 pub enum BlockParent {
-    Admonition {
-        #[serde(rename = "type")]
-        node_type: NodeType,
-        delimiter: Option<String>,
-        title: Option<Inlines>,
-        blocks: Vec<NonSectionBlockBody>,
-        location: Option<Location>,
-        variant: AdmonitionVariant,
-    },
+    Admonition(AdmonitionBlock),
     Example(BlockParentBody),
     Sidebar(BlockParentBody),
     Open(BlockParentBody),
     Quote(BlockParentBody),
 }
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum AdmonitionVariant {
-    Caution,
-    Important,
-    Note,
-    Tip,
-    Warning,
-}
+
 impl BlockParent {
-    fn new_admonition(variant: AdmonitionVariant) -> Self {
-        Self::Admonition {
-            node_type: NodeType::Block,
-            delimiter: None,
-            title: None,
-            blocks: Vec::with_capacity(0),
-            location: None,
-            variant,
-        }
+    fn new_admonition() -> Self {
+        Self::Admonition(AdmonitionBlock::new())
     }
 
     fn new_example() -> Self {
-        Self::Example(BlockParentBody::new())
+        Self::Example(BlockParentBody::new("====".to_string()))
     }
 
     fn new_sidebar() -> Self {
-        Self::Sidebar(BlockParentBody::new())
+        Self::Sidebar(BlockParentBody::new("****".to_string()))
     }
 
     fn new_open() -> Self {
-        Self::Open(BlockParentBody::new())
+        Self::Open(BlockParentBody::new("~~~~".to_string()))
     }
 
     fn new_quote() -> Self {
-        Self::Quote(BlockParentBody::new())
+        Self::Quote(BlockParentBody::new("____".to_string()))
     }
 
-    pub(crate) fn delimiter(&self) -> Option<String> {
-        match self {
-            BlockParent::Admonition { delimiter, .. } => delimiter.to_owned(),
-            BlockParent::Example(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockParent::Sidebar(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockParent::Open(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockParent::Quote(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
-        }
+    pub(crate) fn delimiter(&self) -> String {
+        let BlockParentBody { delimiter, .. } = match self {
+            BlockParent::Admonition(variant) => variant.body(),
+            BlockParent::Example(body)
+            | BlockParent::Sidebar(body)
+            | BlockParent::Open(body)
+            | BlockParent::Quote(body) => body.to_owned(),
+        };
+        delimiter
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "variant", rename_all = "lowercase")]
+pub enum AdmonitionBlock {
+    Caution(BlockParentBody),
+    Important(BlockParentBody),
+    Note(BlockParentBody),
+    Tip(BlockParentBody),
+    Warning(BlockParentBody),
+}
+impl AdmonitionBlock {
+    fn new() -> Self {
+        Self::Note(BlockParentBody::new("====".to_string()))
+    }
+
+    fn body(&self) -> BlockParentBody {
+        let (Self::Caution(body)
+        | Self::Important(body)
+        | Self::Note(body)
+        | Self::Tip(body)
+        | Self::Warning(body)) = self;
+        body.to_owned()
     }
 }
 
@@ -74,16 +77,18 @@ impl BlockParent {
 pub struct BlockParentBody {
     #[serde(rename = "type")]
     node_type: NodeType,
-    delimiter: Option<String>,
+    delimiter: String,
+    form: BlockParentForm,
     title: Option<Inlines>,
     blocks: Vec<NonSectionBlockBody>,
     location: Option<Location>,
 }
 impl BlockParentBody {
-    fn new() -> Self {
+    fn new(delimiter: String) -> Self {
         Self {
             node_type: NodeType::Block,
-            delimiter: None,
+            delimiter,
+            form: BlockParentForm::Delimited,
             title: None,
             blocks: Vec::with_capacity(0),
             location: None,
@@ -91,9 +96,15 @@ impl BlockParentBody {
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum BlockParentForm {
+    Delimited,
+}
+
 impl Block {
-    pub fn new_admonition(variant: AdmonitionVariant) -> Self {
-        Self::BlockParent(BlockParent::new_admonition(variant))
+    pub fn new_admonition() -> Self {
+        Self::BlockParent(BlockParent::new_admonition())
     }
 
     pub fn new_example() -> Self {
