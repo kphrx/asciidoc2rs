@@ -51,6 +51,31 @@ pub enum NodeType {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[serde(try_from = "Vec<T>")]
 struct NonEmptyVec<T>(Vec<T>);
+impl<T> NonEmptyVec<T> {
+    fn with_capacity(capacity: usize) -> Self {
+        Self(Vec::with_capacity(capacity))
+    }
+
+    const fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    fn pop(&mut self) -> Option<T> {
+        self.0.pop()
+    }
+
+    fn push(&mut self, value: T) {
+        self.0.push(value)
+    }
+
+    fn push_mut(&mut self, value: T) -> &mut T {
+        self.0.push_mut(value)
+    }
+
+    fn last_mut(&mut self) -> Option<&mut T> {
+        self.0.last_mut()
+    }
+}
 impl<T> TryFrom<Vec<T>> for NonEmptyVec<T> {
     type Error = EmptySequence;
 
