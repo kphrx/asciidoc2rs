@@ -6,7 +6,7 @@ use crate::asg::{Inlines, Location, NodeType};
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[serde(tag = "name", rename_all = "lowercase")]
 pub enum BlockParent {
     Admonition(AdmonitionBlock),
     Example(BlockParentBody),
