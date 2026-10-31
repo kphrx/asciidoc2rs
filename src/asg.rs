@@ -52,22 +52,22 @@ pub enum NodeType {
 #[serde(try_from = "Vec<T>")]
 struct NonEmptyVec<T>(Vec<T>);
 impl<T> TryFrom<Vec<T>> for NonEmptyVec<T> {
-    type Error = RequireFile;
+    type Error = EmptySequence;
 
     fn try_from(value: Vec<T>) -> Result<Self, Self::Error> {
         if value.is_empty() {
-            Err(RequireFile)
+            Err(EmptySequence)
         } else {
             Ok(Self(value))
         }
     }
 }
 
-#[derive(Debug)]
-struct RequireFile;
-impl fmt::Display for RequireFile {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("location require one or more file")
+#[derive(Debug, Clone, PartialEq)]
+struct EmptySequence;
+impl fmt::Display for EmptySequence {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str("sequence must contain at least one element")
     }
 }
-impl Error for RequireFile {}
+impl Error for EmptySequence {}
