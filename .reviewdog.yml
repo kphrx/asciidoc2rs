@@ -4,6 +4,6 @@ runner:
     format: cargo-check
     level: warning
   clippy:
-    cmd: cargo clippy -q --message-format=short
+    cmd: cargo clippy -q --message-format=short --color=never
     format: clippy
     level: warning
