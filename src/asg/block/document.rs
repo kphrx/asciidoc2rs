@@ -10,8 +10,8 @@ use std::error::Error;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "name", rename = "document")]
 pub struct Document {
-    name: String,
     #[serde(rename = "type")]
     node_type: NodeType,
     attributes: Option<HashMap<String, String>>,
@@ -41,7 +41,6 @@ pub struct DocumentHeader {
 impl Document {
     pub(crate) fn new(doctype: Doctype) -> Self {
         Self {
-            name: "document".to_owned(),
             node_type: NodeType::Block,
             attributes: None,
             header: None,
