@@ -5,7 +5,7 @@ use super::Block;
 use crate::asg::{Inlines, Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[serde(tag = "name", rename_all = "lowercase")]
 pub enum BlockMacro {
     Audio(BlockMacroBody),
     Video(BlockMacroBody),
@@ -35,6 +35,7 @@ impl BlockMacro {
 pub struct BlockMacroBody {
     #[serde(rename = "type")]
     node_type: NodeType,
+    form: BlockMacroForm,
     target: Option<String>,
     title: Option<Inlines>,
     location: Option<Location>,
@@ -43,11 +44,18 @@ impl BlockMacroBody {
     fn new() -> Self {
         Self {
             node_type: NodeType::Block,
+            form: BlockMacroForm::Macro,
             target: None,
             title: None,
             location: None,
         }
     }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(rename_all = "lowercase")]
+enum BlockMacroForm {
+    Macro,
 }
 
 impl Block {
