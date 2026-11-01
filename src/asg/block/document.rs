@@ -14,8 +14,9 @@ use std::error::Error;
 pub struct Document {
     #[serde(rename = "type")]
     node_type: NodeType,
-    attributes: Option<HashMap<String, String>>,
+    #[serde(flatten)]
     header: Option<DocumentHeader>,
+    #[serde(default)]
     blocks: Vec<SectionBody>,
     location: Option<Location>,
 
@@ -35,14 +36,30 @@ pub struct Document {
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DocumentHeader {
-    title: Inlines,
+    header: Option<TitleAndAuthors>,
+    attributes: HashMap<String, String>,
+}
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
+pub struct TitleAndAuthors {
+    title: Option<Inlines>,
+    authors: Option<Vec<Author>>,
     location: Option<Location>,
+}
+#[skip_serializing_none]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
+pub struct Author {
+    fullname: Option<String>,
+    initials: Option<String>,
+    firstname: Option<String>,
+    middlename: Option<String>,
+    lastname: Option<String>,
+    address: Option<String>,
 }
 impl Document {
     pub(crate) fn new(doctype: Doctype) -> Self {
         Self {
             node_type: NodeType::Block,
-            attributes: None,
             header: None,
             blocks: Vec::with_capacity(0),
             location: None,
@@ -89,12 +106,26 @@ impl Document {
                 }
                 HeaderLineKind::Title(document_title) => {
                     let title = Inlines::new_with_line(&document_title);
-                    self.header = Some(DocumentHeader {
-                        title,
-                        location: None,
-                    });
-                    if self.attributes.is_none() {
-                        self.attributes = Some(HashMap::new());
+                    match self.header {
+                        Some(DocumentHeader {
+                            header: Some(ref mut h),
+                            ..
+                        }) => h.title = Some(title),
+                        Some(ref mut h) => {
+                            h.header = Some(TitleAndAuthors {
+                                title: Some(title),
+                                ..Default::default()
+                            })
+                        }
+                        None => {
+                            self.header = Some(DocumentHeader {
+                                header: Some(TitleAndAuthors {
+                                    title: Some(title),
+                                    ..Default::default()
+                                }),
+                                attributes: HashMap::new(),
+                            })
+                        }
                     }
                     self.parser.is_authors_line = true;
                     return Ok(());
@@ -400,34 +431,53 @@ impl Document {
     }
 
     fn set_authors(&mut self, authors: Vec<Author>) {
-        for (i, author) in authors.iter().enumerate() {
-            let (author_key, email_key) = if i > 0 {
-                let index = i + 1;
-                (format!("author_{}", index), format!("email_{}", index))
-            } else {
-                ("author".to_owned(), "email".to_owned())
-            };
-
-            self.set_value(author_key, &author.name);
-            if let Some(email) = &author.email {
-                self.set_value(email_key, email);
+        if let Some(ref mut header) = self.header {
+            match header.header {
+                Some(TitleAndAuthors {
+                    authors: Some(ref mut header_authors),
+                    ..
+                }) => header_authors.extend(authors),
+                Some(ref mut h) => h.authors = Some(authors),
+                None => {
+                    header.header = Some(TitleAndAuthors {
+                        authors: Some(authors),
+                        ..Default::default()
+                    })
+                }
             }
+        } else {
+            self.header = Some(DocumentHeader {
+                header: Some(TitleAndAuthors {
+                    authors: Some(authors),
+                    ..Default::default()
+                }),
+                attributes: HashMap::new(),
+            })
         }
     }
 
     fn unset_value(&mut self, name: String) {
-        if let Some(attrs) = self.attributes.as_mut() {
+        if let Some(DocumentHeader {
+            attributes: attrs, ..
+        }) = self.header.as_mut()
+        {
             attrs.remove(&name.to_lowercase());
         }
     }
 
     fn set_value(&mut self, name: String, value: &str) {
-        if let Some(attrs) = self.attributes.as_mut() {
+        if let Some(DocumentHeader {
+            attributes: attrs, ..
+        }) = self.header.as_mut()
+        {
             attrs.insert(name.to_lowercase(), value.to_owned());
         } else {
             let mut attrs = HashMap::new();
             attrs.insert(name.to_lowercase(), value.to_owned());
-            self.attributes = Some(attrs);
+            self.header = Some(DocumentHeader {
+                header: None,
+                attributes: attrs,
+            });
         }
     }
 }
@@ -611,10 +661,17 @@ impl HeaderParser {
         let mut authors: Vec<Author> = Vec::with_capacity(split_authors.len());
         for author in split_authors {
             let author = match author.split_once(" <") {
-                None => Author::new(author.to_owned(), None),
+                None => Author {
+                    fullname: Some(author.to_owned()),
+                    ..Default::default()
+                },
                 Some((a, e)) => {
                     if let Some(email) = e.strip_suffix('>') {
-                        Author::new(a.to_owned(), Some(email.to_owned()))
+                        Author {
+                            fullname: Some(a.to_owned()),
+                            address: Some(email.to_owned()),
+                            ..Default::default()
+                        }
                     } else {
                         return Err("Invalid author format".into());
                     }
@@ -669,17 +726,6 @@ impl HeaderParser {
     }
 }
 
-#[derive(Debug)]
-struct Author {
-    name: String,
-    email: Option<String>,
-}
-impl Author {
-    fn new(name: String, email: Option<String>) -> Self {
-        Self { name, email }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -700,19 +746,25 @@ mod tests {
         let document = parse("// this comment line is ignored\n= Document Title\nKismet R. Lee <kismet@asciidoctor.org>\n:description: The document's description.\n:sectanchors:\n:url-repo: https://my-git-repo.com\n\nThe document body starts here.").unwrap();
 
         assert_eq!(
-            Some(Inlines::new_with_line("Document Title")),
-            document.header.map(|h| h.title)
+            Some(Some(TitleAndAuthors {
+                title: Some(Inlines::new_with_line("Document Title")),
+                authors: Some(vec![Author {
+                    fullname: Some("Kismet R. Lee".to_string()),
+                    address: Some("kismet@asciidoctor.org".to_string()),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            })),
+            document.header.as_ref().map(|h| h.header.clone())
         );
         let mut attrs = HashMap::new();
-        attrs.insert("author".to_owned(), "Kismet R. Lee".to_owned());
-        attrs.insert("email".to_owned(), "kismet@asciidoctor.org".to_owned());
         attrs.insert(
             "description".to_owned(),
             "The document's description.".to_owned(),
         );
         attrs.insert("sectanchors".to_owned(), "".to_owned());
         attrs.insert("url-repo".to_owned(), "https://my-git-repo.com".to_owned());
-        assert_eq!(Some(attrs), document.attributes);
+        assert_eq!(Some(attrs), document.header.map(|h| h.attributes));
         assert_eq!(1, document.blocks.len());
     }
 
@@ -732,15 +784,21 @@ mod tests {
                 .unwrap();
 
         assert_eq!(
-            Some(Inlines::new_with_line("The Intrepid Chronicles")),
-            document.header.map(|h| h.title)
+            Some(Some(TitleAndAuthors {
+                title: Some(Inlines::new_with_line("The Intrepid Chronicles")),
+                authors: Some(vec![Author {
+                    fullname: Some("Kismet Lee".to_string()),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            })),
+            document.header.as_ref().map(|h| h.header.clone())
         );
         let mut attrs = HashMap::new();
-        attrs.insert("author".to_owned(), "Kismet Lee".to_owned());
         attrs.insert("revnumber".to_owned(), "2.9".to_owned());
         attrs.insert("revdate".to_owned(), "October 31, 2021".to_owned());
         attrs.insert("revremark".to_owned(), "Fall incarnation".to_owned());
-        assert_eq!(Some(attrs), document.attributes);
+        assert_eq!(Some(attrs), document.header.map(|h| h.attributes));
     }
 
     #[test]
@@ -748,13 +806,19 @@ mod tests {
         let document = parse("= The Intrepid Chronicles\nKismet Lee\nv7.5").unwrap();
 
         assert_eq!(
-            Some(Inlines::new_with_line("The Intrepid Chronicles")),
-            document.header.map(|h| h.title)
+            Some(Some(TitleAndAuthors {
+                title: Some(Inlines::new_with_line("The Intrepid Chronicles")),
+                authors: Some(vec![Author {
+                    fullname: Some("Kismet Lee".to_string()),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            })),
+            document.header.as_ref().map(|h| h.header.clone())
         );
         let mut attrs = HashMap::new();
-        attrs.insert("author".to_owned(), "Kismet Lee".to_owned());
         attrs.insert("revnumber".to_owned(), "7.5".to_owned());
-        assert_eq!(Some(attrs), document.attributes);
+        assert_eq!(Some(attrs), document.header.map(|h| h.attributes));
     }
 
     #[test]
@@ -764,15 +828,21 @@ mod tests {
                 .unwrap();
 
         assert_eq!(
-            Some(Inlines::new_with_line("The Intrepid Chronicles")),
-            document.header.map(|h| h.title)
+            Some(Some(TitleAndAuthors {
+                title: Some(Inlines::new_with_line("The Intrepid Chronicles")),
+                authors: Some(vec![Author {
+                    fullname: Some("Kismet Lee".to_string()),
+                    ..Default::default()
+                }]),
+                ..Default::default()
+            })),
+            document.header.as_ref().map(|h| h.header.clone())
         );
         let mut attrs = HashMap::new();
-        attrs.insert("author".to_owned(), "Kismet Lee".to_owned());
         attrs.insert("revnumber".to_owned(), "55".to_owned());
         attrs.insert("revdate".to_owned(), "{docdate}".to_owned());
         attrs.insert("revremark".to_owned(), "A Special ⚄ Edition".to_owned());
-        assert_eq!(Some(attrs), document.attributes);
+        assert_eq!(Some(attrs), document.header.map(|h| h.attributes));
     }
 
     #[test]
