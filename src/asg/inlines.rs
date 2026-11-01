@@ -18,7 +18,7 @@ impl Inlines {
 
     pub fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
         if let Some(Inline::Literal(InlineLiteral::Text(last))) = self.0.last_mut() {
-            last.value.push_str(line);
+            last.value.push_str(&format!("\n{}", line));
             Ok(())
         } else {
             self.0.push(Inline::new_text(line));
