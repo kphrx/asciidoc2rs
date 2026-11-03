@@ -37,7 +37,7 @@ pub struct Document {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct DocumentHeader {
     header: Option<TitleAndAuthors>,
-    attributes: HashMap<String, String>,
+    attributes: HashMap<String, Option<String>>,
 }
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
@@ -461,7 +461,7 @@ impl Document {
             attributes: attrs, ..
         }) = self.header.as_mut()
         {
-            attrs.remove(&name.to_lowercase());
+            attrs.insert(name.to_lowercase(), None);
         }
     }
 
@@ -470,10 +470,10 @@ impl Document {
             attributes: attrs, ..
         }) = self.header.as_mut()
         {
-            attrs.insert(name.to_lowercase(), value.to_owned());
+            attrs.insert(name.to_lowercase(), Some(value.to_owned()));
         } else {
             let mut attrs = HashMap::new();
-            attrs.insert(name.to_lowercase(), value.to_owned());
+            attrs.insert(name.to_lowercase(), Some(value.to_owned()));
             self.header = Some(DocumentHeader {
                 header: None,
                 attributes: attrs,
@@ -760,10 +760,13 @@ mod tests {
         let mut attrs = HashMap::new();
         attrs.insert(
             "description".to_owned(),
-            "The document's description.".to_owned(),
+            Some("The document's description.".to_owned()),
         );
-        attrs.insert("sectanchors".to_owned(), "".to_owned());
-        attrs.insert("url-repo".to_owned(), "https://my-git-repo.com".to_owned());
+        attrs.insert("sectanchors".to_owned(), Some("".to_owned()));
+        attrs.insert(
+            "url-repo".to_owned(),
+            Some("https://my-git-repo.com".to_owned()),
+        );
         assert_eq!(Some(attrs), document.header.map(|h| h.attributes));
         assert_eq!(1, document.blocks.len());
     }
@@ -795,9 +798,9 @@ mod tests {
             document.header.as_ref().map(|h| h.header.clone())
         );
         let mut attrs = HashMap::new();
-        attrs.insert("revnumber".to_owned(), "2.9".to_owned());
-        attrs.insert("revdate".to_owned(), "October 31, 2021".to_owned());
-        attrs.insert("revremark".to_owned(), "Fall incarnation".to_owned());
+        attrs.insert("revnumber".to_owned(), Some("2.9".to_owned()));
+        attrs.insert("revdate".to_owned(), Some("October 31, 2021".to_owned()));
+        attrs.insert("revremark".to_owned(), Some("Fall incarnation".to_owned()));
         assert_eq!(Some(attrs), document.header.map(|h| h.attributes));
     }
 
@@ -817,7 +820,7 @@ mod tests {
             document.header.as_ref().map(|h| h.header.clone())
         );
         let mut attrs = HashMap::new();
-        attrs.insert("revnumber".to_owned(), "7.5".to_owned());
+        attrs.insert("revnumber".to_owned(), Some("7.5".to_owned()));
         assert_eq!(Some(attrs), document.header.map(|h| h.attributes));
     }
 
@@ -839,9 +842,12 @@ mod tests {
             document.header.as_ref().map(|h| h.header.clone())
         );
         let mut attrs = HashMap::new();
-        attrs.insert("revnumber".to_owned(), "55".to_owned());
-        attrs.insert("revdate".to_owned(), "{docdate}".to_owned());
-        attrs.insert("revremark".to_owned(), "A Special ⚄ Edition".to_owned());
+        attrs.insert("revnumber".to_owned(), Some("55".to_owned()));
+        attrs.insert("revdate".to_owned(), Some("{docdate}".to_owned()));
+        attrs.insert(
+            "revremark".to_owned(),
+            Some("A Special ⚄ Edition".to_owned()),
+        );
         assert_eq!(Some(attrs), document.header.map(|h| h.attributes));
     }
 
