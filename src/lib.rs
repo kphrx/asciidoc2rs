@@ -84,8 +84,8 @@ impl<'input> Parser<'input> {
                         Err("require document title for doctype-manpage".into())
                     } else {
                         let mut doc = Document::new(self.doctype.clone());
-                        doc.header = header.clone();
-                        self.state = State::Body(doc);
+                        doc.header = header.as_deref().cloned();
+                        self.state = State::Body(Box::new(doc));
                         self.push_line(line, _num)
                     }
                 }
@@ -100,8 +100,8 @@ impl<'input> Parser<'input> {
                         Err("require document title for doctype-manpage".into())
                     } else {
                         let mut doc = Document::new(self.doctype.clone());
-                        doc.header = header.clone();
-                        self.state = State::Body(doc);
+                        doc.header = header.as_deref().cloned();
+                        self.state = State::Body(Box::new(doc));
                         Ok(())
                     }
                 }
@@ -109,13 +109,13 @@ impl<'input> Parser<'input> {
                     if let Some(DocumentHeader {
                         header: Some(TitleAndAuthors { title: Some(_), .. }),
                         ..
-                    }) = header
+                    }) = header.as_deref()
                     {
                         Err("invalid document header".into())
                     } else if let Some(DocumentHeader {
                         header: ref mut title_and_authors,
                         ..
-                    }) = header
+                    }) = header.as_deref_mut()
                     {
                         if let Some(taa) = title_and_authors {
                             taa.title = Some(Inlines::new_with_line(&title));
@@ -128,13 +128,13 @@ impl<'input> Parser<'input> {
                             Ok(())
                         }
                     } else {
-                        *header = Some(DocumentHeader {
+                        *header = Some(Box::new(DocumentHeader {
                             header: Some(TitleAndAuthors {
                                 title: Some(Inlines::new_with_line(&title)),
                                 ..Default::default()
                             }),
                             ..Default::default()
-                        });
+                        }));
                         Ok(())
                     }
                 }
@@ -148,9 +148,9 @@ impl<'input> Parser<'input> {
                         })
                         .collect();
                     if let Some(DocumentHeader {
-                        header: Some(title_and_authors),
+                        header: Some(ref mut title_and_authors),
                         ..
-                    }) = header
+                    }) = header.as_deref_mut()
                     {
                         title_and_authors.authors = Some(a);
                         Ok(())
@@ -162,7 +162,7 @@ impl<'input> Parser<'input> {
                     if let Some(DocumentHeader {
                         attributes: ref mut attrs,
                         ..
-                    }) = header
+                    }) = header.as_deref_mut()
                     {
                         attrs.insert("revnumber".to_string(), Some(number));
                         if let Some(d) = date {
@@ -180,16 +180,16 @@ impl<'input> Parser<'input> {
                     if let Some(DocumentHeader {
                         attributes: ref mut attrs,
                         ..
-                    }) = header
+                    }) = header.as_deref_mut()
                     {
                         attrs.insert(name, Some(value));
                     } else {
                         let mut attrs = HashMap::new();
                         attrs.insert(name, Some(value));
-                        *header = Some(DocumentHeader {
+                        *header = Some(Box::new(DocumentHeader {
                             attributes: attrs,
                             ..Default::default()
-                        });
+                        }));
                     }
                     Ok(())
                 }
@@ -204,16 +204,16 @@ impl<'input> Parser<'input> {
                     if let Some(DocumentHeader {
                         attributes: ref mut attrs,
                         ..
-                    }) = header
+                    }) = header.as_deref_mut()
                     {
                         attrs.insert(name, None);
                     } else {
                         let mut attrs = HashMap::new();
                         attrs.insert(name, None);
-                        *header = Some(DocumentHeader {
+                        *header = Some(Box::new(DocumentHeader {
                             attributes: attrs,
                             ..Default::default()
-                        });
+                        }));
                     }
                     Ok(())
                 }
@@ -221,7 +221,7 @@ impl<'input> Parser<'input> {
                     if let Some(DocumentHeader {
                         attributes: ref mut attrs,
                         ..
-                    }) = header
+                    }) = header.as_deref_mut()
                     {
                         attrs.remove(&name);
                     } else {
@@ -255,14 +255,14 @@ impl<'input> Parser<'input> {
                     Err("require document title for doctype-manpage".into())
                 } else {
                     let mut doc = Document::new(self.doctype);
-                    doc.header = header.clone();
+                    doc.header = header.as_deref().cloned();
                     doc.end();
                     Ok(doc)
                 }
             }
             State::Body(mut doc) => {
                 doc.end();
-                Ok(doc)
+                Ok(*doc)
             }
         }
     }
@@ -278,8 +278,8 @@ impl<'input> Parser<'input> {
 enum State {
     #[default]
     Start,
-    Header(HeaderParser, Option<DocumentHeader>),
-    Body(Document),
+    Header(HeaderParser, Option<Box<DocumentHeader>>),
+    Body(Box<Document>),
 }
 
 #[cfg(test)]
