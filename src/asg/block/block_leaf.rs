@@ -7,7 +7,7 @@ use super::Block;
 use crate::asg::{Inlines, Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[serde(tag = "name", rename_all = "lowercase")]
 pub enum BlockLeaf {
     Listing(BlockLeafBody),
     Literal(BlockLeafBody),
@@ -48,25 +48,22 @@ impl BlockLeaf {
             _ => Err("not implemented".into()),
         }
     }
-
-    pub(crate) fn delimiter(&self) -> Option<String> {
-        match self {
-            BlockLeaf::Listing(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Literal(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Paragraph(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Pass(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Stem(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Verse(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-        }
-    }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "form", content = "delimiter", rename_all = "lowercase")]
+pub(crate) enum BlockLeafForm {
+    Delimited(String),
+    Indented,
+    Paragraph,
+}
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BlockLeafBody {
     #[serde(rename = "type")]
     node_type: NodeType,
-    delimiter: Option<String>,
+    #[serde(flatten)]
+    pub(crate) form: Option<BlockLeafForm>,
     title: Option<Inlines>,
     pub(crate) inlines: Inlines,
     location: Option<Location>,
@@ -76,7 +73,7 @@ impl BlockLeafBody {
     fn new() -> Self {
         Self {
             node_type: NodeType::Block,
-            delimiter: None,
+            form: None,
             title: None,
             inlines: Inlines::new(),
             location: None,
@@ -86,7 +83,7 @@ impl BlockLeafBody {
     fn new_text(line: &str) -> Self {
         Self {
             node_type: NodeType::Block,
-            delimiter: None,
+            form: None,
             title: None,
             inlines: Inlines::new_with_line(line),
             location: None,

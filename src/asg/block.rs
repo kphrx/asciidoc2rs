@@ -233,7 +233,14 @@ impl Block {
     fn is_delimited_block(&self) -> bool {
         match self {
             Block::BlockParent(_) => true,
-            Block::BlockLeaf(leaf) => leaf.delimiter().is_some(),
+            Block::BlockLeaf(
+                BlockLeaf::Listing(leaf)
+                | BlockLeaf::Literal(leaf)
+                | BlockLeaf::Paragraph(leaf)
+                | BlockLeaf::Pass(leaf)
+                | BlockLeaf::Stem(leaf)
+                | BlockLeaf::Verse(leaf),
+            ) if let Some(BlockLeafForm::Delimited(_)) = leaf.form => true,
             _ => false,
         }
     }
@@ -241,7 +248,17 @@ impl Block {
     fn delimiter(&self) -> Option<String> {
         match self {
             Block::BlockParent(parent) => Some(parent.delimiter()),
-            Block::BlockLeaf(leaf) => leaf.delimiter(),
+            Block::BlockLeaf(
+                BlockLeaf::Listing(leaf)
+                | BlockLeaf::Literal(leaf)
+                | BlockLeaf::Paragraph(leaf)
+                | BlockLeaf::Pass(leaf)
+                | BlockLeaf::Stem(leaf)
+                | BlockLeaf::Verse(leaf),
+            ) => match leaf.form {
+                Some(BlockLeafForm::Delimited(ref delimiter)) => Some(delimiter.to_string()),
+                _ => None,
+            },
             _ => None,
         }
     }
