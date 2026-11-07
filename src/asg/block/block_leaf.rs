@@ -7,39 +7,39 @@ use super::Block;
 use crate::asg::{Inlines, Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
-pub enum BlockLeaf {
-    Listing(BlockLeafBody),
-    Literal(BlockLeafBody),
-    Paragraph(BlockLeafBody),
-    Pass(BlockLeafBody),
-    Stem(BlockLeafBody),
-    Verse(BlockLeafBody),
+#[serde(tag = "name", rename_all = "lowercase")]
+pub enum LeafBlock {
+    Listing(LeafBody),
+    Literal(LeafBody),
+    Paragraph(LeafBody),
+    Pass(LeafBody),
+    Stem(LeafBody),
+    Verse(LeafBody),
 }
 
-impl BlockLeaf {
+impl LeafBlock {
     fn new_listing() -> Self {
-        Self::Listing(BlockLeafBody::new())
+        Self::Listing(LeafBody::new())
     }
 
     fn new_literal() -> Self {
-        Self::Literal(BlockLeafBody::new())
+        Self::Literal(LeafBody::new())
     }
 
     fn new_paragraph(line: &str) -> Self {
-        Self::Paragraph(BlockLeafBody::new_text(line))
+        Self::Paragraph(LeafBody::new_text(line))
     }
 
     fn new_pass() -> Self {
-        Self::Pass(BlockLeafBody::new())
+        Self::Pass(LeafBody::new())
     }
 
     fn new_stem() -> Self {
-        Self::Stem(BlockLeafBody::new())
+        Self::Stem(LeafBody::new())
     }
 
     fn new_verse() -> Self {
-        Self::Verse(BlockLeafBody::new())
+        Self::Verse(LeafBody::new())
     }
 
     pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
@@ -48,35 +48,32 @@ impl BlockLeaf {
             _ => Err("not implemented".into()),
         }
     }
-
-    pub(crate) fn delimiter(&self) -> Option<String> {
-        match self {
-            BlockLeaf::Listing(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Literal(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Paragraph(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Pass(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Stem(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Verse(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-        }
-    }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "form", content = "delimiter", rename_all = "lowercase")]
+pub(crate) enum LeafForm {
+    Delimited(String),
+    Indented,
+    Paragraph,
+}
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BlockLeafBody {
+pub struct LeafBody {
     #[serde(rename = "type")]
     node_type: NodeType,
-    delimiter: Option<String>,
+    #[serde(flatten)]
+    pub(crate) form: Option<LeafForm>,
     title: Option<Inlines>,
     pub(crate) inlines: Inlines,
     location: Option<Location>,
 }
 
-impl BlockLeafBody {
+impl LeafBody {
     fn new() -> Self {
         Self {
             node_type: NodeType::Block,
-            delimiter: None,
+            form: None,
             title: None,
             inlines: Inlines::new(),
             location: None,
@@ -86,7 +83,7 @@ impl BlockLeafBody {
     fn new_text(line: &str) -> Self {
         Self {
             node_type: NodeType::Block,
-            delimiter: None,
+            form: None,
             title: None,
             inlines: Inlines::new_with_line(line),
             location: None,
@@ -96,26 +93,26 @@ impl BlockLeafBody {
 
 impl Block {
     pub fn new_listing() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_listing())
+        Self::Leaf(LeafBlock::new_listing())
     }
 
     pub fn new_literal() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_literal())
+        Self::Leaf(LeafBlock::new_literal())
     }
 
     pub fn new_paragraph(line: &str) -> Self {
-        Self::BlockLeaf(BlockLeaf::new_paragraph(line))
+        Self::Leaf(LeafBlock::new_paragraph(line))
     }
 
     pub fn new_pass() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_pass())
+        Self::Leaf(LeafBlock::new_pass())
     }
 
     pub fn new_stem() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_stem())
+        Self::Leaf(LeafBlock::new_stem())
     }
 
     pub fn new_verse() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_verse())
+        Self::Leaf(LeafBlock::new_verse())
     }
 }

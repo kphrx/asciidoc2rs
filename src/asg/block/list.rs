@@ -3,12 +3,12 @@ use std::error::Error;
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, NonSectionBlockBody, TrimIndent};
-use crate::asg::{Inlines, Location, NodeType};
+use super::{Block, NonSectionBlockBody};
+use crate::asg::{Inlines, Location, NodeType, NonEmptyVec};
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[serde(tag = "name", rename_all = "lowercase")]
 pub enum AnyList {
     List {
         #[serde(rename = "type")]
@@ -17,7 +17,7 @@ pub enum AnyList {
         marker: String,
         title: Option<Inlines>,
         location: Option<Location>,
-        items: Vec<ListItem>,
+        items: NonEmptyVec<ListItem>,
     },
     Dlist {
         #[serde(rename = "type")]
@@ -25,14 +25,14 @@ pub enum AnyList {
         marker: String,
         title: Option<Inlines>,
         location: Option<Location>,
-        items: Vec<DlistItem>,
+        items: NonEmptyVec<DlistItem>,
 
         #[serde(skip)]
         current_terms: Vec<String>,
     },
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "lowercase")]
 pub enum ListVariant {
     Callout,
     Ordered,
@@ -40,10 +40,10 @@ pub enum ListVariant {
 }
 impl AnyList {
     fn new_callout_list(marker: String, principal: String) -> Self {
-        let items = vec![ListItem::new(
+        let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
             Inlines::new_with_line(&principal),
-        )];
+        ));
 
         Self::List {
             node_type: NodeType::Block,
@@ -56,10 +56,10 @@ impl AnyList {
     }
 
     fn new_ordered_list(marker: String, principal: String) -> Self {
-        let items = vec![ListItem::new(
+        let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
             Inlines::new_with_line(&principal),
-        )];
+        ));
 
         Self::List {
             node_type: NodeType::Block,
@@ -72,10 +72,10 @@ impl AnyList {
     }
 
     fn new_unordered_list(marker: String, principal: String) -> Self {
-        let items = vec![ListItem::new(
+        let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
             Inlines::new_with_line(&principal),
-        )];
+        ));
 
         Self::List {
             node_type: NodeType::Block,
@@ -88,7 +88,7 @@ impl AnyList {
     }
 
     fn new_description_list(marker: String, term: String, principal: Option<String>) -> Self {
-        let mut items = Vec::with_capacity(1);
+        let mut items = NonEmptyVec::with_capacity(1);
         let current_terms = vec![term.clone()];
         if let Some(principal) = principal {
             items.push(DlistItem::new(
@@ -112,7 +112,8 @@ impl AnyList {
         match self {
             Self::List { marker, items, .. } => {
                 let prefix = marker.to_owned() + " ";
-                if let Some(principal) = line.trim_indent().strip_prefix(&prefix) {
+                if let Some(principal) = line.trim_start_matches(['\t', ' ']).strip_prefix(&prefix)
+                {
                     items.push(ListItem::new(
                         marker.to_owned(),
                         Inlines::new_with_line(principal),
@@ -155,7 +156,7 @@ impl AnyList {
                         return Ok(());
                     }
 
-                    let principal = line.trim_indent();
+                    let principal = line.trim_start_matches(['\t', ' ']);
                     items.push(DlistItem::new(
                         marker.clone(),
                         current_terms.to_owned(),
@@ -231,7 +232,7 @@ pub struct DlistItem {
     principal: Inlines,
     blocks: Option<Vec<NonSectionBlockBody>>,
     location: Option<Location>,
-    terms: Vec<Inlines>,
+    terms: NonEmptyVec<Inlines>,
 }
 impl DlistItem {
     fn new(marker: String, _terms: Vec<String>, principal: Inlines) -> Self {
@@ -242,7 +243,7 @@ impl DlistItem {
             principal,
             blocks: Some(Vec::with_capacity(0)),
             location: None,
-            terms: Vec::with_capacity(0),
+            terms: NonEmptyVec::with_capacity(1),
         }
     }
 
