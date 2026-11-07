@@ -8,7 +8,7 @@ use std::error::Error;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
-#[serde(tag = "name", rename_all = "lowercase")]
+#[serde(tag = "name", rename = "section")]
 pub struct Section {
     #[serde(rename = "type")]
     node_type: NodeType,
