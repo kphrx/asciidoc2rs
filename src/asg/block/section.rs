@@ -1,8 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, LineKind, SectionBody};
+use super::{Block, SectionBody};
 use crate::asg::{Inlines, Location, NodeType};
+use crate::LineKind;
 
 use std::error::Error;
 

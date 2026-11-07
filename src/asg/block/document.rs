@@ -1,9 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, LineKind, Section, SectionBody};
+use super::{Block, Section, SectionBody};
 use crate::asg::{Inlines, Location, NodeType};
-use crate::Doctype;
+use crate::{Doctype, LineKind};
 
 use std::collections::HashMap;
 use std::error::Error;
