@@ -8,8 +8,8 @@ use std::error::Error;
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug)]
+#[serde(tag = "name", rename_all = "lowercase")]
 pub struct Section {
-    name: String,
     #[serde(rename = "type")]
     node_type: NodeType,
     title: Inlines,
@@ -27,7 +27,6 @@ pub struct Section {
 impl Section {
     pub(crate) fn new(level: usize, heading: &str) -> Self {
         Self {
-            name: "section".to_owned(),
             node_type: NodeType::Block,
             title: Inlines::new_with_line(heading),
             level,
@@ -310,7 +309,7 @@ impl Section {
 
 #[cfg(test)]
 mod tests {
-    use crate::asg::{block::BlockLeaf, inlines::Inlines};
+    use crate::asg::{block::LeafBlock, inlines::Inlines};
 
     use super::*;
 
@@ -393,9 +392,8 @@ mod tests {
         };
         assert_eq!(Inlines::new_with_line("First Section"), first_section.title);
         assert_eq!(2, first_section.blocks.len());
-        let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(
-            content_of_first_section,
-        )))) = first_section.blocks.first()
+        let Some(SectionBody::Block(Block::Leaf(LeafBlock::Paragraph(content_of_first_section)))) =
+            first_section.blocks.first()
         else {
             panic!("cannot call");
         };
@@ -412,9 +410,8 @@ mod tests {
             nested_section.title
         );
         assert_eq!(1, nested_section.blocks.len());
-        let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(
-            content_of_nested_section,
-        )))) = nested_section.blocks.first()
+        let Some(SectionBody::Block(Block::Leaf(LeafBlock::Paragraph(content_of_nested_section)))) =
+            nested_section.blocks.first()
         else {
             panic!("cannot call");
         };
@@ -431,9 +428,8 @@ mod tests {
             second_section.title
         );
         assert_eq!(1, second_section.blocks.len());
-        let Some(SectionBody::Block(Block::BlockLeaf(BlockLeaf::Paragraph(
-            content_of_second_section,
-        )))) = second_section.blocks.first()
+        let Some(SectionBody::Block(Block::Leaf(LeafBlock::Paragraph(content_of_second_section)))) =
+            second_section.blocks.first()
         else {
             panic!("cannot call");
         };
