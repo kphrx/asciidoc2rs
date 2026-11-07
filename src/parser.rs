@@ -1,4 +1,4 @@
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default)]
 pub(crate) enum HeaderParser {
     #[default]
     Line,
@@ -242,7 +242,7 @@ impl HeaderParser {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub(crate) enum HeaderLineKind {
     NotHeader,
     End,
@@ -256,7 +256,7 @@ pub(crate) enum HeaderLineKind {
     Wrap,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 pub(crate) struct Author {
     pub(crate) fullname: String,
     pub(crate) email: Option<String>,
@@ -265,6 +265,7 @@ pub(crate) struct Author {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::assert_matches;
 
     mod header_parser {
         use super::*;
@@ -272,220 +273,205 @@ mod tests {
         #[test]
         fn line_prase_line_empty() {
             let mut p = HeaderParser::Line;
-            assert_eq!(p.parse_line(""), Ok(HeaderLineKind::End));
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p.parse_line(""), Ok(HeaderLineKind::End));
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn line_prase_line_title() {
             let mut p = HeaderParser::Line;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line("= The Intrepid Chronicles"),
-                Ok(HeaderLineKind::Title("The Intrepid Chronicles".to_string()))
+                Ok(HeaderLineKind::Title(t)) if t == "The Intrepid Chronicles"
             );
-            assert_eq!(p, HeaderParser::AuthorLine);
+            assert_matches!(p, HeaderParser::AuthorLine);
         }
 
         #[test]
         fn line_prase_line_attribute() {
             let mut p = HeaderParser::Line;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line(":name-of-an-attribute:"),
-                Ok(HeaderLineKind::Attribute(
-                    "name-of-an-attribute".to_string(),
-                    "".to_string()
-                ))
+                Ok(HeaderLineKind::Attribute(n, v))
+                    if n == "name-of-an-attribute"
+                    && v == ""
             );
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn line_prase_line_wrap_attribute() {
             let mut p = HeaderParser::Line;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line(":description: If you have a very long line of text \\"),
                 Ok(HeaderLineKind::Wrap)
             );
-            assert_eq!(
+            assert_matches!(
                 p,
-                HeaderParser::Wrapped(
-                    "description".to_string(),
-                    "If you have a very long line of text ".to_string()
-                )
+                HeaderParser::Wrapped(n, v)
+                    if n == "description"
+                    && v == "If you have a very long line of text "
             );
         }
 
         #[test]
         fn author_line_prase_line_empty() {
             let mut p = HeaderParser::AuthorLine;
-            assert_eq!(p.parse_line(""), Ok(HeaderLineKind::End));
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p.parse_line(""), Ok(HeaderLineKind::End));
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn author_line_prase_line_an_author() {
             let mut p = HeaderParser::AuthorLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line("Kismet R. Lee <kismet@asciidoctor.org>"),
-                Ok(HeaderLineKind::Authors(vec![Author {
-                    fullname: "Kismet R. Lee".to_string(),
-                    email: Some("kismet@asciidoctor.org".to_string())
-                }]))
+                Ok(HeaderLineKind::Authors(a))
+                    if matches!(a.as_slice(), [Author { fullname, email: Some(email) }]
+                        if fullname == "Kismet R. Lee"
+                        && email == "kismet@asciidoctor.org")
             );
-            assert_eq!(p, HeaderParser::RevisionLine);
+            assert_matches!(p, HeaderParser::RevisionLine);
         }
 
         #[test]
         fn author_line_prase_line_multiple_authors() {
             let mut p = HeaderParser::AuthorLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line("Kismet R. Lee <kismet@asciidoctor.org>; B. Steppenwolf; Pax Draeke <pax@asciidoctor.org>"),
-                Ok(HeaderLineKind::Authors(vec![
-                        Author {
-                            fullname: "Kismet R. Lee".to_string(),
-                            email: Some("kismet@asciidoctor.org".to_string()),
-                        },
-                        Author {
-                            fullname: "B. Steppenwolf".to_string(),
-                            email: None,
-                        },
-                        Author {
-                            fullname: "Pax Draeke".to_string(),
-                            email: Some("pax@asciidoctor.org".to_string()),
-                        },
-                ])),
+                Ok(HeaderLineKind::Authors(a))
+                    if matches!(
+                        a.as_slice(),
+                        [
+                            Author { fullname: fullname1, email: Some(email1) },
+                            Author { fullname: fullname2, email: None },
+                            Author { fullname: fullname3, email: Some(email3) },
+                        ]
+                            if fullname1 == "Kismet R. Lee" && email1 == "kismet@asciidoctor.org"
+                            && fullname2 == "B. Steppenwolf"
+                            && fullname3 == "Pax Draeke" && email3 == "pax@asciidoctor.org")
             );
-            assert_eq!(p, HeaderParser::RevisionLine);
+            assert_matches!(p, HeaderParser::RevisionLine);
         }
 
         #[test]
         fn author_line_prase_line_attribute() {
             let mut p = HeaderParser::AuthorLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line(":name-of-an-attribute:"),
-                Ok(HeaderLineKind::Attribute(
-                    "name-of-an-attribute".to_string(),
-                    "".to_string()
-                ))
+                Ok(HeaderLineKind::Attribute(n, v))
+                    if n == "name-of-an-attribute"
+                    && v == ""
             );
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn author_line_prase_line_wrap_attribute() {
             let mut p = HeaderParser::AuthorLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line(":description: If you have a very long line of text \\"),
                 Ok(HeaderLineKind::Wrap)
             );
-            assert_eq!(
+            assert_matches!(
                 p,
-                HeaderParser::Wrapped(
-                    "description".to_string(),
-                    "If you have a very long line of text ".to_string()
-                )
+                HeaderParser::Wrapped(n, v)
+                    if n == "description"
+                    && v == "If you have a very long line of text "
             );
         }
 
         #[test]
         fn revision_line_prase_line_empty() {
             let mut p = HeaderParser::RevisionLine;
-            assert_eq!(p.parse_line(""), Ok(HeaderLineKind::End));
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p.parse_line(""), Ok(HeaderLineKind::End));
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn revision_line_prase_line_revision() {
             let mut p = HeaderParser::RevisionLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line("2.9, October 31, 2021: Fall incarnation"),
-                Ok(HeaderLineKind::Revision(
-                    "2.9".to_string(),
-                    Some("October 31, 2021".to_string()),
-                    Some("Fall incarnation".to_string())
-                ))
+                Ok(HeaderLineKind::Revision(n, Some(d), Some(r)))
+                    if n == "2.9"
+                    && d == "October 31, 2021"
+                    && r == "Fall incarnation"
             );
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn revision_line_prase_line_revision_number_only() {
             let mut p = HeaderParser::RevisionLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line("v7.5"),
-                Ok(HeaderLineKind::Revision("7.5".to_string(), None, None))
+                Ok(HeaderLineKind::Revision(n, None, None)) if n == "7.5"
             );
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn revision_line_prase_line_revision_number_and_date() {
             let mut p = HeaderParser::RevisionLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line("7.5, 1-29-2020"),
-                Ok(HeaderLineKind::Revision(
-                    "7.5".to_string(),
-                    Some("1-29-2020".to_string()),
-                    None
-                ))
+                Ok(HeaderLineKind::Revision(n, Some(d), None))
+                    if n == "7.5"
+                    && d == "1-29-2020"
             );
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn revision_line_prase_line_revision_number_and_remark() {
             let mut p = HeaderParser::RevisionLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line("7.5: A new analysis"),
-                Ok(HeaderLineKind::Revision(
-                    "7.5".to_string(),
-                    None,
-                    Some("A new analysis".to_string())
-                ))
+                Ok(HeaderLineKind::Revision(n, None, Some(r)))
+                    if n == "7.5"
+                    && r == "A new analysis"
             );
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn revision_line_prase_line_revision_trim_prefix_characters() {
             let mut p = HeaderParser::RevisionLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line("LPR55, {docdate}: A Special ⚄ Edition"),
-                Ok(HeaderLineKind::Revision(
-                    "55".to_string(),
-                    Some("{docdate}".to_string()),
-                    Some("A Special ⚄ Edition".to_string())
-                ))
+                Ok(HeaderLineKind::Revision(n, Some(d), Some(r)))
+                    if n == "55"
+                    && d == "{docdate}"
+                    && r == "A Special ⚄ Edition"
             );
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn revision_line_prase_line_attribute() {
             let mut p = HeaderParser::RevisionLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line(":name-of-an-attribute:"),
-                Ok(HeaderLineKind::Attribute(
-                    "name-of-an-attribute".to_string(),
-                    "".to_string()
-                ))
+                Ok(HeaderLineKind::Attribute(n, v))
+                    if n == "name-of-an-attribute"
+                    && v == ""
             );
-            assert_eq!(p, HeaderParser::Line);
+            assert_matches!(p, HeaderParser::Line);
         }
 
         #[test]
         fn revision_line_prase_line_wrap_attribute() {
             let mut p = HeaderParser::RevisionLine;
-            assert_eq!(
+            assert_matches!(
                 p.parse_line(":description: If you have a very long line of text \\"),
                 Ok(HeaderLineKind::Wrap)
             );
-            assert_eq!(
+            assert_matches!(
                 p,
-                HeaderParser::Wrapped(
-                    "description".to_string(),
-                    "If you have a very long line of text ".to_string()
-                )
+                HeaderParser::Wrapped(n, v)
+                    if n == "description"
+                    && v == "If you have a very long line of text "
             );
         }
     }
