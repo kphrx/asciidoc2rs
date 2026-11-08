@@ -3,9 +3,9 @@
 pub mod asg;
 mod parser;
 
-use parser::{HeaderLineKind, HeaderParser};
+use parser::{HeaderLineKind, HeaderParser, SectionLineKind, SectionParser};
 
-use asg::block::{Author, Document, DocumentHeader, TitleAndAuthors};
+use asg::block::{Author, Document, DocumentHeader, SectionBody, TitleAndAuthors};
 use asg::Inlines;
 
 use std::collections::HashMap;
@@ -255,7 +255,7 @@ impl<'input> Parser<'input> {
         Ok(doc)
     }
 
-    fn push_line(&mut self, line: &str, _num: usize) -> Result<(), Box<dyn Error>> {
+    fn push_line(&mut self, line: &str, _num: usize) -> Result<(), String> {
         match self.state {
             State::Start => {
                 if line.is_empty() || (line.starts_with("//") && !line.starts_with("///")) {
@@ -278,7 +278,7 @@ impl<'input> Parser<'input> {
                     } else {
                         let mut doc = Document::new(self.doctype.clone());
                         doc.header = header.as_deref().cloned();
-                        self.state = State::Body(Box::new(doc));
+                        self.state = State::Body(Default::default(), Box::new(doc));
                         self.push_line(line, _num)
                     }
                 }
@@ -294,7 +294,7 @@ impl<'input> Parser<'input> {
                     } else {
                         let mut doc = Document::new(self.doctype.clone());
                         doc.header = header.as_deref().cloned();
-                        self.state = State::Body(Box::new(doc));
+                        self.state = State::Body(Default::default(), Box::new(doc));
                         Ok(())
                     }
                 }
@@ -424,7 +424,45 @@ impl<'input> Parser<'input> {
                 }
                 HeaderLineKind::Wrap | HeaderLineKind::Comment => Ok(()),
             },
-            State::Body(ref mut doc) => doc.push(line),
+            State::Body(ref mut parser, ref mut doc) => match parser.parse_line(line, 0)? {
+                SectionLineKind::End(0, title) => match self.doctype {
+                    Doctype::Book => {
+                        *parser = SectionParser::Section(
+                            Default::default(),
+                            0,
+                            title,
+                            Vec::with_capacity(0),
+                        );
+                        Ok(())
+                    }
+                    _ => Err("level 0 sections can only be used when doctype is book".to_string()),
+                },
+                SectionLineKind::End(..) => panic!("cannot call"),
+                SectionLineKind::SectionEnd(section, 0, title) => match self.doctype {
+                    Doctype::Book => {
+                        doc.blocks.push(SectionBody::Section(section));
+                        *parser = SectionParser::Section(
+                            Default::default(),
+                            0,
+                            title,
+                            Vec::with_capacity(0),
+                        );
+                        Ok(())
+                    }
+                    _ => Err("level 0 sections can only be used when doctype is book".to_string()),
+                },
+                SectionLineKind::SectionEnd(section, l, title) => {
+                    doc.blocks.push(SectionBody::Section(section));
+                    *parser =
+                        SectionParser::Section(Default::default(), l, title, Vec::with_capacity(0));
+                    Ok(())
+                }
+                SectionLineKind::NestedEnd(block) => {
+                    doc.blocks.push(block);
+                    Ok(())
+                }
+                SectionLineKind::Skip | SectionLineKind::Comment | SectionLineKind::Nest => Ok(()),
+            },
         }
     }
 
@@ -453,8 +491,10 @@ impl<'input> Parser<'input> {
                     Ok(doc)
                 }
             }
-            State::Body(mut doc) => {
-                doc.end();
+            State::Body(parser, mut doc) => {
+                if let Some(body) = parser.finish() {
+                    doc.blocks.push(body);
+                }
                 Ok(*doc)
             }
         }
@@ -472,7 +512,7 @@ enum State {
     #[default]
     Start,
     Header(HeaderParser, Option<Box<DocumentHeader>>),
-    Body(Box<Document>),
+    Body(SectionParser, Box<Document>),
 }
 
 #[cfg(test)]
