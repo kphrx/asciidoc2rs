@@ -15,9 +15,9 @@ pub struct Document {
     #[serde(rename = "type")]
     node_type: NodeType,
     #[serde(flatten)]
-    pub(crate) header: Option<DocumentHeader>,
+    pub header: Option<DocumentHeader>,
     #[serde(default)]
-    pub(crate) blocks: Vec<SectionBody>,
+    pub blocks: Vec<SectionBody>,
     location: Option<Location>,
 
     #[serde(skip)]
@@ -32,25 +32,25 @@ pub struct Document {
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct DocumentHeader {
-    pub(crate) header: Option<TitleAndAuthors>,
-    pub(crate) attributes: HashMap<String, Option<String>>,
+    pub header: Option<TitleAndAuthors>,
+    pub attributes: HashMap<String, Option<String>>,
 }
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct TitleAndAuthors {
-    pub(crate) title: Option<Inlines>,
-    pub(crate) authors: Option<Vec<Author>>,
+    pub title: Option<Inlines>,
+    pub authors: Option<Vec<Author>>,
     pub(crate) location: Option<Location>,
 }
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Author {
-    pub(crate) fullname: Option<String>,
+    pub fullname: Option<String>,
     pub(crate) initials: Option<String>,
     pub(crate) firstname: Option<String>,
     pub(crate) middlename: Option<String>,
     pub(crate) lastname: Option<String>,
-    pub(crate) address: Option<String>,
+    pub address: Option<String>,
 }
 impl Document {
     pub(crate) fn new(doctype: Doctype) -> Self {

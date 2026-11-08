@@ -6,7 +6,7 @@ use crate::asg::Location;
 use std::error::Error;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct Inlines(Vec<Inline>);
+pub struct Inlines(pub Vec<Inline>);
 impl Inlines {
     pub fn new() -> Self {
         Self(Vec::with_capacity(0))
@@ -104,7 +104,7 @@ pub enum InlineLiteral {
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct LiteralValue {
-    value: String,
+    pub value: String,
     location: Option<Location>,
 }
 impl LiteralValue {
