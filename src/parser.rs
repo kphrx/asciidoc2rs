@@ -1,3 +1,8 @@
+use std::mem;
+
+use crate::asg::block::{Block, Section, SectionBody};
+use crate::LineKind;
+
 #[derive(Debug, Default)]
 pub(crate) enum HeaderParser {
     #[default]
@@ -260,6 +265,137 @@ pub(crate) enum HeaderLineKind {
 pub(crate) struct Author {
     pub(crate) fullname: String,
     pub(crate) email: Option<String>,
+}
+
+#[derive(Debug, Default)]
+pub(crate) enum SectionParser {
+    #[default]
+    Line,
+    Paragraph(String),
+    Section(Box<SectionParser>, usize, String, Vec<SectionBody>),
+    DelimitedComment(String),
+    Delimited(Box<DelimitedParser>, String, Vec<Block>),
+}
+impl SectionParser {
+    pub(crate) fn parse_line(
+        &mut self,
+        line: &str,
+        level: usize,
+    ) -> Result<SectionLineKind, String> {
+        match self {
+            Self::Line => {
+                match LineKind::parse(line.to_string()) {
+                    LineKind::Empty | LineKind::CommentMarker => Ok(SectionLineKind::Skip),
+                    LineKind::CommentDelimiter(delimiter) => {
+                        *self = Self::DelimitedComment(delimiter);
+                        Ok(SectionLineKind::Comment)
+                    }
+                    LineKind::HeadingMarker { level: l, title } => if level >= l {
+                        Ok(SectionLineKind::End(l, title))
+                    } else if level + 1 == l {
+                        *self = Self::Section(Default::default(), l, title, Vec::with_capacity(0));
+                        Ok(SectionLineKind::Nest)
+                    } else { Err("cannot skip section level".to_string()) },
+                    LineKind::UnorderedListMarker { marker, principal } => todo!("parse_line SectionParser::Line: LineKind::UnorderedListMarker {{ marker: {:?}, principal: {:?} }}", marker, principal),
+                    LineKind::OrderedListMarker { marker, principal } => todo!("parse_line SectionParser::Line: LineKind::OrderedListMarker {{ marker: {:?}, principal: {:?} }}", marker, principal),
+                    LineKind::OffsetOrderedListMarker { offset, principal } => todo!("parse_line SectionParser::Line: LineKind::OffsetOrderedListMarker {{ offset: {:?}, principal: {:?} }}", offset, principal),
+                    LineKind::CalloutListMarker { marker, principal } => todo!("parse_line SectionParser::Line: LineKind::CalloutListMarker {{ marker: {:?}, principal: {:?} }}", marker, principal),
+                    LineKind::DescriptionListMarker { marker, term, principal } => todo!("parse_line SectionParser::Line: LineKind::DescriptionListMarker {{ marker: {:?}, term: {:?}, principal: {:?} }}", marker, term, principal),
+                    LineKind::Unknown => {
+                        *self = Self::Paragraph(line.to_string());
+                        Ok(SectionLineKind::Nest)
+                    },
+                    k => todo!("parse_line SectionParser::Line: LineKind::{:?}", k),
+                }
+            }
+            Self::Paragraph(l) => {
+                match LineKind::parse(line.to_string()) {
+                    LineKind::Empty => {
+                        let p = Block::new_paragraph(l);
+                        *self = Self::Line;
+                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(p)))
+                    }
+                    LineKind::CommentMarker => Ok(SectionLineKind::Skip),
+                    LineKind::CommentDelimiter(delimiter) => {
+                        let p = Block::new_paragraph(l);
+                        *self = Self::DelimitedComment(delimiter);
+                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(p)))
+                    }
+                    _ => {
+                        l.push('\n');
+                        l.push_str(line);
+                        Ok(SectionLineKind::Nest)
+                    }
+                }
+            }
+            Self::Section(parser, sl, title, blocks) => {
+                match parser.parse_line(line, *sl)? {
+                    SectionLineKind::End(l, t) => {
+                        let sec = Section::new_with_blocks(*sl, title, mem::take(blocks));
+                        *self = Self::Line; // end
+                        Ok(SectionLineKind::SectionEnd(Box::new(sec), l, t))
+                    }
+                    SectionLineKind::SectionEnd(nsec, l, t) => if *sl < l {
+                        blocks.push(SectionBody::Section(nsec));
+                        **parser = SectionParser::Section(Default::default(), l, t, Default::default());
+                        Ok(SectionLineKind::Nest)
+                    } else {
+                        blocks.push(SectionBody::Section(nsec));
+                        let sec = Section::new_with_blocks(*sl, title, mem::take(blocks));
+                        *self = Self::Line; // end
+                        Ok(SectionLineKind::SectionEnd(Box::new(sec), l, t))
+                    },
+                    SectionLineKind::NestedEnd(body) => {
+                        blocks.push(body);
+                        Ok(SectionLineKind::Nest)
+                    }
+                    SectionLineKind::Skip | SectionLineKind::Nest | SectionLineKind::Comment => Ok(SectionLineKind::Nest),
+                }
+            }
+            Self::DelimitedComment(delimiter) => match LineKind::parse(line.to_string()) {
+                LineKind::CommentDelimiter(d) if d == *delimiter => {
+                    *self = Self::Line;
+                    Ok(SectionLineKind::Comment)
+                },
+                _ => Ok(SectionLineKind::Comment),
+            }
+            Self::Delimited(_parser, _delimiter, _block) => todo!(),
+        }
+    }
+
+    pub(crate) fn finish(self) -> Option<SectionBody> {
+        match self {
+            Self::Section(parser, level, title, mut blocks) => {
+                if let Some(body) = parser.finish() {
+                    blocks.push(body);
+                }
+
+                Some(SectionBody::Section(Box::new(Section::new_with_blocks(
+                    level, &title, blocks,
+                ))))
+            }
+            Self::Line => None,
+            Self::Paragraph(line) => Some(SectionBody::Block(Block::new_paragraph(&line))),
+            _ => todo!("finish: SectionParser::{:?}", self),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum SectionLineKind {
+    Comment,
+    Skip,
+    End(usize, String),
+    SectionEnd(Box<Section>, usize, String),
+    Nest,
+    NestedEnd(SectionBody),
+}
+
+#[derive(Debug)]
+pub(crate) enum DelimitedParser {
+    Line,
+    DelimitedComment(String),
+    Delimited(Box<DelimitedParser>, String, Vec<Block>),
 }
 
 #[cfg(test)]
@@ -566,6 +702,16 @@ mod tests {
                     if n == "description"
                     && v == "Write your docs in text,\nAsciiDoc makes it easy,\n"
             );
+        }
+    }
+
+    mod section_parser {
+        use super::*;
+
+        #[test]
+        fn line_prase_line_empty() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("", 0), Ok(SectionLineKind::Skip))
         }
     }
 }

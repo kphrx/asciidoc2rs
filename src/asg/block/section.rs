@@ -26,6 +26,19 @@ pub struct Section {
     previous_line: String,
 }
 impl Section {
+    pub(crate) fn new_with_blocks(level: usize, heading: &str, blocks: Vec<SectionBody>) -> Self {
+        Self {
+            node_type: NodeType::Block,
+            title: Inlines::new_with_line(heading),
+            level,
+            blocks,
+            location: None,
+            current_block: None,
+            comment_delimiter: None,
+            previous_line: "".to_owned(),
+        }
+    }
+
     pub(crate) fn new(level: usize, heading: &str) -> Self {
         Self {
             node_type: NodeType::Block,
