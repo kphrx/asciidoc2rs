@@ -78,7 +78,7 @@ jobs:
             const table = [[{data: 'Status', header: true}, {data: 'Test Case', header: true}, {data: 'Execution time', header: true}]];
             const commandErrors = [];
             let codeBuffer = '';
-            let currentFailedResult;
+            let currentFailedResult = {};
             for await (const line of lineStream) {
               if (line.length === 0 && codeBuffer.length === 0) {
                 continue;
