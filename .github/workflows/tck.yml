@@ -158,7 +158,8 @@ jobs:
               const code = line.slice(2);
               if (currentFailedResult.suite == null) {
                 currentFailedResult.error ??= '';
-                currentFailedResult.error += code;
+                currentFailedResult.error += `${code}\n`;
+                continue;
               }
               if (code === '') {
                 continue;
@@ -236,13 +237,15 @@ jobs:
                   const tableBuffer = [test.status ? 'Pass&nbsp;✅' : 'Fail&nbsp;❌', test.name, test.time];
                   if (!info.status) {
                     tableBuffer.push(
-                      test.status ? '' : summary()
-                        .addRaw(test.detail.message, true)
-                        .addDetails('Error Info', summary()
-                          .addCodeBlock(test.detail.diff, 'diff')
-                          .addCodeBlock(test.detail.info, 'js')
-                          .stringify())
-                        .stringify());
+                      test.status ? ''
+                      : test.detail == null ? 'Failed Command'
+                      : summary()
+                          .addRaw(test.detail.message, true)
+                          .addDetails('Error Info', summary()
+                            .addCodeBlock(test.detail.diff, 'diff')
+                            .addCodeBlock(test.detail.info, 'js')
+                            .stringify())
+                          .stringify());
                   };
                   tableBuffers.push(tableBuffer);
                 }
