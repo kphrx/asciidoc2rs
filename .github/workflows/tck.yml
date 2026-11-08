@@ -129,7 +129,7 @@ jobs:
               }
 
               const failedTestResultMarker = line.indexOf('✖');
-              if (line.indexOf('✖') !== -1) {
+              if (failedTestResultMarker !== -1) {
                 if (codeBuffer.length > 0) {
                   tests.find(test => {
                     return test.name === currentFailedResult.name && test.suite === currentFailedResult.suite;
@@ -153,9 +153,10 @@ jobs:
               }
 
               const code = line.slice(2);
-              if (code === '') {
+              if (code === '' || currentFailedResult.suite == null) {
                 continue;
               }
+
               if (code === '+ actual - expected') {
                 codeBuffer += '+ actual\n- expected\n';
                 continue;
