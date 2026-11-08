@@ -78,7 +78,7 @@ impl Block {
     pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
         match self {
             Self::Leaf(leaf) => leaf.push(line),
-            Self::AnyList(list) => list.push(line),
+            Self::AnyList(list) => Ok(list.push(line)?),
             _ => Err("not implemented".into()),
         }
     }

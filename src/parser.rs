@@ -1,6 +1,6 @@
 use std::mem;
 
-use crate::asg::block::{Block, Section, SectionBody};
+use crate::asg::block::{AnyList, Block, Section, SectionBody};
 use crate::LineKind;
 
 #[derive(Debug, Default)]
@@ -272,6 +272,7 @@ pub(crate) enum SectionParser {
     #[default]
     Line,
     Paragraph(String),
+    List(ListVariant, String, Vec<String>),
     Section(Box<SectionParser>, usize, String, Vec<SectionBody>),
     DelimitedComment(String),
     Delimited(Box<DelimitedParser>, String, Vec<Block>),
@@ -296,10 +297,22 @@ impl SectionParser {
                         *self = Self::Section(Default::default(), l, title, Vec::with_capacity(0));
                         Ok(SectionLineKind::Nest)
                     } else { Err("cannot skip section level".to_string()) },
-                    LineKind::UnorderedListMarker { marker, principal } => todo!("parse_line SectionParser::Line: LineKind::UnorderedListMarker {{ marker: {:?}, principal: {:?} }}", marker, principal),
-                    LineKind::OrderedListMarker { marker, principal } => todo!("parse_line SectionParser::Line: LineKind::OrderedListMarker {{ marker: {:?}, principal: {:?} }}", marker, principal),
-                    LineKind::OffsetOrderedListMarker { offset, principal } => todo!("parse_line SectionParser::Line: LineKind::OffsetOrderedListMarker {{ offset: {:?}, principal: {:?} }}", offset, principal),
-                    LineKind::CalloutListMarker { marker, principal } => todo!("parse_line SectionParser::Line: LineKind::CalloutListMarker {{ marker: {:?}, principal: {:?} }}", marker, principal),
+                    LineKind::UnorderedListMarker { marker, principal } => {
+                        *self = Self::List(ListVariant::Unordered, marker, vec![principal]);
+                        Ok(SectionLineKind::Nest)
+                    },
+                    LineKind::OrderedListMarker { marker, principal } => {
+                        *self = Self::List(ListVariant::Ordered, marker, vec![principal]);
+                        Ok(SectionLineKind::Nest)
+                    },
+                    LineKind::OffsetOrderedListMarker { offset, principal } => {
+                        *self = Self::List(ListVariant::Ordered, format!("{}.", offset), vec![principal]);
+                        Ok(SectionLineKind::Nest)
+                    },
+                    LineKind::CalloutListMarker { marker, principal } => {
+                        *self = Self::List(ListVariant::Callout, marker, vec![principal]);
+                        Ok(SectionLineKind::Nest)
+                    },
                     LineKind::DescriptionListMarker { marker, term, principal } => todo!("parse_line SectionParser::Line: LineKind::DescriptionListMarker {{ marker: {:?}, term: {:?}, principal: {:?} }}", marker, term, principal),
                     LineKind::Unknown => {
                         *self = Self::Paragraph(line.to_string());
@@ -326,6 +339,29 @@ impl SectionParser {
                         l.push_str(line);
                         Ok(SectionLineKind::Nest)
                     }
+                }
+            }
+            Self::List(v, m, i) => {
+                match LineKind::parse(line.to_string()) {
+                    LineKind::Empty => {
+                        let mut items = i.iter_mut();
+                        if let Some(principal) = items.next() {
+                            let mut list = match v {
+                                ListVariant::Callout => AnyList::new_callout_list(m.to_string(), principal.to_string()),
+                                ListVariant::Ordered => AnyList::new_ordered_list(m.to_string(), principal.to_string()),
+                                ListVariant::Unordered => AnyList::new_unordered_list(m.to_string(), principal.to_string()),
+                            };
+
+                            for p in items {
+                                list.push(&format!("{} {}", m, p))?;
+                            }
+                            *self = Self::Line;
+                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
+                        } else {
+                            Err("not expected empty items of list".to_string())
+                        }
+                    }
+                    _ => todo!()
                 }
             }
             Self::Section(parser, sl, title, blocks) => {
@@ -376,6 +412,27 @@ impl SectionParser {
             }
             Self::Line => None,
             Self::Paragraph(line) => Some(SectionBody::Block(Block::new_paragraph(&line))),
+            Self::List(v, m, i) => {
+                let mut items = i.into_iter();
+                if let Some(principal) = items.next() {
+                    let mut list = match v {
+                        ListVariant::Callout => AnyList::new_callout_list(m.to_string(), principal),
+                        ListVariant::Ordered => AnyList::new_ordered_list(m.to_string(), principal),
+                        ListVariant::Unordered => {
+                            AnyList::new_unordered_list(m.to_string(), principal)
+                        }
+                    };
+
+                    for p in items {
+                        if list.push(&format!("{} {}", m, p)).is_err() {
+                            return None;
+                        }
+                    }
+                    Some(SectionBody::Block(Block::AnyList(list)))
+                } else {
+                    None
+                }
+            }
             _ => todo!("finish: SectionParser::{:?}", self),
         }
     }
@@ -396,6 +453,12 @@ pub(crate) enum DelimitedParser {
     Line,
     DelimitedComment(String),
     Delimited(Box<DelimitedParser>, String, Vec<Block>),
+}
+#[derive(Debug)]
+pub(crate) enum ListVariant {
+    Callout,
+    Ordered,
+    Unordered,
 }
 
 #[cfg(test)]

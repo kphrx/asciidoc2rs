@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
@@ -39,7 +37,7 @@ pub enum ListVariant {
     Unordered,
 }
 impl AnyList {
-    fn new_callout_list(marker: String, principal: String) -> Self {
+    pub(crate) fn new_callout_list(marker: String, principal: String) -> Self {
         let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
             Inlines::new_with_line(&principal),
@@ -55,7 +53,7 @@ impl AnyList {
         }
     }
 
-    fn new_ordered_list(marker: String, principal: String) -> Self {
+    pub(crate) fn new_ordered_list(marker: String, principal: String) -> Self {
         let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
             Inlines::new_with_line(&principal),
@@ -71,7 +69,7 @@ impl AnyList {
         }
     }
 
-    fn new_unordered_list(marker: String, principal: String) -> Self {
+    pub(crate) fn new_unordered_list(marker: String, principal: String) -> Self {
         let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
             Inlines::new_with_line(&principal),
@@ -108,7 +106,7 @@ impl AnyList {
         }
     }
 
-    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn push(&mut self, line: &str) -> Result<(), String> {
         match self {
             Self::List { marker, items, .. } => {
                 let prefix = marker.to_owned() + " ";
@@ -126,7 +124,7 @@ impl AnyList {
                     return last.push(line);
                 }
 
-                Err("not expected empty items of list".into())
+                Err("not expected empty items of list".to_string())
             }
             Self::Dlist {
                 marker,
@@ -188,7 +186,7 @@ impl AnyList {
                     return last.push(line);
                 }
 
-                Err("not expected empty items of list".into())
+                Err("not expected empty items of list".to_string())
             }
         }
     }
@@ -217,8 +215,8 @@ impl ListItem {
         }
     }
 
-    pub(crate) fn push(&mut self, _line: &str) -> Result<(), Box<dyn Error>> {
-        Err("not implemented".into())
+    pub(crate) fn push(&mut self, _line: &str) -> Result<(), String> {
+        Err("not implemented".to_string())
     }
 }
 
@@ -247,8 +245,8 @@ impl DlistItem {
         }
     }
 
-    pub(crate) fn push(&mut self, _line: &str) -> Result<(), Box<dyn Error>> {
-        Err("not implemented".into())
+    pub(crate) fn push(&mut self, _line: &str) -> Result<(), String> {
+        Err("not implemented".to_string())
     }
 }
 
