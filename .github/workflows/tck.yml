@@ -140,7 +140,7 @@ jobs:
                     info: codeBuffer,
                   };
                 } else if (currentFailedResult.error != null) {
-                  commandErrors.push({..currentFailedResult});
+                  commandErrors.push({...currentFailedResult});
                 }
                 codeBuffer = '';
                 currentFailedResult = {name: line.slice(2).split(' (')[0]};
@@ -186,7 +186,7 @@ jobs:
                 info: codeBuffer,
               };
             } else if (currentFailedResult.error != null) {
-              commandErrors.push({..currentFailedResult});
+              commandErrors.push({...currentFailedResult});
             }
             codeBuffer = '';
 
