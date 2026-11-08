@@ -315,6 +315,21 @@ mod tests {
         }
 
         #[test]
+        fn line_prase_line_wrap_return_attribute() {
+            let mut p = HeaderParser::Line;
+            assert_matches!(
+                p.parse_line(":description: Write your docs in text, + \\"),
+                Ok(HeaderLineKind::Wrap)
+            );
+            assert_matches!(
+                p,
+                HeaderParser::Wrapped(n, v)
+                    if n == "description"
+                    && v == "Write your docs in text,\n"
+            );
+        }
+
+        #[test]
         fn author_line_prase_line_empty() {
             let mut p = HeaderParser::AuthorLine;
             assert_matches!(p.parse_line(""), Ok(HeaderLineKind::End));
@@ -378,6 +393,21 @@ mod tests {
                 HeaderParser::Wrapped(n, v)
                     if n == "description"
                     && v == "If you have a very long line of text "
+            );
+        }
+
+        #[test]
+        fn author_line_prase_line_wrap_return_attribute() {
+            let mut p = HeaderParser::AuthorLine;
+            assert_matches!(
+                p.parse_line(":description: Write your docs in text, + \\"),
+                Ok(HeaderLineKind::Wrap)
+            );
+            assert_matches!(
+                p,
+                HeaderParser::Wrapped(n, v)
+                    if n == "description"
+                    && v == "Write your docs in text,\n"
             );
         }
 
@@ -472,6 +502,69 @@ mod tests {
                 HeaderParser::Wrapped(n, v)
                     if n == "description"
                     && v == "If you have a very long line of text "
+            );
+        }
+
+        #[test]
+        fn revision_line_prase_line_wrap_return_attribute() {
+            let mut p = HeaderParser::RevisionLine;
+            assert_matches!(
+                p.parse_line(":description: Write your docs in text, + \\"),
+                Ok(HeaderLineKind::Wrap)
+            );
+            assert_matches!(
+                p,
+                HeaderParser::Wrapped(n, v)
+                    if n == "description"
+                    && v == "Write your docs in text,\n"
+            );
+        }
+
+        #[test]
+        fn wrapped_prase_line_attribute() {
+            let mut p = HeaderParser::Wrapped("description".to_string(), "If you have a very long line of text that you need to substitute regularly in a document, you may find it easier to split the value neatly in the header ".to_string());
+            assert_matches!(
+                p.parse_line("so it remains readable to folks looking at the AsciiDoc source."),
+                Ok(HeaderLineKind::Attribute(n, v))
+                    if n == "description"
+                    && v == "If you have a very long line of text that you need to substitute regularly in a document, you may find it easier to split the value neatly in the header so it remains readable to folks looking at the AsciiDoc source."
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn wrapped_prase_line_wrap_attribute() {
+            let mut p = HeaderParser::Wrapped(
+                "description".to_string(),
+                "If you have a very long line of text ".to_string(),
+            );
+            assert_matches!(
+                p.parse_line("that you need to substitute regularly in a document, \\"),
+                Ok(HeaderLineKind::Wrap)
+            );
+            assert_matches!(
+                p,
+                HeaderParser::Wrapped(n, v)
+                    if n == "description"
+                    && v == "If you have a very long line of text that you need to substitute regularly in a document, "
+            );
+        }
+
+        #[test]
+        fn wrapped_prase_line_wrap_return_attribute() {
+            let mut p = HeaderParser::Wrapped(
+                "description".to_string(),
+                "Write your docs in text,\n".to_string(),
+            );
+            assert_matches!(
+                p.parse_line("AsciiDoc makes it easy, + \\"),
+                Ok(HeaderLineKind::Wrap)
+            );
+            assert_matches!(
+                p,
+                HeaderParser::Wrapped(n, v)
+                    if n == "description"
+                    && v == "Write your docs in text,\nAsciiDoc makes it easy,\n"
             );
         }
     }
