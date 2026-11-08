@@ -158,7 +158,7 @@ jobs:
               const code = line.slice(2);
               if (currentFailedResult.suite == null) {
                 currentFailedResult.error ??= '';
-                currentFailedResult.error += code;
+                currentFailedResult.error += `${code}\n`;
                 continue;
               }
               if (code === '') {
