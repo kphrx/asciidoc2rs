@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, NonSectionBlockBody};
+use super::NonSectionBlockBody;
 use crate::asg::{Inlines, Location, NodeType, NonEmptyVec};
 
 #[skip_serializing_none]
@@ -254,45 +254,23 @@ impl DlistItem {
     }
 }
 
-impl Block {
-    pub(crate) fn new_callout_list(marker: String, principal: String) -> Self {
-        Self::AnyList(AnyList::new_callout_list(marker, principal))
-    }
-
-    pub(crate) fn new_ordered_list(marker: String, principal: String) -> Self {
-        Self::AnyList(AnyList::new_ordered_list(marker, principal))
-    }
-
-    pub(crate) fn new_unordered_list(marker: String, principal: String) -> Self {
-        Self::AnyList(AnyList::new_unordered_list(marker, principal))
-    }
-
-    pub(crate) fn new_description_list(
-        marker: String,
-        term: String,
-        principal: Option<String>,
-    ) -> Self {
-        Self::AnyList(AnyList::new_description_list(marker, term, principal))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn unordered_list() {
-        let mut list = Block::new_unordered_list("*".to_owned(), "item 1".to_owned());
+        let mut list = AnyList::new_unordered_list("*".to_owned(), "item 1".to_owned());
 
-        list.push("* item 2");
-        list.push("  * item 3");
+        list.push("* item 2").unwrap();
+        list.push("  * item 3").unwrap();
 
-        let Block::AnyList(AnyList::List {
+        let AnyList::List {
             variant,
             marker,
             items,
             ..
-        }) = list
+        } = list
         else {
             panic!("not expected")
         };
@@ -313,18 +291,18 @@ mod tests {
 
     #[test]
     fn description_list() {
-        let mut list = Block::new_description_list(
+        let mut list = AnyList::new_description_list(
             "::".to_owned(),
             "term 1".to_owned(),
             Some("description 1".to_owned()),
         );
 
-        list.push("term 2::");
-        list.push("  description 2");
-        list.push("term 3::");
-        list.push("    term 4:: description 3-4");
+        list.push("term 2::").unwrap();
+        list.push("  description 2").unwrap();
+        list.push("term 3::").unwrap();
+        list.push("    term 4:: description 3-4").unwrap();
 
-        let Block::AnyList(AnyList::Dlist { marker, items, .. }) = list else {
+        let AnyList::Dlist { marker, items, .. } = list else {
             panic!("not expected")
         };
         let mut items = items.to_owned();

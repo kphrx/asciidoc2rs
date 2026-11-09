@@ -237,7 +237,7 @@ impl<'input> Parser<'input> {
         }
     }
 
-    pub fn parse_to_inlines(self) -> Result<Inlines, Box<dyn Error>> {
+    pub fn parse_to_inlines(self) -> Result<Inlines, String> {
         let mut inlines = Inlines::new();
         for line in self.text.lines() {
             inlines.push(line)?;
@@ -246,7 +246,7 @@ impl<'input> Parser<'input> {
         Ok(inlines)
     }
 
-    pub fn parse_to_asg(mut self) -> Result<Document, Box<dyn Error>> {
+    pub fn parse_to_asg(mut self) -> Result<Document, String> {
         for (index, line) in self.text.lines().enumerate() {
             self.push_line(line, index + 1)?;
         }

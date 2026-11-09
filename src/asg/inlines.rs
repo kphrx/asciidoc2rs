@@ -3,8 +3,6 @@ use serde_with_macros::skip_serializing_none;
 
 use crate::asg::Location;
 
-use std::error::Error;
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Inlines(pub Vec<Inline>);
 impl Inlines {
@@ -16,7 +14,7 @@ impl Inlines {
         Self(vec![Inline::new_text(line)])
     }
 
-    pub fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+    pub fn push(&mut self, line: &str) -> Result<(), String> {
         if let Some(Inline::Literal(InlineLiteral::Text(last))) = self.0.last_mut() {
             last.value.push_str(&format!("\n{}", line));
             Ok(())

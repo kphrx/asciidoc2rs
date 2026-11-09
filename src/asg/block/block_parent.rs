@@ -35,17 +35,6 @@ impl ParentBlock {
     fn new_quote() -> Self {
         Self::Quote(ParentBody::new("____".to_string()))
     }
-
-    pub(crate) fn delimiter(&self) -> String {
-        let ParentBody { delimiter, .. } = match self {
-            ParentBlock::Admonition(variant) => variant.body(),
-            ParentBlock::Example(body)
-            | ParentBlock::Sidebar(body)
-            | ParentBlock::Open(body)
-            | ParentBlock::Quote(body) => body.to_owned(),
-        };
-        delimiter
-    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -60,15 +49,6 @@ pub enum AdmonitionBlock {
 impl AdmonitionBlock {
     fn new() -> Self {
         Self::Note(ParentBody::new("====".to_string()))
-    }
-
-    fn body(&self) -> ParentBody {
-        let (Self::Caution(body)
-        | Self::Important(body)
-        | Self::Note(body)
-        | Self::Tip(body)
-        | Self::Warning(body)) = self;
-        body.to_owned()
     }
 }
 

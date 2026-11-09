@@ -18,8 +18,6 @@ pub use section::*;
 
 use serde::{Deserialize, Serialize};
 
-use std::error::Error;
-
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(untagged)]
 pub enum SectionBody {
@@ -38,48 +36,4 @@ pub enum Block {
     Break(Break),
     Heading(DiscreteHeading),
     AnyList(AnyList),
-}
-impl Block {
-    fn is_delimited_block(&self) -> bool {
-        match self {
-            Block::Parent(_) => true,
-            Block::Leaf(
-                LeafBlock::Listing(leaf)
-                | LeafBlock::Literal(leaf)
-                | LeafBlock::Paragraph(leaf)
-                | LeafBlock::Pass(leaf)
-                | LeafBlock::Stem(leaf)
-                | LeafBlock::Verse(leaf),
-            ) if let Some(LeafForm::Delimited(_)) = leaf.form => true,
-            _ => false,
-        }
-    }
-
-    fn delimiter(&self) -> Option<String> {
-        match self {
-            Block::Parent(parent) => Some(parent.delimiter()),
-            Block::Leaf(
-                LeafBlock::Listing(leaf)
-                | LeafBlock::Literal(leaf)
-                | LeafBlock::Paragraph(leaf)
-                | LeafBlock::Pass(leaf)
-                | LeafBlock::Stem(leaf)
-                | LeafBlock::Verse(leaf),
-            ) => match leaf.form {
-                Some(LeafForm::Delimited(ref delimiter)) => Some(delimiter.to_string()),
-                _ => None,
-            },
-            _ => None,
-        }
-    }
-
-    pub(crate) fn end(&mut self) {}
-
-    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
-        match self {
-            Self::Leaf(leaf) => leaf.push(line),
-            Self::AnyList(list) => Ok(list.push(line)?),
-            _ => Err("not implemented".into()),
-        }
-    }
 }

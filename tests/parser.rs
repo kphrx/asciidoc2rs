@@ -3,10 +3,9 @@ use asciidoc2rs::asg::{Inline, InlineLiteral, Inlines, LiteralValue};
 use asciidoc2rs::{Doctype, Parser};
 use std::assert_matches;
 use std::collections::HashMap;
-use std::error::Error;
 
-fn parse(text: &'static str) -> Result<Document, Box<dyn Error>> {
-    let mut parser = Parser::new_with_doctype(text, Doctype::Article);
+fn parse(text: &'static str) -> Result<Document, String> {
+    let parser = Parser::new_with_doctype(text, Doctype::Article);
 
     let document = parser.parse_to_asg()?;
 

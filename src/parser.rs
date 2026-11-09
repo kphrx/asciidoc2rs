@@ -605,7 +605,7 @@ mod tests {
                 p.parse_line(":name-of-an-attribute:"),
                 Ok(HeaderLineKind::Attribute(n, v))
                     if n == "name-of-an-attribute"
-                    && v == ""
+                    && v.is_empty()
             );
             assert_matches!(p, HeaderParser::Line);
         }
@@ -687,7 +687,7 @@ mod tests {
                 p.parse_line(":name-of-an-attribute:"),
                 Ok(HeaderLineKind::Attribute(n, v))
                     if n == "name-of-an-attribute"
-                    && v == ""
+                    && v.is_empty()
             );
             assert_matches!(p, HeaderParser::Line);
         }
@@ -796,7 +796,7 @@ mod tests {
                 p.parse_line(":name-of-an-attribute:"),
                 Ok(HeaderLineKind::Attribute(n, v))
                     if n == "name-of-an-attribute"
-                    && v == ""
+                    && v.is_empty()
             );
             assert_matches!(p, HeaderParser::Line);
         }

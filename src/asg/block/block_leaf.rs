@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
@@ -40,13 +38,6 @@ impl LeafBlock {
 
     fn new_verse() -> Self {
         Self::Verse(LeafBody::new())
-    }
-
-    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
-        match self {
-            Self::Paragraph(body) => body.inlines.push(line),
-            _ => Err("not implemented".into()),
-        }
     }
 }
 
