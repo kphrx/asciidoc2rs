@@ -65,7 +65,7 @@ pub struct LeafBody {
     #[serde(flatten)]
     pub(crate) form: Option<LeafForm>,
     title: Option<Inlines>,
-    pub(crate) inlines: Inlines,
+    pub inlines: Inlines,
     location: Option<Location>,
 }
 

@@ -1,4 +1,4 @@
-use asciidoc2rs::asg::block::{Author, Document, TitleAndAuthors};
+use asciidoc2rs::asg::block::{Author, Block, Document, LeafBlock, SectionBody, TitleAndAuthors};
 use asciidoc2rs::asg::{Inline, InlineLiteral, Inlines, LiteralValue};
 use asciidoc2rs::{Doctype, Parser};
 use std::assert_matches;
@@ -136,4 +136,125 @@ fn paragraph_blocks() {
     let document = parse("Paragraphs don't require any special markup in AsciiDoc.\nA paragraph is just one or more lines of consecutive text.\n\nTo begin a new paragraph, separate it by at least one empty line from the previous paragraph or block.").unwrap();
 
     assert_eq!(2, document.blocks.len());
+}
+
+#[test]
+fn section_block() {
+    let document = parse("== Level 1 Section Title\n\n=== Level 2 Section Title\n\n==== Level 3 Section Title\n\n===== Level 4 Section Title\n\n====== Level 5 Section Title\n\n== Another Level 1 Section Title").unwrap();
+
+    assert_eq!(2, document.blocks.len());
+
+    let Some(SectionBody::Section(level1_section)) = document.blocks.first() else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Level 1 Section Title"),
+        level1_section.title
+    );
+    assert_eq!(1, level1_section.blocks.len());
+    let Some(SectionBody::Section(level2_section)) = level1_section.blocks.first() else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Level 2 Section Title"),
+        level2_section.title
+    );
+    assert_eq!(1, level2_section.blocks.len());
+    let Some(SectionBody::Section(level3_section)) = level2_section.blocks.first() else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Level 3 Section Title"),
+        level3_section.title
+    );
+    assert_eq!(1, level3_section.blocks.len());
+    let Some(SectionBody::Section(level4_section)) = level3_section.blocks.first() else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Level 4 Section Title"),
+        level4_section.title
+    );
+    assert_eq!(1, level4_section.blocks.len());
+    let Some(SectionBody::Section(level5_section)) = level4_section.blocks.first() else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Level 5 Section Title"),
+        level5_section.title
+    );
+    assert_eq!(0, level5_section.blocks.len());
+
+    let Some(SectionBody::Section(another_level1_section)) = document.blocks.last() else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Another Level 1 Section Title"),
+        another_level1_section.title
+    );
+    assert_eq!(0, another_level1_section.blocks.len());
+}
+
+#[test]
+fn nested_section_block() {
+    let document = parse("== First Section\n\nContent of first section\n\n=== Nested Section\n\nContent of nested section\n\n== Second Section\n\nContent of second section").unwrap();
+
+    assert_eq!(2, document.blocks.len());
+
+    let Some(SectionBody::Section(first_section)) = document.blocks.first() else {
+        panic!("cannot call");
+    };
+    assert_eq!(Inlines::new_with_line("First Section"), first_section.title);
+    assert_eq!(2, first_section.blocks.len());
+    let Some(SectionBody::Block(Block::Leaf(LeafBlock::Paragraph(content_of_first_section)))) =
+        first_section.blocks.first()
+    else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Content of first section"),
+        content_of_first_section.inlines
+    );
+
+    let Some(SectionBody::Section(nested_section)) = first_section.blocks.last() else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Nested Section"),
+        nested_section.title
+    );
+    assert_eq!(1, nested_section.blocks.len());
+    let Some(SectionBody::Block(Block::Leaf(LeafBlock::Paragraph(content_of_nested_section)))) =
+        nested_section.blocks.first()
+    else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Content of nested section"),
+        content_of_nested_section.inlines
+    );
+
+    let Some(SectionBody::Section(second_section)) = document.blocks.last() else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Second Section"),
+        second_section.title
+    );
+    assert_eq!(1, second_section.blocks.len());
+    let Some(SectionBody::Block(Block::Leaf(LeafBlock::Paragraph(content_of_second_section)))) =
+        second_section.blocks.first()
+    else {
+        panic!("cannot call");
+    };
+    assert_eq!(
+        Inlines::new_with_line("Content of second section"),
+        content_of_second_section.inlines
+    );
+}
+
+#[test]
+#[should_panic]
+fn illegal_level_skipped_section_block() {
+    parse("== First Section\n\n==== Illegal Nested Section (violates rule #2)").unwrap();
 }

@@ -42,8 +42,9 @@ struct LocationBoundary {
     file: Option<NonEmptyVec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum NodeType {
+    #[default]
     Block,
 }

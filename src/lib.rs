@@ -276,7 +276,7 @@ impl<'input> Parser<'input> {
                     {
                         Err("require document title for doctype-manpage".into())
                     } else {
-                        let mut doc = Document::new(self.doctype.clone());
+                        let mut doc = Document::default();
                         doc.header = header.as_deref().cloned();
                         self.state = State::Body(Default::default(), Box::new(doc));
                         self.push_line(line, _num)
@@ -292,7 +292,7 @@ impl<'input> Parser<'input> {
                     {
                         Err("require document title for doctype-manpage".into())
                     } else {
-                        let mut doc = Document::new(self.doctype.clone());
+                        let mut doc = Document::default();
                         doc.header = header.as_deref().cloned();
                         self.state = State::Body(Default::default(), Box::new(doc));
                         Ok(())
@@ -472,7 +472,7 @@ impl<'input> Parser<'input> {
                 if matches!(self.doctype, Doctype::Manpage) {
                     Err("require document title for doctype-manpage".into())
                 } else {
-                    Ok(Document::new(self.doctype))
+                    Ok(Document::default())
                 }
             }
             State::Header(_, header) => {
@@ -485,9 +485,8 @@ impl<'input> Parser<'input> {
                 {
                     Err("require document title for doctype-manpage".into())
                 } else {
-                    let mut doc = Document::new(self.doctype);
+                    let mut doc = Document::default();
                     doc.header = header.as_deref().cloned();
-                    doc.end();
                     Ok(doc)
                 }
             }
