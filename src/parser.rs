@@ -273,6 +273,7 @@ pub(crate) enum SectionParser {
     Line,
     Paragraph(String),
     List(ListVariant, String, Vec<String>),
+    Dlist(String, Vec<(String, Option<String>)>),
     Section(Box<SectionParser>, usize, String, Vec<SectionBody>),
     DelimitedComment(String),
     Delimited(Box<DelimitedParser>, String, Vec<Block>),
@@ -313,7 +314,10 @@ impl SectionParser {
                         *self = Self::List(ListVariant::Callout, marker, vec![principal]);
                         Ok(SectionLineKind::Nest)
                     },
-                    LineKind::DescriptionListMarker { marker, term, principal } => todo!("parse_line SectionParser::Line: LineKind::DescriptionListMarker {{ marker: {:?}, term: {:?}, principal: {:?} }}", marker, term, principal),
+                    LineKind::DescriptionListMarker { marker, term, principal } => {
+                        *self = Self::Dlist(marker, vec![(term, principal)]);
+                        Ok(SectionLineKind::Nest)
+                    },
                     LineKind::Unknown => {
                         *self = Self::Paragraph(line.to_string());
                         Ok(SectionLineKind::Nest)
@@ -395,6 +399,44 @@ impl SectionParser {
                     k => todo!("parse_line SectionParser::List: LineKind::{:?}", k),
                 }
             }
+            Self::Dlist(m, i) => {
+                // TODO: Nesting List
+                match LineKind::parse(line.to_string()) {
+                    LineKind::DescriptionListMarker {
+                        marker,
+                        term,
+                        principal,
+                    } => {
+                        if marker == *m {
+                            i.push((term, principal));
+                            Ok(SectionLineKind::Nest)
+                        } else {
+                            let mut items = i.into_iter();
+                            if let Some((t, p)) = items.next() {
+                                let mut list = AnyList::new_description_list(
+                                    m.to_string(),
+                                    t.to_string(),
+                                    p.clone(),
+                                );
+                                for (t, p) in items {
+                                    if let Some(principal) = p {
+                                        list.push(&format!("{}{} {}", t, m, principal))?;
+                                    } else {
+                                        list.push(&format!("{}{}", t, m))?;
+                                    }
+                                }
+                                *self = Self::Dlist(marker, vec![(term, principal)]);
+                                Ok(SectionLineKind::NestedEnd(SectionBody::Block(
+                                    Block::AnyList(list),
+                                )))
+                            } else {
+                                Err("not expected empty items of list".to_string())
+                            }
+                        }
+                    }
+                    k => todo!("parse_line SectionParser::Dlist: LineKind::{:?}", k),
+                }
+            }
             Self::Section(parser, sl, title, blocks) => {
                 match parser.parse_line(line, *sl)? {
                     SectionLineKind::End(l, t) => {
@@ -445,6 +487,25 @@ impl SectionParser {
             Self::Paragraph(line) => Some(SectionBody::Block(Block::new_paragraph(&line))),
             Self::List(v, m, i) => {
                 if let Ok(list) = Self::list_finish(&v, &m, i) {
+                    Some(SectionBody::Block(Block::AnyList(list)))
+                } else {
+                    None
+                }
+            }
+            Self::Dlist(m, i) => {
+                let mut items = i.into_iter();
+                if let Some((t, p)) = items.next() {
+                    let mut list = AnyList::new_description_list(m.clone(), t, p);
+                    for (t, p) in items {
+                        let principal = if let Some(principal) = p {
+                            format!("{}{} {}", t, m, principal)
+                        } else {
+                            format!("{}{}", t, m)
+                        };
+                        if list.push(&principal).is_err() {
+                            return None;
+                        }
+                    }
                     Some(SectionBody::Block(Block::AnyList(list)))
                 } else {
                     None

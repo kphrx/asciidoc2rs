@@ -85,7 +85,11 @@ impl AnyList {
         }
     }
 
-    fn new_description_list(marker: String, term: String, principal: Option<String>) -> Self {
+    pub(crate) fn new_description_list(
+        marker: String,
+        term: String,
+        principal: Option<String>,
+    ) -> Self {
         let mut items = NonEmptyVec::with_capacity(1);
         let current_terms = vec![term.clone()];
         if let Some(principal) = principal {
