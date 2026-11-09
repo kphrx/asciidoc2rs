@@ -285,66 +285,74 @@ impl SectionParser {
         level: usize,
     ) -> Result<SectionLineKind, String> {
         match self {
-            Self::Line => {
-                match LineKind::parse(line.to_string()) {
-                    LineKind::Empty | LineKind::CommentMarker => Ok(SectionLineKind::Skip),
-                    LineKind::CommentDelimiter(delimiter) => {
-                        *self = Self::DelimitedComment(delimiter);
-                        Ok(SectionLineKind::Comment)
-                    }
-                    LineKind::HeadingMarker { level: l, title } => if level >= l {
+            Self::Line => match LineKind::parse(line.to_string()) {
+                LineKind::Empty | LineKind::CommentMarker => Ok(SectionLineKind::Skip),
+                LineKind::CommentDelimiter(delimiter) => {
+                    *self = Self::DelimitedComment(delimiter);
+                    Ok(SectionLineKind::Comment)
+                }
+                LineKind::HeadingMarker { level: l, title } => {
+                    if level >= l {
                         Ok(SectionLineKind::End(l, title))
                     } else if level + 1 == l {
                         *self = Self::Section(Default::default(), l, title, Vec::with_capacity(0));
                         Ok(SectionLineKind::Nest)
-                    } else { Err("cannot skip section level".to_string()) },
-                    LineKind::UnorderedListMarker { marker, principal } => {
-                        *self = Self::List(ListVariant::Unordered, marker, vec![principal]);
-                        Ok(SectionLineKind::Nest)
-                    },
-                    LineKind::OrderedListMarker { marker, principal } => {
-                        *self = Self::List(ListVariant::Ordered, marker, vec![principal]);
-                        Ok(SectionLineKind::Nest)
-                    },
-                    LineKind::OffsetOrderedListMarker { offset, principal } => {
-                        *self = Self::List(ListVariant::Ordered, format!("{}.", offset), vec![principal]);
-                        Ok(SectionLineKind::Nest)
-                    },
-                    LineKind::CalloutListMarker { marker, principal } => {
-                        *self = Self::List(ListVariant::Callout, marker, vec![principal]);
-                        Ok(SectionLineKind::Nest)
-                    },
-                    LineKind::DescriptionListMarker { marker, term, principal } => {
-                        *self = Self::Dlist(marker, vec![(term, principal)]);
-                        Ok(SectionLineKind::Nest)
-                    },
-                    LineKind::Unknown => {
-                        *self = Self::Paragraph(line.to_string());
-                        Ok(SectionLineKind::Nest)
-                    },
-                    k => todo!("parse_line SectionParser::Line: LineKind::{:?}", k),
-                }
-            }
-            Self::Paragraph(l) => {
-                match LineKind::parse(line.to_string()) {
-                    LineKind::Empty => {
-                        let p = Block::new_paragraph(l);
-                        *self = Self::Line;
-                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(p)))
-                    }
-                    LineKind::CommentMarker => Ok(SectionLineKind::Skip),
-                    LineKind::CommentDelimiter(delimiter) => {
-                        let p = Block::new_paragraph(l);
-                        *self = Self::DelimitedComment(delimiter);
-                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(p)))
-                    }
-                    _ => {
-                        l.push('\n');
-                        l.push_str(line);
-                        Ok(SectionLineKind::Nest)
+                    } else {
+                        Err("cannot skip section level".to_string())
                     }
                 }
-            }
+                LineKind::UnorderedListMarker { marker, principal } => {
+                    *self = Self::List(ListVariant::Unordered, marker, vec![principal]);
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::OrderedListMarker { marker, principal } => {
+                    *self = Self::List(ListVariant::Ordered, marker, vec![principal]);
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::OffsetOrderedListMarker { offset, principal } => {
+                    *self = Self::List(
+                        ListVariant::Ordered,
+                        format!("{}.", offset),
+                        vec![principal],
+                    );
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::CalloutListMarker { marker, principal } => {
+                    *self = Self::List(ListVariant::Callout, marker, vec![principal]);
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::DescriptionListMarker {
+                    marker,
+                    term,
+                    principal,
+                } => {
+                    *self = Self::Dlist(marker, vec![(term, principal)]);
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::Unknown => {
+                    *self = Self::Paragraph(line.to_string());
+                    Ok(SectionLineKind::Nest)
+                }
+                k => todo!("parse_line SectionParser::Line: LineKind::{:?}", k),
+            },
+            Self::Paragraph(l) => match LineKind::parse(line.to_string()) {
+                LineKind::Empty => {
+                    let p = Block::new_paragraph(l);
+                    *self = Self::Line;
+                    Ok(SectionLineKind::NestedEnd(SectionBody::Block(p)))
+                }
+                LineKind::CommentMarker => Ok(SectionLineKind::Skip),
+                LineKind::CommentDelimiter(delimiter) => {
+                    let p = Block::new_paragraph(l);
+                    *self = Self::DelimitedComment(delimiter);
+                    Ok(SectionLineKind::NestedEnd(SectionBody::Block(p)))
+                }
+                _ => {
+                    l.push('\n');
+                    l.push_str(line);
+                    Ok(SectionLineKind::Nest)
+                }
+            },
             Self::List(v, m, i) => {
                 match LineKind::parse(line.to_string()) {
                     LineKind::Empty => {
@@ -411,7 +419,7 @@ impl SectionParser {
                             i.push((term, principal));
                             Ok(SectionLineKind::Nest)
                         } else {
-                            let mut items = i.into_iter();
+                            let mut items = i.iter_mut();
                             if let Some((t, p)) = items.next() {
                                 let mut list = AnyList::new_description_list(
                                     m.to_string(),
@@ -444,30 +452,39 @@ impl SectionParser {
                         *self = Self::Line; // end
                         Ok(SectionLineKind::SectionEnd(Box::new(sec), l, t))
                     }
-                    SectionLineKind::SectionEnd(nsec, l, t) => if *sl < l {
-                        blocks.push(SectionBody::Section(nsec));
-                        **parser = SectionParser::Section(Default::default(), l, t, Default::default());
-                        Ok(SectionLineKind::Nest)
-                    } else {
-                        blocks.push(SectionBody::Section(nsec));
-                        let sec = Section::new_with_blocks(*sl, title, mem::take(blocks));
-                        *self = Self::Line; // end
-                        Ok(SectionLineKind::SectionEnd(Box::new(sec), l, t))
-                    },
+                    SectionLineKind::SectionEnd(nsec, l, t) => {
+                        if *sl < l {
+                            blocks.push(SectionBody::Section(nsec));
+                            **parser = SectionParser::Section(
+                                Default::default(),
+                                l,
+                                t,
+                                Default::default(),
+                            );
+                            Ok(SectionLineKind::Nest)
+                        } else {
+                            blocks.push(SectionBody::Section(nsec));
+                            let sec = Section::new_with_blocks(*sl, title, mem::take(blocks));
+                            *self = Self::Line; // end
+                            Ok(SectionLineKind::SectionEnd(Box::new(sec), l, t))
+                        }
+                    }
                     SectionLineKind::NestedEnd(body) => {
                         blocks.push(body);
                         Ok(SectionLineKind::Nest)
                     }
-                    SectionLineKind::Skip | SectionLineKind::Nest | SectionLineKind::Comment => Ok(SectionLineKind::Nest),
+                    SectionLineKind::Skip | SectionLineKind::Nest | SectionLineKind::Comment => {
+                        Ok(SectionLineKind::Nest)
+                    }
                 }
             }
             Self::DelimitedComment(delimiter) => match LineKind::parse(line.to_string()) {
                 LineKind::CommentDelimiter(d) if d == *delimiter => {
                     *self = Self::Line;
                     Ok(SectionLineKind::Comment)
-                },
+                }
                 _ => Ok(SectionLineKind::Comment),
-            }
+            },
             Self::Delimited(_parser, _delimiter, _block) => todo!(),
         }
     }
