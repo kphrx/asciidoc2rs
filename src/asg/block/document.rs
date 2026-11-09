@@ -18,6 +18,15 @@ pub struct Document {
     pub blocks: Vec<SectionBody>,
     location: Option<Location>,
 }
+impl Document {
+    pub(crate) fn new_with_header(header: Option<DocumentHeader>) -> Self {
+        Self {
+            header,
+            ..Default::default()
+        }
+    }
+}
+
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct DocumentHeader {

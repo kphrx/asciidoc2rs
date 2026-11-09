@@ -276,8 +276,7 @@ impl<'input> Parser<'input> {
                     {
                         Err("require document title for doctype-manpage".into())
                     } else {
-                        let mut doc = Document::default();
-                        doc.header = header.as_deref().cloned();
+                        let doc = Document::new_with_header(header.as_deref().cloned());
                         self.state = State::Body(Default::default(), Box::new(doc));
                         self.push_line(line, _num)
                     }
@@ -292,8 +291,7 @@ impl<'input> Parser<'input> {
                     {
                         Err("require document title for doctype-manpage".into())
                     } else {
-                        let mut doc = Document::default();
-                        doc.header = header.as_deref().cloned();
+                        let doc = Document::new_with_header(header.as_deref().cloned());
                         self.state = State::Body(Default::default(), Box::new(doc));
                         Ok(())
                     }
@@ -466,13 +464,13 @@ impl<'input> Parser<'input> {
         }
     }
 
-    fn finish(self) -> Result<Document, Box<dyn Error>> {
+    fn finish(self) -> Result<Document, String> {
         match self.state {
             State::Start => {
                 if matches!(self.doctype, Doctype::Manpage) {
-                    Err("require document title for doctype-manpage".into())
+                    Err("require document title for doctype-manpage".to_string())
                 } else {
-                    Ok(Document::default())
+                    Ok(Default::default())
                 }
             }
             State::Header(_, header) => {
@@ -483,11 +481,9 @@ impl<'input> Parser<'input> {
                         .and_then(|t| t.title)
                         .is_none()
                 {
-                    Err("require document title for doctype-manpage".into())
+                    Err("require document title for doctype-manpage".to_string())
                 } else {
-                    let mut doc = Document::default();
-                    doc.header = header.as_deref().cloned();
-                    Ok(doc)
+                    Ok(Document::new_with_header(header.as_deref().cloned()))
                 }
             }
             State::Body(parser, mut doc) => {
