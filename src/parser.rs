@@ -344,24 +344,55 @@ impl SectionParser {
             Self::List(v, m, i) => {
                 match LineKind::parse(line.to_string()) {
                     LineKind::Empty => {
-                        let mut items = i.iter_mut();
-                        if let Some(principal) = items.next() {
-                            let mut list = match v {
-                                ListVariant::Callout => AnyList::new_callout_list(m.to_string(), principal.to_string()),
-                                ListVariant::Ordered => AnyList::new_ordered_list(m.to_string(), principal.to_string()),
-                                ListVariant::Unordered => AnyList::new_unordered_list(m.to_string(), principal.to_string()),
-                            };
-
-                            for p in items {
-                                list.push(&format!("{} {}", m, p))?;
-                            }
-                            *self = Self::Line;
-                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
-                        } else {
-                            Err("not expected empty items of list".to_string())
-                        }
+                        // TODO: Separating Lists, Compound List Items and list continuation
+                        let list = Self::list_finish(v, m, mem::take(i))?;
+                        *self = Self::Line;
+                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
                     }
-                    _ => todo!()
+                    LineKind::CommentMarker => todo!("separating lists: require surrounded by empty lines. currently not keep state"),
+                    LineKind::UnorderedListMarker { marker, principal } => {
+                        // TODO: Nesting List
+                        if matches!(v, ListVariant::Unordered) && marker == *m {
+                            i.push(principal);
+                            Ok(SectionLineKind::Nest)
+                        } else {
+                            let list = Self::list_finish(v, m, mem::take(i))?;
+                            *self = Self::List(ListVariant::Unordered, marker, vec![principal.to_string()]);
+                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
+                        }
+                    },
+                    LineKind::OrderedListMarker { marker, principal } => {
+                        if matches!(v, ListVariant::Ordered) && marker == *m {
+                            i.push(principal);
+                            Ok(SectionLineKind::Nest)
+                        } else {
+                            let list = Self::list_finish(v, m, mem::take(i))?;
+                            *self = Self::List(ListVariant::Ordered, marker, vec![principal.to_string()]);
+                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
+                        }
+                    },
+                    LineKind::OffsetOrderedListMarker { offset, principal } => {
+                        let marker = format!("{}.", offset);
+                        if matches!(v, ListVariant::Ordered) && marker == *m {
+                            i.push(principal);
+                            Ok(SectionLineKind::Nest)
+                        } else {
+                            let list = Self::list_finish(v, m, mem::take(i))?;
+                            *self = Self::List(ListVariant::Ordered, marker, vec![principal.to_string()]);
+                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
+                        }
+                    },
+                    LineKind::CalloutListMarker { marker, principal } => {
+                        if matches!(v, ListVariant::Callout) && marker == *m {
+                            i.push(principal);
+                            Ok(SectionLineKind::Nest)
+                        } else {
+                            let list = Self::list_finish(v, m, mem::take(i))?;
+                            *self = Self::List(ListVariant::Callout, marker, vec![principal.to_string()]);
+                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
+                        }
+                    },
+                    k => todo!("parse_line SectionParser::List: LineKind::{:?}", k),
                 }
             }
             Self::Section(parser, sl, title, blocks) => {
@@ -413,27 +444,30 @@ impl SectionParser {
             Self::Line => None,
             Self::Paragraph(line) => Some(SectionBody::Block(Block::new_paragraph(&line))),
             Self::List(v, m, i) => {
-                let mut items = i.into_iter();
-                if let Some(principal) = items.next() {
-                    let mut list = match v {
-                        ListVariant::Callout => AnyList::new_callout_list(m.to_string(), principal),
-                        ListVariant::Ordered => AnyList::new_ordered_list(m.to_string(), principal),
-                        ListVariant::Unordered => {
-                            AnyList::new_unordered_list(m.to_string(), principal)
-                        }
-                    };
-
-                    for p in items {
-                        if list.push(&format!("{} {}", m, p)).is_err() {
-                            return None;
-                        }
-                    }
+                if let Ok(list) = Self::list_finish(&v, &m, i) {
                     Some(SectionBody::Block(Block::AnyList(list)))
                 } else {
                     None
                 }
             }
             _ => todo!("finish: SectionParser::{:?}", self),
+        }
+    }
+
+    fn list_finish(v: &ListVariant, m: &str, i: Vec<String>) -> Result<AnyList, String> {
+        let mut items = i.into_iter();
+        if let Some(principal) = items.next() {
+            let mut list = match v {
+                ListVariant::Callout => AnyList::new_callout_list(m.to_string(), principal),
+                ListVariant::Ordered => AnyList::new_ordered_list(m.to_string(), principal),
+                ListVariant::Unordered => AnyList::new_unordered_list(m.to_string(), principal),
+            };
+            for p in items {
+                list.push(&format!("{} {}", m, p))?;
+            }
+            Ok(list)
+        } else {
+            Err("not expected empty items of list".to_string())
         }
     }
 }
