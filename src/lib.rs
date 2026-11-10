@@ -199,19 +199,6 @@ impl LineKind {
 
         Self::Unknown
     }
-
-    fn block_delimiter(&self) -> Option<String> {
-        match self {
-            Self::ExampleDelimiter(x) => Some(x.to_owned()),
-            Self::SidebarDelimiter(x) => Some(x.to_owned()),
-            Self::QuoteDelimiter(x) => Some(x.to_owned()),
-            Self::ListingDelimiter(x) => Some(x.to_owned()),
-            Self::LiteralDelimiter(x) => Some(x.to_owned()),
-            Self::PassthroughDelimiter(x) => Some(x.to_owned()),
-            Self::OpenDelimiter(x) => Some(x.to_owned()),
-            _ => None,
-        }
-    }
 }
 
 #[derive(Default)]

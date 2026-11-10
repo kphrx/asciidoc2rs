@@ -11,3 +11,13 @@ pub struct DiscreteHeading {
     title: Inlines,
     location: Option<Location>,
 }
+impl DiscreteHeading {
+    pub(crate) fn new(level: usize, heading: &str) -> Self {
+        Self {
+            node_type: NodeType::Block,
+            title: Inlines::new_with_line(heading),
+            level,
+            location: None,
+        }
+    }
+}

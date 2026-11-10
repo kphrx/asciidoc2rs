@@ -16,24 +16,24 @@ pub enum ParentBlock {
 }
 
 impl ParentBlock {
-    fn new_admonition() -> Self {
-        Self::Admonition(AdmonitionBlock::new())
+    fn new_admonition(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new(delimiter, blocks))
     }
 
-    fn new_example() -> Self {
-        Self::Example(ParentBody::new("====".to_string()))
+    fn new_example(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Example(ParentBody::new(delimiter, blocks))
     }
 
-    fn new_sidebar() -> Self {
-        Self::Sidebar(ParentBody::new("****".to_string()))
+    fn new_sidebar(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Sidebar(ParentBody::new(delimiter, blocks))
     }
 
-    fn new_open() -> Self {
-        Self::Open(ParentBody::new("~~~~".to_string()))
+    fn new_open(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Open(ParentBody::new(delimiter, blocks))
     }
 
-    fn new_quote() -> Self {
-        Self::Quote(ParentBody::new("____".to_string()))
+    fn new_quote(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Quote(ParentBody::new(delimiter, blocks))
     }
 }
 
@@ -47,13 +47,13 @@ pub enum AdmonitionBlock {
     Warning(ParentBody),
 }
 impl AdmonitionBlock {
-    fn new() -> Self {
-        Self::Note(ParentBody::new("====".to_string()))
+    fn new(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Note(ParentBody::new(delimiter, blocks))
     }
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 #[serde(tag = "form", rename = "delimited")]
 pub struct ParentBody {
     #[serde(rename = "type")]
@@ -64,35 +64,33 @@ pub struct ParentBody {
     location: Option<Location>,
 }
 impl ParentBody {
-    fn new(delimiter: String) -> Self {
+    fn new(delimiter: String, blocks: Vec<Block>) -> Self {
         Self {
-            node_type: NodeType::Block,
             delimiter,
-            title: None,
-            blocks: Vec::with_capacity(0),
-            location: None,
+            blocks,
+            ..Default::default()
         }
     }
 }
 
 impl Block {
-    pub fn new_admonition() -> Self {
-        Self::Parent(ParentBlock::new_admonition())
+    pub(crate) fn new_admonition(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_admonition(delimiter, blocks))
     }
 
-    pub fn new_example() -> Self {
-        Self::Parent(ParentBlock::new_example())
+    pub(crate) fn new_example(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_example(delimiter, blocks))
     }
 
-    pub fn new_sidebar() -> Self {
-        Self::Parent(ParentBlock::new_sidebar())
+    pub(crate) fn new_sidebar(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_sidebar(delimiter, blocks))
     }
 
-    pub fn new_open() -> Self {
-        Self::Parent(ParentBlock::new_open())
+    pub(crate) fn new_open(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_open(delimiter, blocks))
     }
 
-    pub fn new_quote() -> Self {
-        Self::Parent(ParentBlock::new_quote())
+    pub(crate) fn new_quote(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_quote(delimiter, blocks))
     }
 }

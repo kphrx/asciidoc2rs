@@ -1,6 +1,6 @@
 use std::mem;
 
-use crate::asg::block::{AnyList, Block, Section, SectionBody};
+use crate::asg::block::{AnyList, Block, DiscreteHeading, Section, SectionBody};
 use crate::LineKind;
 
 #[derive(Debug, Default)]
@@ -276,7 +276,7 @@ pub(crate) enum SectionParser {
     Dlist(String, Vec<(String, Option<String>)>),
     Section(Box<SectionParser>, usize, String, Vec<SectionBody>),
     DelimitedComment(String),
-    Delimited(Box<DelimitedParser>, String, Vec<Block>),
+    Delimited(Box<DelimitedParser>, BlockVariant, String, Vec<Block>),
 }
 impl SectionParser {
     pub(crate) fn parse_line(
@@ -300,6 +300,69 @@ impl SectionParser {
                     } else {
                         Err("cannot skip section level".to_string())
                     }
+                }
+                LineKind::ExampleDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Example,
+                        delimiter,
+                        Vec::with_capacity(0),
+                    );
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::SidebarDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Sidebar,
+                        delimiter,
+                        Vec::with_capacity(0),
+                    );
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::QuoteDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Quote,
+                        delimiter,
+                        Vec::with_capacity(0),
+                    );
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::ListingDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Listing,
+                        delimiter,
+                        Vec::with_capacity(0),
+                    );
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::LiteralDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Literal,
+                        delimiter,
+                        Vec::with_capacity(0),
+                    );
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::PassthroughDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Passthrough,
+                        delimiter,
+                        Vec::with_capacity(0),
+                    );
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::OpenDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Open,
+                        delimiter,
+                        Vec::with_capacity(0),
+                    );
+                    Ok(SectionLineKind::Nest)
                 }
                 LineKind::UnorderedListMarker { marker, principal } => {
                     *self = Self::List(ListVariant::Unordered, marker, vec![principal]);
@@ -333,7 +396,6 @@ impl SectionParser {
                     *self = Self::Paragraph(line.to_string());
                     Ok(SectionLineKind::Nest)
                 }
-                k => todo!("parse_line SectionParser::Line: LineKind::{:?}", k),
             },
             Self::Paragraph(l) => match LineKind::parse(line.to_string()) {
                 LineKind::Empty => {
@@ -485,7 +547,14 @@ impl SectionParser {
                 }
                 _ => Ok(SectionLineKind::Comment),
             },
-            Self::Delimited(_parser, _delimiter, _block) => todo!(),
+            Self::Delimited(parser, variant, delimiter, blocks) => match parser.parse_line(line)? {
+                DelimitedLineKind::Delimiter(d) if d == *delimiter => {
+                    let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
+                    *self = Self::Line;
+                    Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
+                }
+                _ => Ok(SectionLineKind::Nest),
+            },
         }
     }
 
@@ -535,11 +604,7 @@ impl SectionParser {
     fn list_finish(v: &ListVariant, m: &str, i: Vec<String>) -> Result<AnyList, String> {
         let mut items = i.into_iter();
         if let Some(principal) = items.next() {
-            let mut list = match v {
-                ListVariant::Callout => AnyList::new_callout_list(m.to_string(), principal),
-                ListVariant::Ordered => AnyList::new_ordered_list(m.to_string(), principal),
-                ListVariant::Unordered => AnyList::new_unordered_list(m.to_string(), principal),
-            };
+            let mut list = v.to_list(m.to_string(), principal);
             for p in items {
                 list.push(&format!("{} {}", m, p))?;
             }
@@ -560,17 +625,91 @@ pub(crate) enum SectionLineKind {
     NestedEnd(SectionBody),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub(crate) enum DelimitedParser {
+    #[default]
     Line,
     DelimitedComment(String),
-    Delimited(Box<DelimitedParser>, String, Vec<Block>),
+    Delimited(Box<DelimitedParser>, BlockVariant, String, Vec<Block>),
 }
+impl DelimitedParser {
+    pub(crate) fn parse_line(&mut self, line: &str) -> Result<DelimitedLineKind, String> {
+        match self {
+            Self::Line => match LineKind::parse(line.to_string()) {
+                LineKind::Empty | LineKind::CommentMarker => Ok(DelimitedLineKind::Skip),
+                LineKind::CommentDelimiter(delimiter) => {
+                    *self = Self::DelimitedComment(delimiter);
+                    Ok(DelimitedLineKind::Comment)
+                }
+                LineKind::HeadingMarker { level, title } => Ok(DelimitedLineKind::NestedEnd(
+                    Block::Heading(DiscreteHeading::new(level, &title)),
+                )),
+                k => todo!("parse_line DelimitedParser::Line: LineKind::{:?}", k),
+            },
+            Self::DelimitedComment(delimiter) => match LineKind::parse(line.to_string()) {
+                LineKind::CommentDelimiter(d) if d == *delimiter => {
+                    *self = Self::Line;
+                    Ok(DelimitedLineKind::Comment)
+                }
+                _ => Ok(DelimitedLineKind::Comment),
+            },
+            Self::Delimited(parser, variant, delimiter, blocks) => match parser.parse_line(line)? {
+                DelimitedLineKind::Delimiter(d) if d == *delimiter => {
+                    let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
+                    *self = Self::Line;
+                    Ok(DelimitedLineKind::NestedEnd(block))
+                }
+                _ => Ok(DelimitedLineKind::Nest),
+            },
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum DelimitedLineKind {
+    Comment,
+    Skip,
+    Delimiter(String),
+    Nest,
+    NestedEnd(Block),
+}
+
 #[derive(Debug)]
 pub(crate) enum ListVariant {
     Callout,
     Ordered,
     Unordered,
+}
+impl ListVariant {
+    fn to_list(&self, marker: String, principal: String) -> AnyList {
+        match self {
+            Self::Callout => AnyList::new_callout_list(marker, principal),
+            Self::Ordered => AnyList::new_ordered_list(marker, principal),
+            Self::Unordered => AnyList::new_unordered_list(marker, principal),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum BlockVariant {
+    Example,
+    Sidebar,
+    Quote,
+    Listing,
+    Literal,
+    Passthrough,
+    Open,
+}
+impl BlockVariant {
+    fn to_block(&self, delimiter: String, blocks: Vec<Block>) -> Block {
+        match self {
+            Self::Example => Block::new_example(delimiter, blocks),
+            Self::Sidebar => Block::new_sidebar(delimiter, blocks),
+            Self::Quote => Block::new_quote(delimiter, blocks),
+            Self::Open => Block::new_open(delimiter, blocks),
+            _ => todo!(),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -887,6 +1026,16 @@ mod tests {
         fn line_prase_line_empty() {
             let mut p = SectionParser::Line;
             assert_matches!(p.parse_line("", 0), Ok(SectionLineKind::Skip))
+        }
+    }
+
+    mod delimited_parser {
+        use super::*;
+
+        #[test]
+        fn line_prase_line_empty() {
+            let mut p = DelimitedParser::Line;
+            assert_matches!(p.parse_line(""), Ok(DelimitedLineKind::Skip))
         }
     }
 }
