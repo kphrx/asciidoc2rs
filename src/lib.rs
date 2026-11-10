@@ -57,6 +57,7 @@ enum LineKind {
         term: String,
         principal: Option<String>,
     },
+    AttributeLine(Vec<String>),
 }
 
 impl LineKind {
@@ -195,6 +196,14 @@ impl LineKind {
                 term,
                 principal: None,
             };
+        }
+
+        if let Some(attr_list) = line
+            .strip_prefix('[')
+            .and_then(|l| l.strip_suffix(']'))
+            .map(|l| l.split(',').map(String::from).collect())
+        {
+            return Self::AttributeLine(attr_list);
         }
 
         Self::Unknown

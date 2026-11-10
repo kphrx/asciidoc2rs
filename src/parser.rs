@@ -271,6 +271,7 @@ pub(crate) struct Author {
 pub(crate) enum SectionParser {
     #[default]
     Line,
+    Attributed(Vec<String>),
     Paragraph(String),
     List(ListVariant, String, Vec<String>),
     Dlist(String, Vec<(String, Option<String>)>),
@@ -301,6 +302,10 @@ impl SectionParser {
                     } else {
                         Err("cannot skip section level".to_string())
                     }
+                }
+                LineKind::AttributeLine(attr_list) => {
+                    *self = Self::Attributed(attr_list);
+                    Ok(SectionLineKind::Nest)
                 }
                 LineKind::ExampleDelimiter(delimiter) => {
                     *self = Self::Delimited(
@@ -398,6 +403,209 @@ impl SectionParser {
                     Ok(SectionLineKind::Nest)
                 }
             },
+            Self::Attributed(l) => {
+                let (parent_variant, leaf_variant) = match l.first().map(String::as_str) {
+                    Some("CAUTION") => (Some(BlockVariant::Caution), None),
+                    Some("IMPORTANT") => (Some(BlockVariant::Important), None),
+                    Some("NOTE") => (Some(BlockVariant::Note), None),
+                    Some("TIP") => (Some(BlockVariant::Tip), None),
+                    Some("WARNING") => (Some(BlockVariant::Warning), None),
+                    Some("example") => (Some(BlockVariant::Example), None),
+                    Some("sidebar") => (Some(BlockVariant::Sidebar), None),
+                    Some("quote") => (Some(BlockVariant::Quote), None),
+                    Some("open") => (Some(BlockVariant::Open), None),
+
+                    Some("listing") => (None, Some(LeafVariant::Listing)),
+                    Some("literal") => (None, Some(LeafVariant::Literal)),
+                    Some("pass") => (None, Some(LeafVariant::Passthrough)),
+                    Some("source") => (None, Some(LeafVariant::Source)),
+                    Some("stem") => (None, Some(LeafVariant::Stem)),
+                    Some("verse") => (None, Some(LeafVariant::Verse)),
+
+                    _ => (None, None),
+                };
+                match (
+                    LineKind::parse(line.to_string()),
+                    parent_variant,
+                    leaf_variant,
+                ) {
+                    (LineKind::Empty | LineKind::CommentMarker, _, _) => {
+                        *self = Self::Line;
+                        Err("attribute lists deny?".to_string())
+                    }
+                    (LineKind::CommentDelimiter(delimiter), _, _) => {
+                        *self = Self::DelimitedComment(delimiter);
+                        Ok(SectionLineKind::Comment)
+                    }
+                    (
+                        LineKind::ExampleDelimiter(delimiter),
+                        Some(
+                            variant @ (BlockVariant::Caution
+                            | BlockVariant::Important
+                            | BlockVariant::Note
+                            | BlockVariant::Tip
+                            | BlockVariant::Warning
+                            | BlockVariant::Example),
+                        ),
+                        None,
+                    ) => {
+                        *self = Self::Delimited(
+                            Default::default(),
+                            variant,
+                            delimiter,
+                            Vec::with_capacity(0),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (LineKind::ExampleDelimiter(delimiter), None, None) => {
+                        *self = Self::Delimited(
+                            Default::default(),
+                            BlockVariant::Example,
+                            delimiter,
+                            Vec::with_capacity(0),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (
+                        LineKind::SidebarDelimiter(delimiter),
+                        Some(BlockVariant::Sidebar) | None,
+                        None,
+                    ) => {
+                        *self = Self::Delimited(
+                            Default::default(),
+                            BlockVariant::Sidebar,
+                            delimiter,
+                            Vec::with_capacity(0),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (
+                        LineKind::QuoteDelimiter(delimiter),
+                        Some(BlockVariant::Quote) | None,
+                        None,
+                    ) => {
+                        *self = Self::Delimited(
+                            Default::default(),
+                            BlockVariant::Quote,
+                            delimiter,
+                            Vec::with_capacity(0),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (LineKind::QuoteDelimiter(delimiter), None, Some(LeafVariant::Verse)) => {
+                        *self = Self::DelimitedLeaf(
+                            Default::default(),
+                            LeafVariant::Verse,
+                            delimiter,
+                            "".to_string(),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (LineKind::OpenDelimiter(delimiter), Some(variant), None) => {
+                        *self = Self::Delimited(
+                            Default::default(),
+                            variant,
+                            delimiter,
+                            Vec::with_capacity(0),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (LineKind::OpenDelimiter(delimiter), None, None) => {
+                        *self = Self::Delimited(
+                            Default::default(),
+                            BlockVariant::Open,
+                            delimiter,
+                            Vec::with_capacity(0),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (
+                        LineKind::OpenDelimiter(delimiter),
+                        None,
+                        Some(
+                            variant @ (LeafVariant::Listing
+                            | LeafVariant::Literal
+                            | LeafVariant::Passthrough
+                            | LeafVariant::Verse),
+                        ),
+                    ) => {
+                        *self = Self::DelimitedLeaf(
+                            Default::default(),
+                            variant,
+                            delimiter,
+                            "".to_string(),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (
+                        LineKind::ListingDelimiter(delimiter),
+                        None,
+                        Some(variant @ (LeafVariant::Listing | LeafVariant::Literal)),
+                    ) => {
+                        *self = Self::DelimitedLeaf(
+                            Default::default(),
+                            variant,
+                            delimiter,
+                            "".to_string(),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (LineKind::ListingDelimiter(delimiter), None, None) => {
+                        *self = Self::DelimitedLeaf(
+                            Default::default(),
+                            LeafVariant::Listing,
+                            delimiter,
+                            "".to_string(),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (
+                        LineKind::LiteralDelimiter(delimiter),
+                        None,
+                        Some(variant @ (LeafVariant::Listing | LeafVariant::Literal)),
+                    ) => {
+                        *self = Self::DelimitedLeaf(
+                            Default::default(),
+                            variant,
+                            delimiter,
+                            "".to_string(),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (LineKind::LiteralDelimiter(delimiter), None, None) => {
+                        *self = Self::DelimitedLeaf(
+                            Default::default(),
+                            LeafVariant::Literal,
+                            delimiter,
+                            "".to_string(),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (
+                        LineKind::PassthroughDelimiter(delimiter),
+                        None,
+                        Some(variant @ (LeafVariant::Passthrough | LeafVariant::Stem)),
+                    ) => {
+                        *self = Self::DelimitedLeaf(
+                            Default::default(),
+                            variant,
+                            delimiter,
+                            "".to_string(),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    (LineKind::PassthroughDelimiter(delimiter), None, None) => {
+                        *self = Self::DelimitedLeaf(
+                            Default::default(),
+                            LeafVariant::Passthrough,
+                            delimiter,
+                            "".to_string(),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
+                    _ => todo!(),
+                }
+            }
             Self::Paragraph(l) => match LineKind::parse(line.to_string()) {
                 LineKind::Empty => {
                     let p = Block::new_paragraph(l);
