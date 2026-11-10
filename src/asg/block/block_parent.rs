@@ -16,8 +16,24 @@ pub enum ParentBlock {
 }
 
 impl ParentBlock {
-    fn new_admonition(delimiter: String, blocks: Vec<Block>) -> Self {
-        Self::Admonition(AdmonitionBlock::new(delimiter, blocks))
+    fn new_caution(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new_caution(delimiter, blocks))
+    }
+
+    fn new_important(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new_important(delimiter, blocks))
+    }
+
+    fn new_note(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new_note(delimiter, blocks))
+    }
+
+    fn new_tip(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new_tip(delimiter, blocks))
+    }
+
+    fn new_warning(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new_warning(delimiter, blocks))
     }
 
     fn new_example(delimiter: String, blocks: Vec<Block>) -> Self {
@@ -47,8 +63,24 @@ pub enum AdmonitionBlock {
     Warning(ParentBody),
 }
 impl AdmonitionBlock {
-    fn new(delimiter: String, blocks: Vec<Block>) -> Self {
+    fn new_caution(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Caution(ParentBody::new(delimiter, blocks))
+    }
+
+    fn new_important(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Important(ParentBody::new(delimiter, blocks))
+    }
+
+    fn new_note(delimiter: String, blocks: Vec<Block>) -> Self {
         Self::Note(ParentBody::new(delimiter, blocks))
+    }
+
+    fn new_tip(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Tip(ParentBody::new(delimiter, blocks))
+    }
+
+    fn new_warning(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Warning(ParentBody::new(delimiter, blocks))
     }
 }
 
@@ -74,8 +106,24 @@ impl ParentBody {
 }
 
 impl Block {
-    pub(crate) fn new_admonition(delimiter: String, blocks: Vec<Block>) -> Self {
-        Self::Parent(ParentBlock::new_admonition(delimiter, blocks))
+    pub(crate) fn new_caution(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_caution(delimiter, blocks))
+    }
+
+    pub(crate) fn new_important(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_important(delimiter, blocks))
+    }
+
+    pub(crate) fn new_note(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_note(delimiter, blocks))
+    }
+
+    pub(crate) fn new_tip(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_tip(delimiter, blocks))
+    }
+
+    pub(crate) fn new_warning(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_warning(delimiter, blocks))
     }
 
     pub(crate) fn new_example(delimiter: String, blocks: Vec<Block>) -> Self {

@@ -277,6 +277,7 @@ pub(crate) enum SectionParser {
     Section(Box<SectionParser>, usize, String, Vec<SectionBody>),
     DelimitedComment(String),
     Delimited(Box<DelimitedParser>, BlockVariant, String, Vec<Block>),
+    DelimitedLeaf(Box<DelimitedParser>, LeafVariant, String, String),
 }
 impl SectionParser {
     pub(crate) fn parse_line(
@@ -328,39 +329,39 @@ impl SectionParser {
                     );
                     Ok(SectionLineKind::Nest)
                 }
-                LineKind::ListingDelimiter(delimiter) => {
-                    *self = Self::Delimited(
-                        Default::default(),
-                        BlockVariant::Listing,
-                        delimiter,
-                        Vec::with_capacity(0),
-                    );
-                    Ok(SectionLineKind::Nest)
-                }
-                LineKind::LiteralDelimiter(delimiter) => {
-                    *self = Self::Delimited(
-                        Default::default(),
-                        BlockVariant::Literal,
-                        delimiter,
-                        Vec::with_capacity(0),
-                    );
-                    Ok(SectionLineKind::Nest)
-                }
-                LineKind::PassthroughDelimiter(delimiter) => {
-                    *self = Self::Delimited(
-                        Default::default(),
-                        BlockVariant::Passthrough,
-                        delimiter,
-                        Vec::with_capacity(0),
-                    );
-                    Ok(SectionLineKind::Nest)
-                }
                 LineKind::OpenDelimiter(delimiter) => {
                     *self = Self::Delimited(
                         Default::default(),
                         BlockVariant::Open,
                         delimiter,
                         Vec::with_capacity(0),
+                    );
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::ListingDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        Default::default(),
+                        LeafVariant::Listing,
+                        delimiter,
+                        "".to_string(),
+                    );
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::LiteralDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        Default::default(),
+                        LeafVariant::Literal,
+                        delimiter,
+                        "".to_string(),
+                    );
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::PassthroughDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        Default::default(),
+                        LeafVariant::Passthrough,
+                        delimiter,
+                        "".to_string(),
                     );
                     Ok(SectionLineKind::Nest)
                 }
@@ -555,6 +556,16 @@ impl SectionParser {
                 }
                 _ => Ok(SectionLineKind::Nest),
             },
+            Self::DelimitedLeaf(parser, variant, delimiter, value) => {
+                match parser.parse_line(line)? {
+                    DelimitedLineKind::Delimiter(d) if d == *delimiter => {
+                        let block = variant.to_block(delimiter.to_string(), value);
+                        *self = Self::Line;
+                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
+                    }
+                    _ => Ok(SectionLineKind::Nest),
+                }
+            }
         }
     }
 
@@ -692,22 +703,50 @@ impl ListVariant {
 
 #[derive(Debug)]
 pub(crate) enum BlockVariant {
+    Caution,
+    Important,
+    Note,
+    Tip,
+    Warning,
     Example,
     Sidebar,
     Quote,
-    Listing,
-    Literal,
-    Passthrough,
     Open,
 }
 impl BlockVariant {
     fn to_block(&self, delimiter: String, blocks: Vec<Block>) -> Block {
         match self {
+            Self::Caution => Block::new_caution(delimiter, blocks),
+            Self::Important => Block::new_important(delimiter, blocks),
+            Self::Note => Block::new_note(delimiter, blocks),
+            Self::Tip => Block::new_tip(delimiter, blocks),
+            Self::Warning => Block::new_warning(delimiter, blocks),
             Self::Example => Block::new_example(delimiter, blocks),
             Self::Sidebar => Block::new_sidebar(delimiter, blocks),
             Self::Quote => Block::new_quote(delimiter, blocks),
             Self::Open => Block::new_open(delimiter, blocks),
-            _ => todo!(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum LeafVariant {
+    Listing,
+    Literal,
+    Passthrough,
+    Source,
+    Stem,
+    Verse,
+}
+impl LeafVariant {
+    fn to_block(&self, delimiter: String, value: &str) -> Block {
+        match self {
+            Self::Listing => Block::new_delimited_listing(delimiter, value),
+            Self::Literal => Block::new_delimited_literal(delimiter, value),
+            Self::Passthrough => Block::new_delimited_pass(delimiter, value),
+            Self::Source => todo!(),
+            Self::Stem => Block::new_delimited_stem(delimiter, value),
+            Self::Verse => Block::new_delimited_verse(delimiter, value),
         }
     }
 }

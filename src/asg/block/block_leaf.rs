@@ -20,8 +20,16 @@ impl LeafBlock {
         Self::Listing(LeafBody::new())
     }
 
+    fn new_delimited_listing(delimiter: String, line: &str) -> Self {
+        Self::Listing(LeafBody::new_delimited_text(delimiter, line))
+    }
+
     fn new_literal() -> Self {
         Self::Literal(LeafBody::new())
+    }
+
+    fn new_delimited_literal(delimiter: String, line: &str) -> Self {
+        Self::Literal(LeafBody::new_delimited_text(delimiter, line))
     }
 
     fn new_paragraph(line: &str) -> Self {
@@ -32,12 +40,24 @@ impl LeafBlock {
         Self::Pass(LeafBody::new())
     }
 
+    fn new_delimited_pass(delimiter: String, line: &str) -> Self {
+        Self::Pass(LeafBody::new_delimited_text(delimiter, line))
+    }
+
     fn new_stem() -> Self {
         Self::Stem(LeafBody::new())
     }
 
+    fn new_delimited_stem(delimiter: String, line: &str) -> Self {
+        Self::Stem(LeafBody::new_delimited_text(delimiter, line))
+    }
+
     fn new_verse() -> Self {
         Self::Verse(LeafBody::new())
+    }
+
+    fn new_delimited_verse(delimiter: String, line: &str) -> Self {
+        Self::Verse(LeafBody::new_delimited_text(delimiter, line))
     }
 }
 
@@ -80,6 +100,16 @@ impl LeafBody {
             location: None,
         }
     }
+
+    fn new_delimited_text(delimiter: String, line: &str) -> Self {
+        Self {
+            node_type: NodeType::Block,
+            form: Some(LeafForm::Delimited(delimiter)),
+            title: None,
+            inlines: Inlines::new_with_line(line),
+            location: None,
+        }
+    }
 }
 
 impl Block {
@@ -87,8 +117,16 @@ impl Block {
         Self::Leaf(LeafBlock::new_listing())
     }
 
+    pub(crate) fn new_delimited_listing(delimiter: String, line: &str) -> Self {
+        Self::Leaf(LeafBlock::new_delimited_listing(delimiter, line))
+    }
+
     pub fn new_literal() -> Self {
         Self::Leaf(LeafBlock::new_literal())
+    }
+
+    pub(crate) fn new_delimited_literal(delimiter: String, line: &str) -> Self {
+        Self::Leaf(LeafBlock::new_delimited_literal(delimiter, line))
     }
 
     pub fn new_paragraph(line: &str) -> Self {
@@ -99,11 +137,23 @@ impl Block {
         Self::Leaf(LeafBlock::new_pass())
     }
 
+    pub(crate) fn new_delimited_pass(delimiter: String, line: &str) -> Self {
+        Self::Leaf(LeafBlock::new_delimited_pass(delimiter, line))
+    }
+
     pub fn new_stem() -> Self {
         Self::Leaf(LeafBlock::new_stem())
     }
 
+    pub(crate) fn new_delimited_stem(delimiter: String, line: &str) -> Self {
+        Self::Leaf(LeafBlock::new_delimited_stem(delimiter, line))
+    }
+
     pub fn new_verse() -> Self {
         Self::Leaf(LeafBlock::new_verse())
+    }
+
+    pub(crate) fn new_delimited_verse(delimiter: String, line: &str) -> Self {
+        Self::Leaf(LeafBlock::new_delimited_verse(delimiter, line))
     }
 }
