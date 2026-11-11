@@ -11,6 +11,7 @@ use asg::Inlines;
 use std::collections::HashMap;
 use std::error::Error;
 use std::mem;
+use std::str::FromStr;
 
 #[derive(Debug, Clone, Default)]
 pub enum Doctype {
@@ -143,9 +144,10 @@ impl LineKind {
                 return Self::OrderedListMarker { marker, principal };
             }
 
-            let offset: usize = marker.parse().unwrap_or(0);
-            if 0 < offset && offset <= 9 {
-                return Self::OffsetOrderedListMarker { offset, principal };
+            if let Ok(offset) = usize::from_str(&marker) {
+                if 0 < offset && offset <= 9 {
+                    return Self::OffsetOrderedListMarker { offset, principal };
+                }
             }
         }
 
@@ -163,7 +165,7 @@ impl LineKind {
                     };
                 }
 
-                if let Ok(number) = marker.parse::<usize>() {
+                if let Ok(number) = usize::from_str(marker) {
                     return Self::CalloutListMarker {
                         marker: format!("<{}>", number),
                         principal,
