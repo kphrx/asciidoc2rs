@@ -278,7 +278,7 @@ pub(crate) enum SectionParser {
     Section(Box<SectionParser>, usize, String, Vec<SectionBody>),
     DelimitedComment(String),
     Delimited(Box<DelimitedParser>, BlockVariant, String, Vec<Block>),
-    DelimitedLeaf(LeafVariant, String, String),
+    DelimitedLeaf(LeafVariant, String, Vec<String>),
 }
 impl SectionParser {
     pub(crate) fn parse_line(
@@ -344,16 +344,21 @@ impl SectionParser {
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::ListingDelimiter(delimiter) => {
-                    *self = Self::DelimitedLeaf(LeafVariant::Listing, delimiter, "".to_string());
+                    *self =
+                        Self::DelimitedLeaf(LeafVariant::Listing, delimiter, Vec::with_capacity(0));
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::LiteralDelimiter(delimiter) => {
-                    *self = Self::DelimitedLeaf(LeafVariant::Literal, delimiter, "".to_string());
+                    *self =
+                        Self::DelimitedLeaf(LeafVariant::Literal, delimiter, Vec::with_capacity(0));
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::PassthroughDelimiter(delimiter) => {
-                    *self =
-                        Self::DelimitedLeaf(LeafVariant::Passthrough, delimiter, "".to_string());
+                    *self = Self::DelimitedLeaf(
+                        LeafVariant::Passthrough,
+                        delimiter,
+                        Vec::with_capacity(0),
+                    );
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::UnorderedListMarker { marker, principal } => {
@@ -480,7 +485,11 @@ impl SectionParser {
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::QuoteDelimiter(delimiter), None, Some(LeafVariant::Verse)) => {
-                        *self = Self::DelimitedLeaf(LeafVariant::Verse, delimiter, "".to_string());
+                        *self = Self::DelimitedLeaf(
+                            LeafVariant::Verse,
+                            delimiter,
+                            Vec::with_capacity(0),
+                        );
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::OpenDelimiter(delimiter), Some(variant), None) => {
@@ -512,12 +521,15 @@ impl SectionParser {
                             | LeafVariant::Verse),
                         ),
                     ) => {
-                        *self = Self::DelimitedLeaf(variant, delimiter, "".to_string());
+                        *self = Self::DelimitedLeaf(variant, delimiter, Vec::with_capacity(0));
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::OpenDelimiter(delimiter), None, Some(LeafVariant::Comment)) => {
-                        *self =
-                            Self::DelimitedLeaf(LeafVariant::Comment, delimiter, "".to_string());
+                        *self = Self::DelimitedLeaf(
+                            LeafVariant::Comment,
+                            delimiter,
+                            Vec::with_capacity(0),
+                        );
                         Ok(SectionLineKind::Comment)
                     }
                     (
@@ -525,12 +537,15 @@ impl SectionParser {
                         None,
                         Some(variant @ (LeafVariant::Listing | LeafVariant::Literal)),
                     ) => {
-                        *self = Self::DelimitedLeaf(variant, delimiter, "".to_string());
+                        *self = Self::DelimitedLeaf(variant, delimiter, Vec::with_capacity(0));
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::ListingDelimiter(delimiter), None, None) => {
-                        *self =
-                            Self::DelimitedLeaf(LeafVariant::Listing, delimiter, "".to_string());
+                        *self = Self::DelimitedLeaf(
+                            LeafVariant::Listing,
+                            delimiter,
+                            Vec::with_capacity(0),
+                        );
                         Ok(SectionLineKind::Nest)
                     }
                     (
@@ -538,12 +553,15 @@ impl SectionParser {
                         None,
                         Some(variant @ (LeafVariant::Listing | LeafVariant::Literal)),
                     ) => {
-                        *self = Self::DelimitedLeaf(variant, delimiter, "".to_string());
+                        *self = Self::DelimitedLeaf(variant, delimiter, Vec::with_capacity(0));
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::LiteralDelimiter(delimiter), None, None) => {
-                        *self =
-                            Self::DelimitedLeaf(LeafVariant::Literal, delimiter, "".to_string());
+                        *self = Self::DelimitedLeaf(
+                            LeafVariant::Literal,
+                            delimiter,
+                            Vec::with_capacity(0),
+                        );
                         Ok(SectionLineKind::Nest)
                     }
                     (
@@ -551,14 +569,14 @@ impl SectionParser {
                         None,
                         Some(variant @ (LeafVariant::Passthrough | LeafVariant::Stem)),
                     ) => {
-                        *self = Self::DelimitedLeaf(variant, delimiter, "".to_string());
+                        *self = Self::DelimitedLeaf(variant, delimiter, Vec::with_capacity(0));
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::PassthroughDelimiter(delimiter), None, None) => {
                         *self = Self::DelimitedLeaf(
                             LeafVariant::Passthrough,
                             delimiter,
-                            "".to_string(),
+                            Vec::with_capacity(0),
                         );
                         Ok(SectionLineKind::Nest)
                     }
@@ -723,7 +741,7 @@ impl SectionParser {
                 }
                 _ => Ok(SectionLineKind::Nest),
             },
-            Self::DelimitedLeaf(variant, delimiter, value) => {
+            Self::DelimitedLeaf(variant, delimiter, lines) => {
                 match LineKind::parse(line.to_string()) {
                     LineKind::QuoteDelimiter(d)
                     | LineKind::ListingDelimiter(d)
@@ -732,7 +750,7 @@ impl SectionParser {
                     | LineKind::OpenDelimiter(d)
                         if d == *delimiter =>
                     {
-                        let block = variant.to_block(delimiter.to_string(), value);
+                        let block = variant.to_block(delimiter.to_string(), &lines.join("\n"));
                         *self = Self::Line;
                         if let Some(block) = block {
                             Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
@@ -743,10 +761,7 @@ impl SectionParser {
                     _ => match variant {
                         LeafVariant::Comment => Ok(SectionLineKind::Comment),
                         _ => {
-                            if !value.is_empty() {
-                                value.push('\n');
-                            }
-                            value.push_str(line);
+                            lines.push(line.to_string());
                             Ok(SectionLineKind::Nest)
                         }
                     },
