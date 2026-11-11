@@ -592,115 +592,131 @@ enum State {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::assert_matches;
 
     #[test]
     fn line_kind_empty_or_comment() {
-        assert!(matches!(LineKind::parse("".to_owned()), LineKind::Empty));
-        assert!(matches!(
+        assert_matches!(LineKind::parse("".to_owned()), LineKind::Empty);
+        assert_matches!(
             LineKind::parse("// inline comment".to_owned()),
             LineKind::CommentMarker
-        ));
-        assert!(
-            matches!(LineKind::parse("/////".to_owned()), LineKind::CommentDelimiter(x) if x == "/////")
         );
+        assert_matches!(
+            LineKind::parse("/////".to_owned()),
+            LineKind::CommentDelimiter(x) if x == "/////");
     }
 
     #[test]
     fn line_kind_section() {
-        assert!(
-            matches!(LineKind::parse("= heading level 0".to_owned()), LineKind::HeadingMarker { level, title } if level == 0 && title == "heading level 0")
-        );
-        assert!(
-            matches!(LineKind::parse("== heading level 1".to_owned()), LineKind::HeadingMarker { level, title } if level == 1 && title == "heading level 1")
-        );
-        assert!(
-            matches!(LineKind::parse("=== heading level 2".to_owned()), LineKind::HeadingMarker { level, title } if level == 2 && title == "heading level 2")
-        );
-        assert!(
-            matches!(LineKind::parse("==== heading level 3".to_owned()), LineKind::HeadingMarker { level, title } if level == 3 && title == "heading level 3")
-        );
-        assert!(
-            matches!(LineKind::parse("===== heading level 4".to_owned()), LineKind::HeadingMarker { level, title } if level == 4 && title == "heading level 4")
-        );
-        assert!(
-            matches!(LineKind::parse("====== heading level 5".to_owned()), LineKind::HeadingMarker { level, title } if level == 5 && title == "heading level 5")
-        );
-        assert!(
-            matches!(LineKind::parse("======= heading level 6".to_owned()), LineKind::HeadingMarker { level, title } if level == 6 && title == "heading level 6")
-        );
+        assert_matches!(
+            LineKind::parse("= heading level 0".to_owned()),
+            LineKind::HeadingMarker { level, title }
+                if level == 0 && title == "heading level 0");
+        assert_matches!(
+            LineKind::parse("== heading level 1".to_owned()),
+            LineKind::HeadingMarker { level, title }
+                if level == 1 && title == "heading level 1");
+        assert_matches!(
+            LineKind::parse("=== heading level 2".to_owned()),
+            LineKind::HeadingMarker { level, title }
+                if level == 2 && title == "heading level 2");
+        assert_matches!(
+            LineKind::parse("==== heading level 3".to_owned()),
+            LineKind::HeadingMarker { level, title }
+                if level == 3 && title == "heading level 3");
+        assert_matches!(
+            LineKind::parse("===== heading level 4".to_owned()),
+            LineKind::HeadingMarker { level, title }
+                if level == 4 && title == "heading level 4");
+        assert_matches!(
+            LineKind::parse("====== heading level 5".to_owned()),
+            LineKind::HeadingMarker { level, title }
+                if level == 5 && title == "heading level 5");
+        assert_matches!(
+            LineKind::parse("======= heading level 6".to_owned()),
+            LineKind::HeadingMarker { level, title }
+                if level == 6 && title == "heading level 6");
     }
 
     #[test]
     fn line_kind_unordered_list() {
-        assert!(
-            matches!(LineKind::parse("** unordered list".to_owned()), LineKind::UnorderedListMarker { marker, principal } if marker == "**" && principal == "unordered list")
-        );
-        assert!(
-            matches!(LineKind::parse("- unordered list".to_owned()), LineKind::UnorderedListMarker { marker, principal } if marker == "-" && principal == "unordered list")
-        );
+        assert_matches!(
+            LineKind::parse("** unordered list".to_owned()),
+            LineKind::UnorderedListMarker { marker, principal }
+                if marker == "**" && principal == "unordered list");
+        assert_matches!(
+            LineKind::parse("- unordered list".to_owned()),
+            LineKind::UnorderedListMarker { marker, principal }
+                if marker == "-" && principal == "unordered list");
     }
 
     #[test]
     fn line_kind_ordered_list() {
-        assert!(
-            matches!(LineKind::parse("\t\t... ordered list".to_owned()), LineKind::OrderedListMarker { marker, principal } if marker == "..." && principal == "ordered list")
-        );
-        assert!(
-            matches!(LineKind::parse("  5. ordered list".to_owned()), LineKind::OffsetOrderedListMarker { offset, principal } if offset == 5 && principal == "ordered list")
-        );
+        assert_matches!(
+            LineKind::parse("\t\t... ordered list".to_owned()),
+            LineKind::OrderedListMarker { marker, principal }
+                if marker == "..." && principal == "ordered list");
+        assert_matches!(
+            LineKind::parse("  5. ordered list".to_owned()),
+            LineKind::OffsetOrderedListMarker { offset, principal }
+                if offset == 5 && principal == "ordered list");
     }
 
     #[test]
     fn line_kind_dlist() {
-        assert!(
-            matches!(LineKind::parse(" term::".to_owned()), LineKind::DescriptionListMarker { marker, term, principal } if marker == "::" && term == "term" && principal.is_none())
-        );
-        assert!(
-            matches!(LineKind::parse("term:: description list".to_owned()), LineKind::DescriptionListMarker { marker, term, principal } if marker == "::" && term == "term" && principal == Some("description list".to_owned()))
-        );
+        assert_matches!(
+            LineKind::parse(" term::".to_owned()),
+            LineKind::DescriptionListMarker { marker, term, principal: None }
+                if marker == "::" && term == "term");
+        assert_matches!(
+            LineKind::parse("term:: description list".to_owned()),
+            LineKind::DescriptionListMarker { marker, term, principal: Some(principal) }
+                if marker == "::" && term == "term" && principal == "description list");
     }
 
     #[test]
     fn line_kind_callout() {
-        assert!(
-            matches!(LineKind::parse("<.> callout list".to_owned()), LineKind::CalloutListMarker { marker, principal } if marker == "<.>" && principal == "callout list")
-        );
-        assert!(
-            matches!(LineKind::parse("<3> callout list".to_owned()), LineKind::CalloutListMarker { marker, principal } if marker == "<3>" && principal == "callout list")
-        );
+        assert_matches!(
+            LineKind::parse("<.> callout list".to_owned()),
+            LineKind::CalloutListMarker { marker, principal }
+                if marker == "<.>" && principal == "callout list");
+        assert_matches!(
+            LineKind::parse("<3> callout list".to_owned()),
+            LineKind::CalloutListMarker { marker, principal }
+                if marker == "<3>" && principal == "callout list");
     }
 
     #[test]
     fn line_kind_block_delimiter() {
-        assert!(
-            matches!(LineKind::parse("====".to_owned()), LineKind::ExampleDelimiter(x) if x == "====")
-        );
+        assert_matches!(
+            LineKind::parse("====".to_owned()),
+            LineKind::ExampleDelimiter(x) if x == "====");
 
-        assert!(
-            matches!(LineKind::parse("****".to_owned()), LineKind::SidebarDelimiter(x) if x == "****")
-        );
+        assert_matches!(
+            LineKind::parse("****".to_owned()),
+            LineKind::SidebarDelimiter(x) if x == "****");
 
-        assert!(
-            matches!(LineKind::parse("____".to_owned()), LineKind::QuoteDelimiter(x) if x == "____")
-        );
+        assert_matches!(
+            LineKind::parse("____".to_owned()),
+            LineKind::QuoteDelimiter(x) if x == "____");
 
-        assert!(
-            matches!(LineKind::parse("----".to_owned()), LineKind::ListingDelimiter(x) if x == "----")
-        );
+        assert_matches!(
+            LineKind::parse("----".to_owned()),
+            LineKind::ListingDelimiter(x) if x == "----");
 
-        assert!(
-            matches!(LineKind::parse("....".to_owned()), LineKind::LiteralDelimiter(x) if x == "....")
-        );
+        assert_matches!(
+            LineKind::parse("....".to_owned()),
+            LineKind::LiteralDelimiter(x) if x == "....");
 
-        assert!(
-            matches!(LineKind::parse("++++".to_owned()), LineKind::PassthroughDelimiter(x) if x == "++++")
-        );
+        assert_matches!(
+            LineKind::parse("++++".to_owned()),
+            LineKind::PassthroughDelimiter(x) if x == "++++");
 
-        assert!(
-            matches!(LineKind::parse("~~~~".to_owned()), LineKind::OpenDelimiter(x) if x == "~~~~")
-        );
-        assert!(
-            matches!(LineKind::parse("--".to_owned()), LineKind::OpenDelimiter(x) if x == "--")
-        );
+        assert_matches!(
+            LineKind::parse("~~~~".to_owned()),
+            LineKind::OpenDelimiter(x) if x == "~~~~");
+        assert_matches!(
+            LineKind::parse("--".to_owned()),
+            LineKind::OpenDelimiter(x) if x == "--");
     }
 }

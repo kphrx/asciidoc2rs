@@ -257,6 +257,7 @@ impl DlistItem {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::assert_matches;
 
     #[test]
     fn unordered_list() {
@@ -276,7 +277,7 @@ mod tests {
         };
         let mut items = items.to_owned();
 
-        assert!(matches!(variant, ListVariant::Unordered));
+        assert_matches!(variant, ListVariant::Unordered);
         assert_eq!("*", marker);
         assert_eq!(3, items.len());
 
