@@ -431,7 +431,14 @@ impl<'input> Parser<'input> {
                         ..
                     }) = header.as_deref()
                     {
-                        Err("invalid document header".into())
+                        if matches!(self.doctype, Doctype::Book) {
+                            let doc = Document::new_with_header(header.as_deref().cloned());
+                            self.state = State::Body(Default::default(), Box::new(doc));
+                            self.push_line(line, _num)
+                        } else {
+                            Err("level 0 sections can only be used when doctype is book"
+                                .to_string())
+                        }
                     } else if let Some(DocumentHeader {
                         header: ref mut title_and_authors,
                         ..
