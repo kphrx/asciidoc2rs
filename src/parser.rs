@@ -740,7 +740,14 @@ impl SectionParser {
                     *self = Self::Line;
                     Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
                 }
-                _ => Ok(SectionLineKind::Nest),
+                DelimitedLineKind::NestedEnd(block) => {
+                    blocks.push(block);
+                    Ok(SectionLineKind::Nest)
+                }
+                DelimitedLineKind::Comment
+                | DelimitedLineKind::Skip
+                | DelimitedLineKind::Delimiter(_)
+                | DelimitedLineKind::Nest => Ok(SectionLineKind::Nest),
             },
             Self::DelimitedLeaf(variant, delimiter, lines) => {
                 match LineKind::parse(line.to_string()) {
@@ -810,6 +817,23 @@ impl SectionParser {
                     None
                 }
             }
+            Self::DelimitedComment(delimiter) => {
+                eprintln!("WARN: unterminated: `{}`", delimiter);
+                None
+            }
+            Self::Delimited(parser, variant, delimiter, mut blocks) => {
+                eprintln!("WARN: unterminated: `{}`", delimiter);
+                if let Some(block) = parser.finish() {
+                    blocks.push(block)
+                }
+                Some(SectionBody::Block(variant.to_block(delimiter, blocks)))
+            }
+            Self::DelimitedLeaf(variant, delimiter, lines) => {
+                eprintln!("WARN: unterminated: `{}`", delimiter);
+                variant
+                    .to_block(delimiter, &lines.join("\n"))
+                    .map(SectionBody::Block)
+            }
             _ => todo!("finish: SectionParser::{:?}", self),
         }
     }
@@ -846,13 +870,49 @@ pub(crate) enum DelimitedParser {
     Delimited(Box<DelimitedParser>, BlockVariant, String, Vec<Block>),
 }
 impl DelimitedParser {
-    pub(crate) fn parse_line(&mut self, line: &str) -> Result<DelimitedLineKind, String> {
+    fn parse_line(&mut self, line: &str) -> Result<DelimitedLineKind, String> {
         match self {
             Self::Line => match LineKind::parse(line.to_string()) {
                 LineKind::Empty | LineKind::CommentMarker => Ok(DelimitedLineKind::Skip),
                 LineKind::CommentDelimiter(delimiter) => {
                     *self = Self::DelimitedComment(delimiter);
                     Ok(DelimitedLineKind::Comment)
+                }
+                LineKind::ExampleDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Example,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(DelimitedLineKind::Delimiter(delimiter))
+                }
+                LineKind::SidebarDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Sidebar,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(DelimitedLineKind::Delimiter(delimiter))
+                }
+                LineKind::QuoteDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Quote,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(DelimitedLineKind::Delimiter(delimiter))
+                }
+                LineKind::OpenDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        BlockVariant::Open,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(DelimitedLineKind::Delimiter(delimiter))
                 }
                 LineKind::HeadingMarker { level, title } => Ok(DelimitedLineKind::NestedEnd(
                     Block::Heading(DiscreteHeading::new(level, &title)),
@@ -874,6 +934,23 @@ impl DelimitedParser {
                 }
                 _ => Ok(DelimitedLineKind::Nest),
             },
+        }
+    }
+
+    fn finish(self) -> Option<Block> {
+        match self {
+            Self::Line => None,
+            Self::DelimitedComment(delimiter) => {
+                eprintln!("WARN: unterminated: `{}`", delimiter);
+                None
+            }
+            Self::Delimited(parser, variant, delimiter, mut blocks) => {
+                eprintln!("WARN: unterminated: `{}`", delimiter);
+                if let Some(block) = parser.finish() {
+                    blocks.push(block)
+                }
+                Some(variant.to_block(delimiter, blocks))
+            }
         }
     }
 }
