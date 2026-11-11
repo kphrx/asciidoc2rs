@@ -742,7 +742,13 @@ impl SectionParser {
                     }
                     _ => match variant {
                         LeafVariant::Comment => Ok(SectionLineKind::Comment),
-                        _ => Ok(SectionLineKind::Nest),
+                        _ => {
+                            if !value.is_empty() {
+                                value.push('\n');
+                            }
+                            value.push_str(line);
+                            Ok(SectionLineKind::Nest)
+                        }
                     },
                 }
             }
