@@ -278,7 +278,7 @@ pub(crate) enum SectionParser {
     Section(Box<SectionParser>, usize, String, Vec<SectionBody>),
     DelimitedComment(String),
     Delimited(Box<DelimitedParser>, BlockVariant, String, Vec<Block>),
-    DelimitedLeaf(Box<DelimitedParser>, LeafVariant, String, String),
+    DelimitedLeaf(LeafVariant, String, String),
 }
 impl SectionParser {
     pub(crate) fn parse_line(
@@ -344,30 +344,16 @@ impl SectionParser {
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::ListingDelimiter(delimiter) => {
-                    *self = Self::DelimitedLeaf(
-                        Default::default(),
-                        LeafVariant::Listing,
-                        delimiter,
-                        "".to_string(),
-                    );
+                    *self = Self::DelimitedLeaf(LeafVariant::Listing, delimiter, "".to_string());
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::LiteralDelimiter(delimiter) => {
-                    *self = Self::DelimitedLeaf(
-                        Default::default(),
-                        LeafVariant::Literal,
-                        delimiter,
-                        "".to_string(),
-                    );
+                    *self = Self::DelimitedLeaf(LeafVariant::Literal, delimiter, "".to_string());
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::PassthroughDelimiter(delimiter) => {
-                    *self = Self::DelimitedLeaf(
-                        Default::default(),
-                        LeafVariant::Passthrough,
-                        delimiter,
-                        "".to_string(),
-                    );
+                    *self =
+                        Self::DelimitedLeaf(LeafVariant::Passthrough, delimiter, "".to_string());
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::UnorderedListMarker { marker, principal } => {
@@ -422,6 +408,7 @@ impl SectionParser {
                     Some("stem") => (None, Some(LeafVariant::Stem)),
                     Some("verse") => (None, Some(LeafVariant::Verse)),
 
+                    Some("comment") => (None, Some(LeafVariant::Comment)),
                     _ => (None, None),
                 };
                 match (
@@ -493,12 +480,7 @@ impl SectionParser {
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::QuoteDelimiter(delimiter), None, Some(LeafVariant::Verse)) => {
-                        *self = Self::DelimitedLeaf(
-                            Default::default(),
-                            LeafVariant::Verse,
-                            delimiter,
-                            "".to_string(),
-                        );
+                        *self = Self::DelimitedLeaf(LeafVariant::Verse, delimiter, "".to_string());
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::OpenDelimiter(delimiter), Some(variant), None) => {
@@ -525,38 +507,30 @@ impl SectionParser {
                         Some(
                             variant @ (LeafVariant::Listing
                             | LeafVariant::Literal
+                            | LeafVariant::Source
                             | LeafVariant::Passthrough
                             | LeafVariant::Verse),
                         ),
                     ) => {
-                        *self = Self::DelimitedLeaf(
-                            Default::default(),
-                            variant,
-                            delimiter,
-                            "".to_string(),
-                        );
+                        *self = Self::DelimitedLeaf(variant, delimiter, "".to_string());
                         Ok(SectionLineKind::Nest)
+                    }
+                    (LineKind::OpenDelimiter(delimiter), None, Some(LeafVariant::Comment)) => {
+                        *self =
+                            Self::DelimitedLeaf(LeafVariant::Comment, delimiter, "".to_string());
+                        Ok(SectionLineKind::Comment)
                     }
                     (
                         LineKind::ListingDelimiter(delimiter),
                         None,
                         Some(variant @ (LeafVariant::Listing | LeafVariant::Literal)),
                     ) => {
-                        *self = Self::DelimitedLeaf(
-                            Default::default(),
-                            variant,
-                            delimiter,
-                            "".to_string(),
-                        );
+                        *self = Self::DelimitedLeaf(variant, delimiter, "".to_string());
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::ListingDelimiter(delimiter), None, None) => {
-                        *self = Self::DelimitedLeaf(
-                            Default::default(),
-                            LeafVariant::Listing,
-                            delimiter,
-                            "".to_string(),
-                        );
+                        *self =
+                            Self::DelimitedLeaf(LeafVariant::Listing, delimiter, "".to_string());
                         Ok(SectionLineKind::Nest)
                     }
                     (
@@ -564,21 +538,12 @@ impl SectionParser {
                         None,
                         Some(variant @ (LeafVariant::Listing | LeafVariant::Literal)),
                     ) => {
-                        *self = Self::DelimitedLeaf(
-                            Default::default(),
-                            variant,
-                            delimiter,
-                            "".to_string(),
-                        );
+                        *self = Self::DelimitedLeaf(variant, delimiter, "".to_string());
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::LiteralDelimiter(delimiter), None, None) => {
-                        *self = Self::DelimitedLeaf(
-                            Default::default(),
-                            LeafVariant::Literal,
-                            delimiter,
-                            "".to_string(),
-                        );
+                        *self =
+                            Self::DelimitedLeaf(LeafVariant::Literal, delimiter, "".to_string());
                         Ok(SectionLineKind::Nest)
                     }
                     (
@@ -586,17 +551,11 @@ impl SectionParser {
                         None,
                         Some(variant @ (LeafVariant::Passthrough | LeafVariant::Stem)),
                     ) => {
-                        *self = Self::DelimitedLeaf(
-                            Default::default(),
-                            variant,
-                            delimiter,
-                            "".to_string(),
-                        );
+                        *self = Self::DelimitedLeaf(variant, delimiter, "".to_string());
                         Ok(SectionLineKind::Nest)
                     }
                     (LineKind::PassthroughDelimiter(delimiter), None, None) => {
                         *self = Self::DelimitedLeaf(
-                            Default::default(),
                             LeafVariant::Passthrough,
                             delimiter,
                             "".to_string(),
@@ -764,14 +723,27 @@ impl SectionParser {
                 }
                 _ => Ok(SectionLineKind::Nest),
             },
-            Self::DelimitedLeaf(parser, variant, delimiter, value) => {
-                match parser.parse_line(line)? {
-                    DelimitedLineKind::Delimiter(d) if d == *delimiter => {
+            Self::DelimitedLeaf(variant, delimiter, value) => {
+                match LineKind::parse(line.to_string()) {
+                    LineKind::QuoteDelimiter(d)
+                    | LineKind::ListingDelimiter(d)
+                    | LineKind::LiteralDelimiter(d)
+                    | LineKind::PassthroughDelimiter(d)
+                    | LineKind::OpenDelimiter(d)
+                        if d == *delimiter =>
+                    {
                         let block = variant.to_block(delimiter.to_string(), value);
                         *self = Self::Line;
-                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
+                        if let Some(block) = block {
+                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
+                        } else {
+                            Ok(SectionLineKind::Comment)
+                        }
                     }
-                    _ => Ok(SectionLineKind::Nest),
+                    _ => match variant {
+                        LeafVariant::Comment => Ok(SectionLineKind::Comment),
+                        _ => Ok(SectionLineKind::Nest),
+                    },
                 }
             }
         }
@@ -945,16 +917,18 @@ pub(crate) enum LeafVariant {
     Source,
     Stem,
     Verse,
+    Comment,
 }
 impl LeafVariant {
-    fn to_block(&self, delimiter: String, value: &str) -> Block {
+    fn to_block(&self, delimiter: String, value: &str) -> Option<Block> {
         match self {
-            Self::Listing => Block::new_delimited_listing(delimiter, value),
-            Self::Literal => Block::new_delimited_literal(delimiter, value),
-            Self::Passthrough => Block::new_delimited_pass(delimiter, value),
+            Self::Listing => Some(Block::new_delimited_listing(delimiter, value)),
+            Self::Literal => Some(Block::new_delimited_literal(delimiter, value)),
+            Self::Passthrough => Some(Block::new_delimited_pass(delimiter, value)),
             Self::Source => todo!(),
-            Self::Stem => Block::new_delimited_stem(delimiter, value),
-            Self::Verse => Block::new_delimited_verse(delimiter, value),
+            Self::Stem => Some(Block::new_delimited_stem(delimiter, value)),
+            Self::Verse => Some(Block::new_delimited_verse(delimiter, value)),
+            Self::Comment => None,
         }
     }
 }
