@@ -15,99 +15,117 @@ pub(crate) enum HeaderParser {
 impl HeaderParser {
     pub(crate) fn parse_line(&mut self, line: &str) -> Result<HeaderLineKind, String> {
         match self {
-            Self::Line => {
-                if line.is_empty() {
-                    Ok(HeaderLineKind::End)
-                } else if line.starts_with("//") && !line.starts_with("///") {
-                    Ok(HeaderLineKind::Comment)
-                } else if let Some((name, value)) =
-                    line.strip_prefix(':').and_then(|a| a.split_once(": "))
-                {
-                    let name = name.to_lowercase();
-                    Self::validate_attribute_name(&name)?;
-                    if let Some(wrapped_value) = value.strip_suffix(" + \\") {
+            Self::Line => match LineKind::parse(line) {
+                LineKind::Empty => Ok(HeaderLineKind::End),
+                LineKind::CommentMarker => Ok(HeaderLineKind::Comment),
+                LineKind::ClearDocumentAttribute(attr_name) => {
+                    let name = attr_name.to_lowercase();
+                    Ok(HeaderLineKind::ClearAttribute(name))
+                }
+                LineKind::UnsetDocumentAttribute(attr_name) => {
+                    let name = attr_name.to_lowercase();
+                    Ok(HeaderLineKind::UnsetAttribute(name))
+                }
+                LineKind::BooleanDocumentAttribute(attr_name) => {
+                    let name = attr_name.to_lowercase();
+                    Ok(HeaderLineKind::Attribute(name, "".to_string()))
+                }
+                LineKind::DocumentAttribute(attr_name, attr_value) => {
+                    let name = attr_name.to_lowercase();
+                    if let Some(wrapped_value) = attr_value.strip_suffix(" + \\") {
                         *self = Self::Wrapped(name, format!("{}\n", wrapped_value));
                         Ok(HeaderLineKind::Wrap)
-                    } else if let Some(wrapped_value) = value.strip_suffix(" \\") {
+                    } else if let Some(wrapped_value) = attr_value.strip_suffix(" \\") {
                         *self = Self::Wrapped(name, format!("{} ", wrapped_value));
                         Ok(HeaderLineKind::Wrap)
                     } else {
-                        Ok(HeaderLineKind::Attribute(name, value.to_string()))
+                        Ok(HeaderLineKind::Attribute(name, attr_value))
                     }
-                } else if let Some(attr_name) =
-                    line.strip_prefix(':').and_then(|a| a.strip_suffix(':'))
-                {
-                    Self::parse_attribute_name(attr_name)
-                } else if let Some(title) = line.strip_prefix("= ") {
-                    let result = HeaderLineKind::Title(title.to_string());
-                    *self = Self::AuthorLine;
-                    Ok(result)
-                } else {
-                    Ok(HeaderLineKind::NotHeader)
                 }
-            }
-            Self::AuthorLine => {
-                if line.is_empty() {
+                LineKind::HeadingMarker { level: 0, title } => {
+                    *self = Self::AuthorLine;
+                    Ok(HeaderLineKind::Title(title))
+                }
+                _ => Ok(HeaderLineKind::NotHeader),
+            },
+            Self::AuthorLine => match LineKind::parse(line) {
+                LineKind::Empty => {
                     *self = Self::Line;
                     Ok(HeaderLineKind::End)
-                } else if line.starts_with("//") && !line.starts_with("///") {
-                    Ok(HeaderLineKind::Comment)
-                } else if let Some((name, value)) =
-                    line.strip_prefix(':').and_then(|a| a.split_once(": "))
-                {
-                    let name = name.to_lowercase();
-                    Self::validate_attribute_name(&name)?;
-                    if let Some(wrapped_value) = value.strip_suffix(" + \\") {
+                }
+                LineKind::CommentMarker => Ok(HeaderLineKind::Comment),
+                LineKind::ClearDocumentAttribute(attr_name) => {
+                    *self = Self::Line;
+                    let name = attr_name.to_lowercase();
+                    Ok(HeaderLineKind::ClearAttribute(name))
+                }
+                LineKind::UnsetDocumentAttribute(attr_name) => {
+                    *self = Self::Line;
+                    let name = attr_name.to_lowercase();
+                    Ok(HeaderLineKind::UnsetAttribute(name))
+                }
+                LineKind::BooleanDocumentAttribute(attr_name) => {
+                    *self = Self::Line;
+                    let name = attr_name.to_lowercase();
+                    Ok(HeaderLineKind::Attribute(name, "".to_string()))
+                }
+                LineKind::DocumentAttribute(attr_name, attr_value) => {
+                    let name = attr_name.to_lowercase();
+                    if let Some(wrapped_value) = attr_value.strip_suffix(" + \\") {
                         *self = Self::Wrapped(name, format!("{}\n", wrapped_value));
                         Ok(HeaderLineKind::Wrap)
-                    } else if let Some(wrapped_value) = value.strip_suffix(" \\") {
+                    } else if let Some(wrapped_value) = attr_value.strip_suffix(" \\") {
                         *self = Self::Wrapped(name, format!("{} ", wrapped_value));
                         Ok(HeaderLineKind::Wrap)
                     } else {
                         *self = Self::Line;
-                        Ok(HeaderLineKind::Attribute(name, value.to_string()))
+                        Ok(HeaderLineKind::Attribute(name, attr_value))
                     }
-                } else if let Some(attr_name) =
-                    line.strip_prefix(':').and_then(|a| a.strip_suffix(':'))
-                {
-                    *self = Self::Line;
-                    Self::parse_attribute_name(attr_name)
-                } else {
+                }
+                _ => {
                     *self = Self::RevisionLine;
                     Ok(HeaderLineKind::Authors(Self::parse_author_line(line)?))
                 }
-            }
-            Self::RevisionLine => {
-                if line.is_empty() {
+            },
+            Self::RevisionLine => match LineKind::parse(line) {
+                LineKind::Empty => {
                     *self = Self::Line;
                     Ok(HeaderLineKind::End)
-                } else if line.starts_with("//") && !line.starts_with("///") {
-                    Ok(HeaderLineKind::Comment)
-                } else if let Some((name, value)) =
-                    line.strip_prefix(':').and_then(|a| a.split_once(": "))
-                {
-                    let name = name.to_lowercase();
-                    Self::validate_attribute_name(&name)?;
-                    if let Some(wrapped_value) = value.strip_suffix(" + \\") {
+                }
+                LineKind::CommentMarker => Ok(HeaderLineKind::Comment),
+                LineKind::ClearDocumentAttribute(attr_name) => {
+                    *self = Self::Line;
+                    let name = attr_name.to_lowercase();
+                    Ok(HeaderLineKind::ClearAttribute(name))
+                }
+                LineKind::UnsetDocumentAttribute(attr_name) => {
+                    *self = Self::Line;
+                    let name = attr_name.to_lowercase();
+                    Ok(HeaderLineKind::UnsetAttribute(name))
+                }
+                LineKind::BooleanDocumentAttribute(attr_name) => {
+                    *self = Self::Line;
+                    let name = attr_name.to_lowercase();
+                    Ok(HeaderLineKind::Attribute(name, "".to_string()))
+                }
+                LineKind::DocumentAttribute(attr_name, attr_value) => {
+                    let name = attr_name.to_lowercase();
+                    if let Some(wrapped_value) = attr_value.strip_suffix(" + \\") {
                         *self = Self::Wrapped(name, format!("{}\n", wrapped_value));
                         Ok(HeaderLineKind::Wrap)
-                    } else if let Some(wrapped_value) = value.strip_suffix(" \\") {
+                    } else if let Some(wrapped_value) = attr_value.strip_suffix(" \\") {
                         *self = Self::Wrapped(name, format!("{} ", wrapped_value));
                         Ok(HeaderLineKind::Wrap)
                     } else {
                         *self = Self::Line;
-                        Ok(HeaderLineKind::Attribute(name, value.to_string()))
+                        Ok(HeaderLineKind::Attribute(name, attr_value))
                     }
-                } else if let Some(attr_name) =
-                    line.strip_prefix(':').and_then(|a| a.strip_suffix(':'))
-                {
-                    *self = Self::Line;
-                    Self::parse_attribute_name(attr_name)
-                } else {
+                }
+                _ => {
                     *self = Self::Line;
                     Self::parse_revision_line(line)
                 }
-            }
+            },
             Self::Wrapped(name, value) => {
                 if let Some(wrapped_value) = line.strip_suffix(" + \\") {
                     value.push_str(wrapped_value);
@@ -124,45 +142,6 @@ impl HeaderParser {
                     Ok(result)
                 }
             }
-        }
-    }
-
-    fn validate_attribute_name(attr_name: &str) -> Result<(), String> {
-        if attr_name.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
-            && !attr_name.contains(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-')
-        {
-            Ok(())
-        } else {
-            Err(format!("invalid document attribute: {}", attr_name))
-        }
-    }
-
-    fn parse_attribute_name(attr_name: &str) -> Result<HeaderLineKind, String> {
-        if let Some(clear_attr) = attr_name
-            .strip_prefix('!')
-            .and_then(|a| a.strip_suffix('!'))
-        {
-            /*
-             * NOTE: Asciidoctor
-             *
-             * > **FI** Introduce `!name!` to clear an attribute so it’s like it was never declared (this is different from unsetting it).
-             */
-            Self::validate_attribute_name(clear_attr)?;
-            Ok(HeaderLineKind::ClearAttribute(
-                clear_attr.to_lowercase().to_string(),
-            ))
-        } else if let Some(unset_attr) = attr_name.strip_prefix('!').or(attr_name.strip_suffix('!'))
-        {
-            Self::validate_attribute_name(unset_attr)?;
-            Ok(HeaderLineKind::UnsetAttribute(
-                unset_attr.to_lowercase().to_string(),
-            ))
-        } else {
-            Self::validate_attribute_name(attr_name)?;
-            Ok(HeaderLineKind::Attribute(
-                attr_name.to_lowercase().to_string(),
-                "".to_string(),
-            ))
         }
     }
 
@@ -288,7 +267,7 @@ impl SectionParser {
         level: usize,
     ) -> Result<SectionLineKind, String> {
         match self {
-            Self::Line => match LineKind::parse(line.to_string()) {
+            Self::Line => match LineKind::parse(line) {
                 LineKind::Empty | LineKind::CommentMarker => Ok(SectionLineKind::Skip),
                 LineKind::CommentDelimiter(delimiter) => {
                     *self = Self::DelimitedComment(delimiter);
@@ -390,7 +369,11 @@ impl SectionParser {
                     *self = Self::Dlist(marker, vec![(term, principal)]);
                     Ok(SectionLineKind::Nest)
                 }
-                LineKind::Unknown => {
+                LineKind::Unknown
+                | LineKind::ClearDocumentAttribute(_)
+                | LineKind::UnsetDocumentAttribute(_)
+                | LineKind::BooleanDocumentAttribute(_)
+                | LineKind::DocumentAttribute(_, _) => {
                     *self = Self::Paragraph(line.to_string());
                     Ok(SectionLineKind::Nest)
                 }
@@ -417,11 +400,7 @@ impl SectionParser {
                     Some("comment") => (None, Some(LeafVariant::Comment)),
                     _ => (None, None),
                 };
-                match (
-                    LineKind::parse(line.to_string()),
-                    parent_variant,
-                    leaf_variant,
-                ) {
+                match (LineKind::parse(line), parent_variant, leaf_variant) {
                     (LineKind::Empty | LineKind::CommentMarker, _, _) => {
                         *self = Self::Line;
                         Err("attribute lists deny?".to_string())
@@ -584,7 +563,7 @@ impl SectionParser {
                     _ => todo!(),
                 }
             }
-            Self::Paragraph(l) => match LineKind::parse(line.to_string()) {
+            Self::Paragraph(l) => match LineKind::parse(line) {
                 LineKind::Empty => {
                     let p = Block::new_paragraph(l);
                     *self = Self::Line;
@@ -603,7 +582,7 @@ impl SectionParser {
                 }
             },
             Self::List(v, m, i) => {
-                match LineKind::parse(line.to_string()) {
+                match LineKind::parse(line) {
                     LineKind::Empty => {
                         // TODO: Separating Lists, Compound List Items and list continuation
                         let list = Self::list_finish(v, m, mem::take(i))?;
@@ -658,7 +637,7 @@ impl SectionParser {
             }
             Self::Dlist(m, i) => {
                 // TODO: Nesting List
-                match LineKind::parse(line.to_string()) {
+                match LineKind::parse(line) {
                     LineKind::DescriptionListMarker {
                         marker,
                         term,
@@ -727,7 +706,7 @@ impl SectionParser {
                     }
                 }
             }
-            Self::DelimitedComment(delimiter) => match LineKind::parse(line.to_string()) {
+            Self::DelimitedComment(delimiter) => match LineKind::parse(line) {
                 LineKind::CommentDelimiter(d) if d == *delimiter => {
                     *self = Self::Line;
                     Ok(SectionLineKind::Comment)
@@ -749,32 +728,30 @@ impl SectionParser {
                 | DelimitedLineKind::Delimiter(_)
                 | DelimitedLineKind::Nest => Ok(SectionLineKind::Nest),
             },
-            Self::DelimitedLeaf(variant, delimiter, lines) => {
-                match LineKind::parse(line.to_string()) {
-                    LineKind::QuoteDelimiter(d)
-                    | LineKind::ListingDelimiter(d)
-                    | LineKind::LiteralDelimiter(d)
-                    | LineKind::PassthroughDelimiter(d)
-                    | LineKind::OpenDelimiter(d)
-                        if d == *delimiter =>
-                    {
-                        let block = variant.to_block(delimiter.to_string(), &lines.join("\n"));
-                        *self = Self::Line;
-                        if let Some(block) = block {
-                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
-                        } else {
-                            Ok(SectionLineKind::Comment)
-                        }
+            Self::DelimitedLeaf(variant, delimiter, lines) => match LineKind::parse(line) {
+                LineKind::QuoteDelimiter(d)
+                | LineKind::ListingDelimiter(d)
+                | LineKind::LiteralDelimiter(d)
+                | LineKind::PassthroughDelimiter(d)
+                | LineKind::OpenDelimiter(d)
+                    if d == *delimiter =>
+                {
+                    let block = variant.to_block(delimiter.to_string(), &lines.join("\n"));
+                    *self = Self::Line;
+                    if let Some(block) = block {
+                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
+                    } else {
+                        Ok(SectionLineKind::Comment)
                     }
-                    _ => match variant {
-                        LeafVariant::Comment => Ok(SectionLineKind::Comment),
-                        _ => {
-                            lines.push(line.to_string());
-                            Ok(SectionLineKind::Nest)
-                        }
-                    },
                 }
-            }
+                _ => match variant {
+                    LeafVariant::Comment => Ok(SectionLineKind::Comment),
+                    _ => {
+                        lines.push(line.to_string());
+                        Ok(SectionLineKind::Nest)
+                    }
+                },
+            },
         }
     }
 
@@ -872,7 +849,7 @@ pub(crate) enum DelimitedParser {
 impl DelimitedParser {
     fn parse_line(&mut self, line: &str) -> Result<DelimitedLineKind, String> {
         match self {
-            Self::Line => match LineKind::parse(line.to_string()) {
+            Self::Line => match LineKind::parse(line) {
                 LineKind::Empty | LineKind::CommentMarker => Ok(DelimitedLineKind::Skip),
                 LineKind::CommentDelimiter(delimiter) => {
                     *self = Self::DelimitedComment(delimiter);
@@ -919,7 +896,7 @@ impl DelimitedParser {
                 )),
                 k => todo!("parse_line DelimitedParser::Line: LineKind::{:?}", k),
             },
-            Self::DelimitedComment(delimiter) => match LineKind::parse(line.to_string()) {
+            Self::DelimitedComment(delimiter) => match LineKind::parse(line) {
                 LineKind::CommentDelimiter(d) if d == *delimiter => {
                     *self = Self::Line;
                     Ok(DelimitedLineKind::Comment)
