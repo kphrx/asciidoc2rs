@@ -46,6 +46,14 @@ impl<T> TryFrom<Vec<T>> for NonEmptyVec<T> {
         }
     }
 }
+impl<T> IntoIterator for NonEmptyVec<T> {
+    type Item = <Vec<T> as IntoIterator>::Item;
+    type IntoIter = <Vec<T> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
 
 #[derive(Debug)]
 pub struct EmptySequence;

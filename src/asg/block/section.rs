@@ -18,7 +18,7 @@ pub struct Section {
 impl Section {
     pub(crate) fn new_with_blocks(level: usize, heading: &str, blocks: Vec<SectionBody>) -> Self {
         Self {
-            title: Inlines::new_with_line(heading),
+            title: Inlines::new_with_text(heading),
             level,
             blocks,
             ..Default::default()

@@ -40,7 +40,7 @@ impl AnyList {
     pub(crate) fn new_callout_list(marker: String, principal: String) -> Self {
         let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
-            Inlines::new_with_line(&principal),
+            Inlines::new_with_text(&principal),
         ));
 
         Self::List {
@@ -56,7 +56,7 @@ impl AnyList {
     pub(crate) fn new_ordered_list(marker: String, principal: String) -> Self {
         let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
-            Inlines::new_with_line(&principal),
+            Inlines::new_with_text(&principal),
         ));
 
         Self::List {
@@ -72,7 +72,7 @@ impl AnyList {
     pub(crate) fn new_unordered_list(marker: String, principal: String) -> Self {
         let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
-            Inlines::new_with_line(&principal),
+            Inlines::new_with_text(&principal),
         ));
 
         Self::List {
@@ -96,7 +96,7 @@ impl AnyList {
             items.push(DlistItem::new(
                 marker.clone(),
                 current_terms.to_owned(),
-                Inlines::new_with_line(&principal),
+                Inlines::new_with_text(&principal),
             ));
         }
 
@@ -118,7 +118,7 @@ impl AnyList {
                 {
                     items.push(ListItem::new(
                         marker.to_owned(),
-                        Inlines::new_with_line(principal),
+                        Inlines::new_with_text(principal),
                     ));
 
                     return Ok(());
@@ -145,7 +145,7 @@ impl AnyList {
                         items.push(DlistItem::new(
                             marker.clone(),
                             current_terms.to_owned(),
-                            Inlines::new_with_line(principal),
+                            Inlines::new_with_text(principal),
                         ));
                         current_terms.clear();
 
@@ -162,7 +162,7 @@ impl AnyList {
                     items.push(DlistItem::new(
                         marker.clone(),
                         current_terms.to_owned(),
-                        Inlines::new_with_line(principal),
+                        Inlines::new_with_text(principal),
                     ));
                     current_terms.clear();
 
@@ -174,7 +174,7 @@ impl AnyList {
                     items.push(DlistItem::new(
                         marker.clone(),
                         vec![term.to_owned()],
-                        Inlines::new_with_line(principal),
+                        Inlines::new_with_text(principal),
                     ));
 
                     return Ok(());
@@ -257,6 +257,7 @@ impl DlistItem {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asg::{Inline, InlineLiteral, LiteralValue};
     use std::assert_matches;
 
     #[test]
@@ -275,19 +276,36 @@ mod tests {
         else {
             panic!("not expected")
         };
-        let mut items = items.to_owned();
-
         assert_matches!(variant, ListVariant::Unordered);
         assert_eq!("*", marker);
+
         assert_eq!(3, items.len());
+        let ref mut items = items.into_iter();
 
-        let item_3 = items.pop().unwrap();
-        let item_2 = items.pop().unwrap();
-        let item_1 = items.pop().unwrap();
-
-        assert_eq!(Inlines::new_with_line("item 1"), item_1.principal);
-        assert_eq!(Inlines::new_with_line("item 2"), item_2.principal);
-        assert_eq!(Inlines::new_with_line("item 3"), item_3.principal);
+        assert_matches!(
+            items.next(),
+            Some(ListItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "item 1")
+        );
+        assert_matches!(
+            items.next(),
+            Some(ListItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "item 2")
+        );
+        assert_matches!(
+            items.next(),
+            Some(ListItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "item 3")
+        );
     }
 
     #[test]
@@ -306,17 +324,35 @@ mod tests {
         let AnyList::Dlist { marker, items, .. } = list else {
             panic!("not expected")
         };
-        let mut items = items.to_owned();
 
         assert_eq!("::", marker);
+
         assert_eq!(3, items.len());
+        let ref mut items = items.into_iter();
 
-        let item_3 = items.pop().unwrap();
-        let item_2 = items.pop().unwrap();
-        let item_1 = items.pop().unwrap();
-
-        assert_eq!(Inlines::new_with_line("description 1"), item_1.principal);
-        assert_eq!(Inlines::new_with_line("description 2"), item_2.principal);
-        assert_eq!(Inlines::new_with_line("description 3-4"), item_3.principal);
+        assert_matches!(
+            items.next(),
+            Some(DlistItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "description 1")
+        );
+        assert_matches!(
+            items.next(),
+            Some(DlistItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "description 2")
+        );
+        assert_matches!(
+            items.next(),
+            Some(DlistItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "description 3-4")
+        );
     }
 }

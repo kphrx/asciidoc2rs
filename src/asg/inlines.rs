@@ -3,35 +3,15 @@ use serde_with_macros::skip_serializing_none;
 
 use crate::asg::Location;
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct Inlines(pub Vec<Inline>);
 impl Inlines {
-    pub fn new() -> Self {
-        Self(Vec::with_capacity(0))
-    }
-
-    pub fn new_with_line(line: &str) -> Self {
-        Self(vec![Inline::new_text(line)])
-    }
-
-    pub fn push(&mut self, line: &str) -> Result<(), String> {
-        if let Some(Inline::Literal(InlineLiteral::Text(last))) = self.0.last_mut() {
-            last.value.push_str(&format!("\n{}", line));
-            Ok(())
-        } else {
-            self.0.push(Inline::new_text(line));
-            Ok(())
-        }
+    pub(crate) fn new_with_text(text: &str) -> Self {
+        Self(vec![Inline::new_text(text)])
     }
 }
 
-impl Default for Inlines {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "type")]
 pub enum Inline {
     #[serde(rename = "inline")]
@@ -45,14 +25,14 @@ impl Inline {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "lowercase")]
 pub enum ParentInline {
     Span(InlineSpan),
     Ref(InlineRef),
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "variant", rename_all = "lowercase")]
 pub enum InlineSpan {
     Strong(SpanBody),
@@ -62,21 +42,21 @@ pub enum InlineSpan {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SpanBody {
     inlines: Vec<Inline>,
     location: Option<Location>,
     form: SpanForm,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub enum SpanForm {
     Constrained,
     Unconstrained,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "variant", rename_all = "lowercase")]
 pub enum InlineRef {
     Link(RefBody),
@@ -84,14 +64,14 @@ pub enum InlineRef {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct RefBody {
     inlines: Vec<Inline>,
     location: Option<Location>,
     target: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(tag = "name", rename_all = "lowercase")]
 pub enum InlineLiteral {
     Text(LiteralValue),
@@ -100,7 +80,7 @@ pub enum InlineLiteral {
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct LiteralValue {
     pub value: String,
     location: Option<Location>,

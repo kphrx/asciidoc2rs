@@ -5,7 +5,7 @@ use std::assert_matches;
 use std::collections::HashMap;
 
 fn parse(text: &'static str) -> Result<Document, String> {
-    let parser = Parser::new_with_doctype(text, Doctype::Article);
+    let parser = Parser::new(text);
 
     let document = parser.parse_to_asg()?;
 
@@ -146,50 +146,74 @@ fn section_block() {
     let Some(SectionBody::Section(level1_section)) = document.blocks.first() else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Level 1 Section Title"),
-        level1_section.title
+    assert_matches!(
+        level1_section.title,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Level 1 Section Title")
     );
     assert_eq!(1, level1_section.blocks.len());
     let Some(SectionBody::Section(level2_section)) = level1_section.blocks.first() else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Level 2 Section Title"),
-        level2_section.title
+    assert_matches!(
+        level2_section.title,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Level 2 Section Title")
     );
     assert_eq!(1, level2_section.blocks.len());
     let Some(SectionBody::Section(level3_section)) = level2_section.blocks.first() else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Level 3 Section Title"),
-        level3_section.title
+    assert_matches!(
+        level3_section.title,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Level 3 Section Title")
     );
     assert_eq!(1, level3_section.blocks.len());
     let Some(SectionBody::Section(level4_section)) = level3_section.blocks.first() else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Level 4 Section Title"),
-        level4_section.title
+    assert_matches!(
+        level4_section.title,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Level 4 Section Title")
     );
     assert_eq!(1, level4_section.blocks.len());
     let Some(SectionBody::Section(level5_section)) = level4_section.blocks.first() else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Level 5 Section Title"),
-        level5_section.title
+    assert_matches!(
+        level5_section.title,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Level 5 Section Title")
     );
     assert_eq!(0, level5_section.blocks.len());
 
     let Some(SectionBody::Section(another_level1_section)) = document.blocks.last() else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Another Level 1 Section Title"),
-        another_level1_section.title
+    assert_matches!(
+        another_level1_section.title,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Another Level 1 Section Title")
     );
     assert_eq!(0, another_level1_section.blocks.len());
 }
@@ -203,24 +227,39 @@ fn nested_section_block() {
     let Some(SectionBody::Section(first_section)) = document.blocks.first() else {
         panic!("cannot call");
     };
-    assert_eq!(Inlines::new_with_line("First Section"), first_section.title);
+    assert_matches!(
+        first_section.title,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "First Section")
+    );
     assert_eq!(2, first_section.blocks.len());
     let Some(SectionBody::Block(Block::Leaf(LeafBlock::Paragraph(content_of_first_section)))) =
         first_section.blocks.first()
     else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Content of first section"),
-        content_of_first_section.inlines
+    assert_matches!(
+        content_of_first_section.inlines,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Content of first section")
     );
 
     let Some(SectionBody::Section(nested_section)) = first_section.blocks.last() else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Nested Section"),
-        nested_section.title
+    assert_matches!(
+        nested_section.title,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Nested Section")
     );
     assert_eq!(1, nested_section.blocks.len());
     let Some(SectionBody::Block(Block::Leaf(LeafBlock::Paragraph(content_of_nested_section)))) =
@@ -228,17 +267,25 @@ fn nested_section_block() {
     else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Content of nested section"),
-        content_of_nested_section.inlines
+    assert_matches!(
+        content_of_nested_section.inlines,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Content of nested section")
     );
 
     let Some(SectionBody::Section(second_section)) = document.blocks.last() else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Second Section"),
-        second_section.title
+    assert_matches!(
+        second_section.title,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Second Section")
     );
     assert_eq!(1, second_section.blocks.len());
     let Some(SectionBody::Block(Block::Leaf(LeafBlock::Paragraph(content_of_second_section)))) =
@@ -246,9 +293,13 @@ fn nested_section_block() {
     else {
         panic!("cannot call");
     };
-    assert_eq!(
-        Inlines::new_with_line("Content of second section"),
-        content_of_second_section.inlines
+    assert_matches!(
+        content_of_second_section.inlines,
+        Inlines(ref inlines)
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "Content of second section")
     );
 }
 

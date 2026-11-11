@@ -15,7 +15,7 @@ impl DiscreteHeading {
     pub(crate) fn new(level: usize, heading: &str) -> Self {
         Self {
             node_type: NodeType::Block,
-            title: Inlines::new_with_line(heading),
+            title: Inlines::new_with_text(heading),
             level,
             location: None,
         }

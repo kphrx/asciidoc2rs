@@ -367,12 +367,7 @@ impl<'input> Parser<'input> {
     }
 
     pub fn parse_to_inlines(self) -> Result<Inlines, String> {
-        let mut inlines = Inlines::new();
-        for line in self.text.lines() {
-            inlines.push(line)?;
-        }
-
-        Ok(inlines)
+        Ok(Inlines::new_with_text(self.text))
     }
 
     pub fn parse_to_asg(mut self) -> Result<Document, String> {
@@ -445,11 +440,11 @@ impl<'input> Parser<'input> {
                     }) = header.as_deref_mut()
                     {
                         if let Some(taa) = title_and_authors {
-                            taa.title = Some(Inlines::new_with_line(&title));
+                            taa.title = Some(Inlines::new_with_text(&title));
                             Ok(())
                         } else {
                             *title_and_authors = Some(TitleAndAuthors {
-                                title: Some(Inlines::new_with_line(&title)),
+                                title: Some(Inlines::new_with_text(&title)),
                                 ..Default::default()
                             });
                             Ok(())
@@ -457,7 +452,7 @@ impl<'input> Parser<'input> {
                     } else {
                         *header = Some(Box::new(DocumentHeader {
                             header: Some(TitleAndAuthors {
-                                title: Some(Inlines::new_with_line(&title)),
+                                title: Some(Inlines::new_with_text(&title)),
                                 ..Default::default()
                             }),
                             ..Default::default()
