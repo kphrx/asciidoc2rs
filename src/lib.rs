@@ -10,6 +10,7 @@ use asg::Inlines;
 
 use std::collections::HashMap;
 use std::error::Error;
+use std::mem;
 
 #[derive(Debug, Clone, Default)]
 pub enum Doctype {
@@ -57,7 +58,7 @@ enum LineKind {
         term: String,
         principal: Option<String>,
     },
-    AttributeLine(Vec<String>),
+    AttributeLine(Box<[String]>, HashMap<String, String>),
 }
 
 impl LineKind {
@@ -198,12 +199,66 @@ impl LineKind {
             };
         }
 
-        if let Some(attr_list) = line
-            .strip_prefix('[')
-            .and_then(|l| l.strip_suffix(']'))
-            .map(|l| l.split(',').map(String::from).collect())
-        {
-            return Self::AttributeLine(attr_list);
+        if let Some(attrlist) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
+            enum State {
+                Quoted,
+                Unquoted,
+                Escaped,
+            }
+            let mut state = State::Unquoted;
+            let value = &mut String::new();
+            let mut positional = vec![];
+            let mut named = HashMap::new();
+            for c in attrlist.chars() {
+                match state {
+                    State::Unquoted => match c {
+                        '"' => {
+                            state = State::Quoted;
+                        }
+                        ',' => {
+                            let item = mem::take(value);
+                            if let Some((name, value)) = item.split_once('=') {
+                                named.insert(name.to_string(), value.to_string());
+                            } else {
+                                positional.push(item);
+                            }
+                        }
+                        _ => {
+                            value.push(c);
+                        }
+                    },
+                    State::Quoted => match c {
+                        '\\' => {
+                            state = State::Escaped;
+                        }
+                        '"' => {
+                            state = State::Unquoted;
+                        }
+                        _ => {
+                            value.push(c);
+                        }
+                    },
+                    State::Escaped => {
+                        match c {
+                            '"' => {
+                                value.push('"');
+                            }
+                            _ => {
+                                value.push('\\');
+                                value.push(c);
+                            }
+                        }
+                        state = State::Quoted;
+                    }
+                }
+            }
+            let item = mem::take(value);
+            if let Some((name, value)) = item.split_once('=') {
+                named.insert(name.to_string(), value.to_string());
+            } else {
+                positional.push(item);
+            }
+            return Self::AttributeLine(positional.into(), named);
         }
 
         Self::Unknown

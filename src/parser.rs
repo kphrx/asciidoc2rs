@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::mem;
 
 use crate::asg::block::{AnyList, Block, DiscreteHeading, Section, SectionBody};
@@ -271,7 +272,7 @@ pub(crate) struct Author {
 pub(crate) enum SectionParser {
     #[default]
     Line,
-    Attributed(Vec<String>),
+    Attributed(Box<[String]>, HashMap<String, String>),
     Paragraph(String),
     List(ListVariant, String, Vec<String>),
     Dlist(String, Vec<(String, Option<String>)>),
@@ -303,8 +304,8 @@ impl SectionParser {
                         Err("cannot skip section level".to_string())
                     }
                 }
-                LineKind::AttributeLine(attr_list) => {
-                    *self = Self::Attributed(attr_list);
+                LineKind::AttributeLine(positional, named) => {
+                    *self = Self::Attributed(positional, named);
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::ExampleDelimiter(delimiter) => {
@@ -394,8 +395,8 @@ impl SectionParser {
                     Ok(SectionLineKind::Nest)
                 }
             },
-            Self::Attributed(l) => {
-                let (parent_variant, leaf_variant) = match l.first().map(String::as_str) {
+            Self::Attributed(positional, _named) => {
+                let (parent_variant, leaf_variant) = match positional.first().map(String::as_str) {
                     Some("CAUTION") => (Some(BlockVariant::Caution), None),
                     Some("IMPORTANT") => (Some(BlockVariant::Important), None),
                     Some("NOTE") => (Some(BlockVariant::Note), None),
