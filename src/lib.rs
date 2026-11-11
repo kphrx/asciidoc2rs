@@ -201,19 +201,25 @@ impl LineKind {
 
         if let Some(attrlist) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
             enum State {
-                Quoted,
+                Quoted(String),
                 Unquoted,
-                Escaped,
+                Escaped(String),
             }
             let mut state = State::Unquoted;
             let value = &mut String::new();
             let mut positional = vec![];
             let mut named = HashMap::new();
+            let mut quoted_chars = attrlist.chars().filter(|c| *c == '"').count();
             for c in attrlist.chars() {
                 match state {
                     State::Unquoted => match c {
                         '"' => {
-                            state = State::Quoted;
+                            if quoted_chars > 0 {
+                                quoted_chars -= 1;
+                                state = State::Quoted(String::new());
+                            } else {
+                                value.push(c);
+                            }
                         }
                         ',' => {
                             let item = mem::take(value);
@@ -227,28 +233,50 @@ impl LineKind {
                             value.push(c);
                         }
                     },
-                    State::Quoted => match c {
+                    State::Quoted(ref mut v) => match c {
                         '\\' => {
-                            state = State::Escaped;
+                            state = State::Escaped(mem::take(v));
                         }
                         '"' => {
-                            state = State::Unquoted;
+                            if quoted_chars > 0 {
+                                quoted_chars -= 1;
+                                value.push_str(v);
+                                state = State::Unquoted;
+                            } else {
+                                value.push_str(&format!("\"{}\"", v.replace("\"", "\\\"")));
+                                state = State::Unquoted;
+                            }
+                        }
+                        ',' => {
+                            if quoted_chars > 0 {
+                                v.push(c);
+                            } else {
+                                value.push_str(&format!("\"{}\"", v.replace("\"", "\\\"")));
+                                let item = mem::take(value);
+                                if let Some((name, value)) = item.split_once('=') {
+                                    named.insert(name.to_string(), value.to_string());
+                                } else {
+                                    positional.push(item);
+                                }
+                                state = State::Unquoted;
+                            }
                         }
                         _ => {
-                            value.push(c);
+                            v.push(c);
                         }
                     },
-                    State::Escaped => {
+                    State::Escaped(mut v) => {
                         match c {
                             '"' => {
-                                value.push('"');
+                                quoted_chars = quoted_chars.saturating_sub(1);
+                                v.push('"');
                             }
                             _ => {
-                                value.push('\\');
-                                value.push(c);
+                                v.push('\\');
+                                v.push(c);
                             }
                         }
-                        state = State::Quoted;
+                        state = State::Quoted(v);
                     }
                 }
             }
