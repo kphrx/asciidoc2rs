@@ -253,6 +253,7 @@ pub(crate) enum SectionParser {
     Line,
     Attributed(Box<[String]>, HashMap<String, String>),
     Paragraph(String),
+    AttributedParagraph(LeafVariant, Box<[String]>, HashMap<String, String>, String),
     List(ListVariant, String, Vec<String>),
     Dlist(String, Vec<(String, Option<String>)>),
     Section(Box<SectionParser>, usize, String, Vec<SectionBody>),
@@ -378,7 +379,7 @@ impl SectionParser {
                     Ok(SectionLineKind::Nest)
                 }
             },
-            Self::Attributed(positional, _named) => {
+            Self::Attributed(positional, named) => {
                 let (parent_variant, leaf_variant) = match positional.first().map(String::as_str) {
                     Some("CAUTION") => (Some(BlockVariant::Caution), None),
                     Some("IMPORTANT") => (Some(BlockVariant::Important), None),
@@ -560,6 +561,15 @@ impl SectionParser {
                         );
                         Ok(SectionLineKind::Nest)
                     }
+                    (LineKind::Unknown, None, Some(variant)) => {
+                        *self = Self::AttributedParagraph(
+                            variant,
+                            mem::take(positional),
+                            mem::take(named),
+                            line.to_string(),
+                        );
+                        Ok(SectionLineKind::Nest)
+                    }
                     _ => todo!(),
                 }
             }
@@ -581,6 +591,34 @@ impl SectionParser {
                     Ok(SectionLineKind::Nest)
                 }
             },
+            Self::AttributedParagraph(variant, _positional, _named, l) => {
+                match LineKind::parse(line) {
+                    LineKind::Empty => {
+                        let b = variant.to_leaf(l);
+                        *self = Self::Line;
+                        if let Some(block) = b {
+                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
+                        } else {
+                            Ok(SectionLineKind::Comment)
+                        }
+                    }
+                    LineKind::CommentMarker => Ok(SectionLineKind::Skip),
+                    LineKind::CommentDelimiter(delimiter) => {
+                        let b = variant.to_leaf(l);
+                        *self = Self::DelimitedComment(delimiter);
+                        if let Some(block) = b {
+                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
+                        } else {
+                            Ok(SectionLineKind::Comment)
+                        }
+                    }
+                    _ => {
+                        l.push('\n');
+                        l.push_str(line);
+                        Ok(SectionLineKind::Nest)
+                    }
+                }
+            }
             Self::List(v, m, i) => {
                 match LineKind::parse(line) {
                     LineKind::Empty => {
@@ -736,7 +774,8 @@ impl SectionParser {
                 | LineKind::OpenDelimiter(d)
                     if d == *delimiter =>
                 {
-                    let block = variant.to_block(delimiter.to_string(), &lines.join("\n"));
+                    let block =
+                        variant.to_leaf_with_delimiter(delimiter.to_string(), &lines.join("\n"));
                     *self = Self::Line;
                     if let Some(block) = block {
                         Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
@@ -808,7 +847,7 @@ impl SectionParser {
             Self::DelimitedLeaf(variant, delimiter, lines) => {
                 eprintln!("WARN: unterminated: `{}`", delimiter);
                 variant
-                    .to_block(delimiter, &lines.join("\n"))
+                    .to_leaf_with_delimiter(delimiter, &lines.join("\n"))
                     .map(SectionBody::Block)
             }
             _ => todo!("finish: SectionParser::{:?}", self),
@@ -996,7 +1035,19 @@ pub(crate) enum LeafVariant {
     Comment,
 }
 impl LeafVariant {
-    fn to_block(&self, delimiter: String, value: &str) -> Option<Block> {
+    fn to_leaf(&self, value: &str) -> Option<Block> {
+        match self {
+            Self::Listing => Some(Block::new_listing(value)),
+            Self::Literal => Some(Block::new_literal(value)),
+            Self::Passthrough => Some(Block::new_pass(value)),
+            Self::Source => todo!(),
+            Self::Stem => Some(Block::new_stem(value)),
+            Self::Verse => Some(Block::new_verse(value)),
+            Self::Comment => None,
+        }
+    }
+
+    fn to_leaf_with_delimiter(&self, delimiter: String, value: &str) -> Option<Block> {
         match self {
             Self::Listing => Some(Block::new_delimited_listing(delimiter, value)),
             Self::Literal => Some(Block::new_delimited_literal(delimiter, value)),
