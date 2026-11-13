@@ -1760,6 +1760,97 @@ mod tests {
                     && raw == "[open]"
             );
         }
+
+        #[test]
+        fn line_parse_line_attribute_line_listing() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[listing]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingLeaf(LeafVariant::Listing, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "listing")
+                    && named == HashMap::new()
+                    && raw == "[listing]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_literal() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[literal]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingLeaf(LeafVariant::Literal, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "literal")
+                    && named == HashMap::new()
+                    && raw == "[literal]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_source() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[source]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingLeaf(LeafVariant::Source, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "source")
+                    && named == HashMap::new()
+                    && raw == "[source]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_pass() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[pass]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingLeaf(LeafVariant::Passthrough, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "pass")
+                    && named == HashMap::new()
+                    && raw == "[pass]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_stem() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[stem]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingLeaf(LeafVariant::Stem, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "stem")
+                    && named == HashMap::new()
+                    && raw == "[stem]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_verse() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[verse]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingLeaf(LeafVariant::Verse, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "verse")
+                    && named == HashMap::new()
+                    && raw == "[verse]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_comment() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[comment]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingComment(positional, named, raw)
+                    if matches!(&*positional, [style] if style == "comment")
+                    && named == HashMap::new()
+                    && raw == "[comment]"
+            );
+        }
     }
 
     mod parent_parser {
