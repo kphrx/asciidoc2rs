@@ -1640,7 +1640,125 @@ mod tests {
         #[test]
         fn line_prase_line_empty() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("", 0), Ok(SectionLineKind::Skip))
+            assert_matches!(p.parse_line("", 0), Ok(SectionLineKind::Skip));
+            assert_matches!(p, SectionParser::Line);
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_caution() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[CAUTION]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingParent(ParentVariant::Caution, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "CAUTION")
+                    && named == HashMap::new()
+                    && raw == "[CAUTION]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_important() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[IMPORTANT]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingParent(ParentVariant::Important, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "IMPORTANT")
+                    && named == HashMap::new()
+                    && raw == "[IMPORTANT]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_note() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[NOTE]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingParent(ParentVariant::Note, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "NOTE")
+                    && named == HashMap::new()
+                    && raw == "[NOTE]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_tip() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[TIP]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingParent(ParentVariant::Tip, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "TIP")
+                    && named == HashMap::new()
+                    && raw == "[TIP]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_warning() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[WARNING]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingParent(ParentVariant::Warning, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "WARNING")
+                    && named == HashMap::new()
+                    && raw == "[WARNING]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_example() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[example]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingParent(ParentVariant::Example, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "example")
+                    && named == HashMap::new()
+                    && raw == "[example]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_sidebar() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[sidebar]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingParent(ParentVariant::Sidebar, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "sidebar")
+                    && named == HashMap::new()
+                    && raw == "[sidebar]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_quote() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[quote]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingParent(ParentVariant::Quote, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "quote")
+                    && named == HashMap::new()
+                    && raw == "[quote]"
+            );
+        }
+
+        #[test]
+        fn line_parse_line_attribute_line_open() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("[open]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::MasqueradingParent(ParentVariant::Open, positional, named, raw)
+                    if matches!(&*positional, [style] if style == "open")
+                    && named == HashMap::new()
+                    && raw == "[open]"
+            );
         }
     }
 
@@ -1650,7 +1768,8 @@ mod tests {
         #[test]
         fn line_prase_line_empty() {
             let mut p = ParentParser::Line;
-            assert_matches!(p.parse_line(""), Ok(ParentLineKind::Skip))
+            assert_matches!(p.parse_line(""), Ok(ParentLineKind::Skip));
+            assert_matches!(p, ParentParser::Line);
         }
     }
 }
