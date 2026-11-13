@@ -258,7 +258,7 @@ pub(crate) enum SectionParser {
     Dlist(String, Vec<(String, Option<String>)>),
     Section(Box<SectionParser>, usize, String, Vec<SectionBody>),
     DelimitedComment(String),
-    Delimited(Box<DelimitedParser>, BlockVariant, String, Vec<Block>),
+    Delimited(Box<ParentParser>, ParentVariant, String, Vec<Block>),
     DelimitedLeaf(LeafVariant, String, Vec<String>),
 }
 impl SectionParser {
@@ -291,7 +291,7 @@ impl SectionParser {
                 LineKind::ExampleDelimiter(delimiter) => {
                     *self = Self::Delimited(
                         Default::default(),
-                        BlockVariant::Example,
+                        ParentVariant::Example,
                         delimiter,
                         Vec::with_capacity(0),
                     );
@@ -300,7 +300,7 @@ impl SectionParser {
                 LineKind::SidebarDelimiter(delimiter) => {
                     *self = Self::Delimited(
                         Default::default(),
-                        BlockVariant::Sidebar,
+                        ParentVariant::Sidebar,
                         delimiter,
                         Vec::with_capacity(0),
                     );
@@ -309,7 +309,7 @@ impl SectionParser {
                 LineKind::QuoteDelimiter(delimiter) => {
                     *self = Self::Delimited(
                         Default::default(),
-                        BlockVariant::Quote,
+                        ParentVariant::Quote,
                         delimiter,
                         Vec::with_capacity(0),
                     );
@@ -318,7 +318,7 @@ impl SectionParser {
                 LineKind::OpenDelimiter(delimiter) => {
                     *self = Self::Delimited(
                         Default::default(),
-                        BlockVariant::Open,
+                        ParentVariant::Open,
                         delimiter,
                         Vec::with_capacity(0),
                     );
@@ -381,15 +381,15 @@ impl SectionParser {
             },
             Self::Attributed(positional, named) => {
                 let (parent_variant, leaf_variant) = match positional.first().map(String::as_str) {
-                    Some("CAUTION") => (Some(BlockVariant::Caution), None),
-                    Some("IMPORTANT") => (Some(BlockVariant::Important), None),
-                    Some("NOTE") => (Some(BlockVariant::Note), None),
-                    Some("TIP") => (Some(BlockVariant::Tip), None),
-                    Some("WARNING") => (Some(BlockVariant::Warning), None),
-                    Some("example") => (Some(BlockVariant::Example), None),
-                    Some("sidebar") => (Some(BlockVariant::Sidebar), None),
-                    Some("quote") => (Some(BlockVariant::Quote), None),
-                    Some("open") => (Some(BlockVariant::Open), None),
+                    Some("CAUTION") => (Some(ParentVariant::Caution), None),
+                    Some("IMPORTANT") => (Some(ParentVariant::Important), None),
+                    Some("NOTE") => (Some(ParentVariant::Note), None),
+                    Some("TIP") => (Some(ParentVariant::Tip), None),
+                    Some("WARNING") => (Some(ParentVariant::Warning), None),
+                    Some("example") => (Some(ParentVariant::Example), None),
+                    Some("sidebar") => (Some(ParentVariant::Sidebar), None),
+                    Some("quote") => (Some(ParentVariant::Quote), None),
+                    Some("open") => (Some(ParentVariant::Open), None),
 
                     Some("listing") => (None, Some(LeafVariant::Listing)),
                     Some("literal") => (None, Some(LeafVariant::Literal)),
@@ -413,12 +413,12 @@ impl SectionParser {
                     (
                         LineKind::ExampleDelimiter(delimiter),
                         Some(
-                            variant @ (BlockVariant::Caution
-                            | BlockVariant::Important
-                            | BlockVariant::Note
-                            | BlockVariant::Tip
-                            | BlockVariant::Warning
-                            | BlockVariant::Example),
+                            variant @ (ParentVariant::Caution
+                            | ParentVariant::Important
+                            | ParentVariant::Note
+                            | ParentVariant::Tip
+                            | ParentVariant::Warning
+                            | ParentVariant::Example),
                         ),
                         None,
                     ) => {
@@ -433,7 +433,7 @@ impl SectionParser {
                     (LineKind::ExampleDelimiter(delimiter), None, None) => {
                         *self = Self::Delimited(
                             Default::default(),
-                            BlockVariant::Example,
+                            ParentVariant::Example,
                             delimiter,
                             Vec::with_capacity(0),
                         );
@@ -441,12 +441,12 @@ impl SectionParser {
                     }
                     (
                         LineKind::SidebarDelimiter(delimiter),
-                        Some(BlockVariant::Sidebar) | None,
+                        Some(ParentVariant::Sidebar) | None,
                         None,
                     ) => {
                         *self = Self::Delimited(
                             Default::default(),
-                            BlockVariant::Sidebar,
+                            ParentVariant::Sidebar,
                             delimiter,
                             Vec::with_capacity(0),
                         );
@@ -454,12 +454,12 @@ impl SectionParser {
                     }
                     (
                         LineKind::QuoteDelimiter(delimiter),
-                        Some(BlockVariant::Quote) | None,
+                        Some(ParentVariant::Quote) | None,
                         None,
                     ) => {
                         *self = Self::Delimited(
                             Default::default(),
-                            BlockVariant::Quote,
+                            ParentVariant::Quote,
                             delimiter,
                             Vec::with_capacity(0),
                         );
@@ -485,7 +485,7 @@ impl SectionParser {
                     (LineKind::OpenDelimiter(delimiter), None, None) => {
                         *self = Self::Delimited(
                             Default::default(),
-                            BlockVariant::Open,
+                            ParentVariant::Open,
                             delimiter,
                             Vec::with_capacity(0),
                         );
@@ -752,19 +752,19 @@ impl SectionParser {
                 _ => Ok(SectionLineKind::Comment),
             },
             Self::Delimited(parser, variant, delimiter, blocks) => match parser.parse_line(line)? {
-                DelimitedLineKind::Delimiter(d) if d == *delimiter => {
+                ParentLineKind::Delimiter(d) if d == *delimiter => {
                     let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
                     *self = Self::Line;
                     Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
                 }
-                DelimitedLineKind::NestedEnd(block) => {
+                ParentLineKind::NestedEnd(block) => {
                     blocks.push(block);
                     Ok(SectionLineKind::Nest)
                 }
-                DelimitedLineKind::Comment
-                | DelimitedLineKind::Skip
-                | DelimitedLineKind::Delimiter(_)
-                | DelimitedLineKind::Nest => Ok(SectionLineKind::Nest),
+                ParentLineKind::Comment
+                | ParentLineKind::Skip
+                | ParentLineKind::Delimiter(_)
+                | ParentLineKind::Nest => Ok(SectionLineKind::Nest),
             },
             Self::DelimitedLeaf(variant, delimiter, lines) => match LineKind::parse(line) {
                 LineKind::QuoteDelimiter(d)
@@ -879,76 +879,76 @@ pub(crate) enum SectionLineKind {
 }
 
 #[derive(Debug, Default)]
-pub(crate) enum DelimitedParser {
+pub(crate) enum ParentParser {
     #[default]
     Line,
     DelimitedComment(String),
-    Delimited(Box<DelimitedParser>, BlockVariant, String, Vec<Block>),
+    Delimited(Box<ParentParser>, ParentVariant, String, Vec<Block>),
 }
-impl DelimitedParser {
-    fn parse_line(&mut self, line: &str) -> Result<DelimitedLineKind, String> {
+impl ParentParser {
+    fn parse_line(&mut self, line: &str) -> Result<ParentLineKind, String> {
         match self {
             Self::Line => match LineKind::parse(line) {
-                LineKind::Empty | LineKind::CommentMarker => Ok(DelimitedLineKind::Skip),
+                LineKind::Empty | LineKind::CommentMarker => Ok(ParentLineKind::Skip),
                 LineKind::CommentDelimiter(delimiter) => {
                     *self = Self::DelimitedComment(delimiter);
-                    Ok(DelimitedLineKind::Comment)
+                    Ok(ParentLineKind::Comment)
                 }
                 LineKind::ExampleDelimiter(delimiter) => {
                     *self = Self::Delimited(
                         Default::default(),
-                        BlockVariant::Example,
+                        ParentVariant::Example,
                         delimiter.clone(),
                         Vec::with_capacity(0),
                     );
-                    Ok(DelimitedLineKind::Delimiter(delimiter))
+                    Ok(ParentLineKind::Delimiter(delimiter))
                 }
                 LineKind::SidebarDelimiter(delimiter) => {
                     *self = Self::Delimited(
                         Default::default(),
-                        BlockVariant::Sidebar,
+                        ParentVariant::Sidebar,
                         delimiter.clone(),
                         Vec::with_capacity(0),
                     );
-                    Ok(DelimitedLineKind::Delimiter(delimiter))
+                    Ok(ParentLineKind::Delimiter(delimiter))
                 }
                 LineKind::QuoteDelimiter(delimiter) => {
                     *self = Self::Delimited(
                         Default::default(),
-                        BlockVariant::Quote,
+                        ParentVariant::Quote,
                         delimiter.clone(),
                         Vec::with_capacity(0),
                     );
-                    Ok(DelimitedLineKind::Delimiter(delimiter))
+                    Ok(ParentLineKind::Delimiter(delimiter))
                 }
                 LineKind::OpenDelimiter(delimiter) => {
                     *self = Self::Delimited(
                         Default::default(),
-                        BlockVariant::Open,
+                        ParentVariant::Open,
                         delimiter.clone(),
                         Vec::with_capacity(0),
                     );
-                    Ok(DelimitedLineKind::Delimiter(delimiter))
+                    Ok(ParentLineKind::Delimiter(delimiter))
                 }
-                LineKind::HeadingMarker { level, title } => Ok(DelimitedLineKind::NestedEnd(
+                LineKind::HeadingMarker { level, title } => Ok(ParentLineKind::NestedEnd(
                     Block::Heading(DiscreteHeading::new(level, &title)),
                 )),
-                k => todo!("parse_line DelimitedParser::Line: LineKind::{:?}", k),
+                k => todo!("parse_line ParentParser::Line: LineKind::{:?}", k),
             },
             Self::DelimitedComment(delimiter) => match LineKind::parse(line) {
                 LineKind::CommentDelimiter(d) if d == *delimiter => {
                     *self = Self::Line;
-                    Ok(DelimitedLineKind::Comment)
+                    Ok(ParentLineKind::Comment)
                 }
-                _ => Ok(DelimitedLineKind::Comment),
+                _ => Ok(ParentLineKind::Comment),
             },
             Self::Delimited(parser, variant, delimiter, blocks) => match parser.parse_line(line)? {
-                DelimitedLineKind::Delimiter(d) if d == *delimiter => {
+                ParentLineKind::Delimiter(d) if d == *delimiter => {
                     let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
                     *self = Self::Line;
-                    Ok(DelimitedLineKind::NestedEnd(block))
+                    Ok(ParentLineKind::NestedEnd(block))
                 }
-                _ => Ok(DelimitedLineKind::Nest),
+                _ => Ok(ParentLineKind::Nest),
             },
         }
     }
@@ -972,7 +972,7 @@ impl DelimitedParser {
 }
 
 #[derive(Debug)]
-pub(crate) enum DelimitedLineKind {
+pub(crate) enum ParentLineKind {
     Comment,
     Skip,
     Delimiter(String),
@@ -997,7 +997,7 @@ impl ListVariant {
 }
 
 #[derive(Debug)]
-pub(crate) enum BlockVariant {
+pub(crate) enum ParentVariant {
     Caution,
     Important,
     Note,
@@ -1008,7 +1008,7 @@ pub(crate) enum BlockVariant {
     Quote,
     Open,
 }
-impl BlockVariant {
+impl ParentVariant {
     fn to_block(&self, delimiter: String, blocks: Vec<Block>) -> Block {
         match self {
             Self::Caution => Block::new_caution(delimiter, blocks),
@@ -1503,13 +1503,13 @@ mod tests {
         }
     }
 
-    mod delimited_parser {
+    mod parent_parser {
         use super::*;
 
         #[test]
         fn line_prase_line_empty() {
-            let mut p = DelimitedParser::Line;
-            assert_matches!(p.parse_line(""), Ok(DelimitedLineKind::Skip))
+            let mut p = ParentParser::Line;
+            assert_matches!(p.parse_line(""), Ok(ParentLineKind::Skip))
         }
     }
 }
