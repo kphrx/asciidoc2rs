@@ -280,7 +280,7 @@ mod tests {
         assert_eq!("*", marker);
 
         assert_eq!(3, items.len());
-        let ref mut items = items.into_iter();
+        let items = &mut items.into_iter();
 
         assert_matches!(
             items.next(),
@@ -328,7 +328,7 @@ mod tests {
         assert_eq!("::", marker);
 
         assert_eq!(3, items.len());
-        let ref mut items = items.into_iter();
+        let items = &mut items.into_iter();
 
         assert_matches!(
             items.next(),
