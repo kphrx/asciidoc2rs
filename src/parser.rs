@@ -1851,6 +1851,94 @@ mod tests {
                     && raw == "[comment]"
             );
         }
+
+        #[test]
+        fn line_parse_line_example_delimiter() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("=====", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::Delimited(parser, ParentVariant::Example, delimiter, body)
+                    if matches!(*parser, ParentParser::Line)
+                    && delimiter == "====="
+                    && matches!(body[..], [])
+            );
+        }
+
+        #[test]
+        fn line_parse_line_sidebar_delimiter() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("*****", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::Delimited(parser, ParentVariant::Sidebar, delimiter, body)
+                    if matches!(*parser, ParentParser::Line)
+                    && delimiter == "*****"
+                    && matches!(body[..], [])
+            );
+        }
+
+        #[test]
+        fn line_parse_line_quote_delimiter() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("_____", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::Delimited(parser, ParentVariant::Quote, delimiter, body)
+                    if matches!(*parser, ParentParser::Line)
+                    && delimiter == "_____"
+                    && matches!(body[..], [])
+            );
+        }
+
+        #[test]
+        fn line_parse_line_open_delimiter() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("~~~~~", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::Delimited(parser, ParentVariant::Open, delimiter, body)
+                    if matches!(*parser, ParentParser::Line)
+                    && delimiter == "~~~~~"
+                    && matches!(body[..], [])
+            );
+        }
+
+        #[test]
+        fn line_parse_line_listing_delimiter() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("-----", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::DelimitedLeaf(LeafVariant::Listing, delimiter, body)
+                    if delimiter == "-----"
+                    && matches!(body[..], [])
+            );
+        }
+
+        #[test]
+        fn line_parse_line_literal_delimiter() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line(".....", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::DelimitedLeaf(LeafVariant::Literal, delimiter, body)
+                    if delimiter == "....."
+                    && matches!(body[..], [])
+            );
+        }
+
+        #[test]
+        fn line_parse_line_pass_delimiter() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("+++++", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::DelimitedLeaf(LeafVariant::Passthrough, delimiter, body)
+                    if delimiter == "+++++"
+                    && matches!(body[..], [])
+            );
+        }
     }
 
     mod parent_parser {
