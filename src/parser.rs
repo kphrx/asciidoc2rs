@@ -1089,6 +1089,48 @@ mod tests {
         fn line_prase_line_attribute() {
             let mut p = HeaderParser::Line;
             assert_matches!(
+                p.parse_line(":name-of-an-attribute: value of the attribute"),
+                Ok(HeaderLineKind::Attribute(n, v))
+                    if n == "name-of-an-attribute"
+                    && v == "value of the attribute"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn line_prase_line_preferred_unset_attribute() {
+            let mut p = HeaderParser::Line;
+            assert_matches!(
+                p.parse_line(":!name:"),
+                Ok(HeaderLineKind::UnsetAttribute(n)) if n == "name"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn line_prase_line_unset_attribute() {
+            let mut p = HeaderParser::Line;
+            assert_matches!(
+                p.parse_line(":name!:"),
+                Ok(HeaderLineKind::UnsetAttribute(n)) if n == "name"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn line_prase_line_clear_attribute() {
+            let mut p = HeaderParser::Line;
+            assert_matches!(
+                p.parse_line(":!name!:"),
+                Ok(HeaderLineKind::ClearAttribute(n)) if n == "name"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn line_prase_line_boolean_attribute() {
+            let mut p = HeaderParser::Line;
+            assert_matches!(
                 p.parse_line(":name-of-an-attribute:"),
                 Ok(HeaderLineKind::Attribute(n, v))
                     if n == "name-of-an-attribute"
@@ -1169,6 +1211,48 @@ mod tests {
 
         #[test]
         fn author_line_prase_line_attribute() {
+            let mut p = HeaderParser::AuthorLine;
+            assert_matches!(
+                p.parse_line(":name-of-an-attribute: value of the attribute"),
+                Ok(HeaderLineKind::Attribute(n, v))
+                    if n == "name-of-an-attribute"
+                    && v == "value of the attribute"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn author_line_prase_line_preferred_unset_attribute() {
+            let mut p = HeaderParser::AuthorLine;
+            assert_matches!(
+                p.parse_line(":!name:"),
+                Ok(HeaderLineKind::UnsetAttribute(n)) if n == "name"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn author_line_prase_line_unset_attribute() {
+            let mut p = HeaderParser::AuthorLine;
+            assert_matches!(
+                p.parse_line(":name!:"),
+                Ok(HeaderLineKind::UnsetAttribute(n)) if n == "name"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn author_line_prase_line_clear_attribute() {
+            let mut p = HeaderParser::AuthorLine;
+            assert_matches!(
+                p.parse_line(":!name!:"),
+                Ok(HeaderLineKind::ClearAttribute(n)) if n == "name"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn author_line_prase_line_boolean_attribute() {
             let mut p = HeaderParser::AuthorLine;
             assert_matches!(
                 p.parse_line(":name-of-an-attribute:"),
@@ -1278,6 +1362,48 @@ mod tests {
 
         #[test]
         fn revision_line_prase_line_attribute() {
+            let mut p = HeaderParser::RevisionLine;
+            assert_matches!(
+                p.parse_line(":name-of-an-attribute: value of the attribute"),
+                Ok(HeaderLineKind::Attribute(n, v))
+                    if n == "name-of-an-attribute"
+                    && v == "value of the attribute"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn revision_line_prase_line_preferred_unset_attribute() {
+            let mut p = HeaderParser::RevisionLine;
+            assert_matches!(
+                p.parse_line(":!name:"),
+                Ok(HeaderLineKind::UnsetAttribute(n)) if n == "name"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn revision_line_prase_line_unset_attribute() {
+            let mut p = HeaderParser::RevisionLine;
+            assert_matches!(
+                p.parse_line(":name!:"),
+                Ok(HeaderLineKind::UnsetAttribute(n)) if n == "name"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn revision_line_prase_line_clear_attribute() {
+            let mut p = HeaderParser::RevisionLine;
+            assert_matches!(
+                p.parse_line(":!name!:"),
+                Ok(HeaderLineKind::ClearAttribute(n)) if n == "name"
+            );
+            assert_matches!(p, HeaderParser::Line);
+        }
+
+        #[test]
+        fn revision_line_prase_line_boolean_attribute() {
             let mut p = HeaderParser::RevisionLine;
             assert_matches!(
                 p.parse_line(":name-of-an-attribute:"),
