@@ -6,109 +6,139 @@ use crate::asg::{Inlines, Location, NodeType};
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
-pub enum BlockParent {
-    Admonition {
-        #[serde(rename = "type")]
-        node_type: NodeType,
-        delimiter: Option<String>,
-        title: Option<Inlines>,
-        blocks: Vec<NonSectionBlockBody>,
-        location: Option<Location>,
-        variant: AdmonitionVariant,
-    },
-    Example(BlockParentBody),
-    Sidebar(BlockParentBody),
-    Open(BlockParentBody),
-    Quote(BlockParentBody),
+#[serde(tag = "name", rename_all = "lowercase")]
+pub enum ParentBlock {
+    Admonition(AdmonitionBlock),
+    Example(ParentBody),
+    Sidebar(ParentBody),
+    Open(ParentBody),
+    Quote(ParentBody),
 }
+
+impl ParentBlock {
+    fn new_caution(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new_caution(delimiter, blocks))
+    }
+
+    fn new_important(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new_important(delimiter, blocks))
+    }
+
+    fn new_note(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new_note(delimiter, blocks))
+    }
+
+    fn new_tip(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new_tip(delimiter, blocks))
+    }
+
+    fn new_warning(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Admonition(AdmonitionBlock::new_warning(delimiter, blocks))
+    }
+
+    fn new_example(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Example(ParentBody::new(delimiter, blocks))
+    }
+
+    fn new_sidebar(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Sidebar(ParentBody::new(delimiter, blocks))
+    }
+
+    fn new_open(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Open(ParentBody::new(delimiter, blocks))
+    }
+
+    fn new_quote(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Quote(ParentBody::new(delimiter, blocks))
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub enum AdmonitionVariant {
-    Caution,
-    Important,
-    Note,
-    Tip,
-    Warning,
+#[serde(tag = "variant", rename_all = "lowercase")]
+pub enum AdmonitionBlock {
+    Caution(ParentBody),
+    Important(ParentBody),
+    Note(ParentBody),
+    Tip(ParentBody),
+    Warning(ParentBody),
 }
-impl BlockParent {
-    fn new_admonition(variant: AdmonitionVariant) -> Self {
-        Self::Admonition {
-            node_type: NodeType::Block,
-            delimiter: None,
-            title: None,
-            blocks: Vec::with_capacity(0),
-            location: None,
-            variant,
-        }
+impl AdmonitionBlock {
+    fn new_caution(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Caution(ParentBody::new(delimiter, blocks))
     }
 
-    fn new_example() -> Self {
-        Self::Example(BlockParentBody::new())
+    fn new_important(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Important(ParentBody::new(delimiter, blocks))
     }
 
-    fn new_sidebar() -> Self {
-        Self::Sidebar(BlockParentBody::new())
+    fn new_note(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Note(ParentBody::new(delimiter, blocks))
     }
 
-    fn new_open() -> Self {
-        Self::Open(BlockParentBody::new())
+    fn new_tip(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Tip(ParentBody::new(delimiter, blocks))
     }
 
-    fn new_quote() -> Self {
-        Self::Quote(BlockParentBody::new())
-    }
-
-    pub(crate) fn delimiter(&self) -> Option<String> {
-        match self {
-            BlockParent::Admonition { delimiter, .. } => delimiter.to_owned(),
-            BlockParent::Example(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockParent::Sidebar(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockParent::Open(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockParent::Quote(BlockParentBody { delimiter, .. }) => delimiter.to_owned(),
-        }
+    fn new_warning(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Warning(ParentBody::new(delimiter, blocks))
     }
 }
 
 #[skip_serializing_none]
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BlockParentBody {
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[serde(tag = "form", rename = "delimited")]
+pub struct ParentBody {
     #[serde(rename = "type")]
     node_type: NodeType,
-    delimiter: Option<String>,
+    delimiter: String,
     title: Option<Inlines>,
     blocks: Vec<NonSectionBlockBody>,
     location: Option<Location>,
 }
-impl BlockParentBody {
-    fn new() -> Self {
+impl ParentBody {
+    fn new(delimiter: String, blocks: Vec<Block>) -> Self {
         Self {
-            node_type: NodeType::Block,
-            delimiter: None,
-            title: None,
-            blocks: Vec::with_capacity(0),
-            location: None,
+            delimiter,
+            blocks,
+            ..Default::default()
         }
     }
 }
 
 impl Block {
-    pub fn new_admonition(variant: AdmonitionVariant) -> Self {
-        Self::BlockParent(BlockParent::new_admonition(variant))
+    pub(crate) fn new_caution(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_caution(delimiter, blocks))
     }
 
-    pub fn new_example() -> Self {
-        Self::BlockParent(BlockParent::new_example())
+    pub(crate) fn new_important(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_important(delimiter, blocks))
     }
 
-    pub fn new_sidebar() -> Self {
-        Self::BlockParent(BlockParent::new_sidebar())
+    pub(crate) fn new_note(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_note(delimiter, blocks))
     }
 
-    pub fn new_open() -> Self {
-        Self::BlockParent(BlockParent::new_open())
+    pub(crate) fn new_tip(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_tip(delimiter, blocks))
     }
 
-    pub fn new_quote() -> Self {
-        Self::BlockParent(BlockParent::new_quote())
+    pub(crate) fn new_warning(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_warning(delimiter, blocks))
+    }
+
+    pub(crate) fn new_example(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_example(delimiter, blocks))
+    }
+
+    pub(crate) fn new_sidebar(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_sidebar(delimiter, blocks))
+    }
+
+    pub(crate) fn new_open(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_open(delimiter, blocks))
+    }
+
+    pub(crate) fn new_quote(delimiter: String, blocks: Vec<Block>) -> Self {
+        Self::Parent(ParentBlock::new_quote(delimiter, blocks))
     }
 }

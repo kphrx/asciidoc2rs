@@ -1,14 +1,12 @@
-use std::error::Error;
-
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
-use super::{Block, NonSectionBlockBody, TrimIndent};
-use crate::asg::{Inlines, Location, NodeType};
+use super::NonSectionBlockBody;
+use crate::asg::{Inlines, Location, NodeType, NonEmptyVec};
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[serde(tag = "name", rename_all = "lowercase")]
 pub enum AnyList {
     List {
         #[serde(rename = "type")]
@@ -17,7 +15,7 @@ pub enum AnyList {
         marker: String,
         title: Option<Inlines>,
         location: Option<Location>,
-        items: Vec<ListItem>,
+        items: NonEmptyVec<ListItem>,
     },
     Dlist {
         #[serde(rename = "type")]
@@ -25,25 +23,25 @@ pub enum AnyList {
         marker: String,
         title: Option<Inlines>,
         location: Option<Location>,
-        items: Vec<DlistItem>,
+        items: NonEmptyVec<DlistItem>,
 
         #[serde(skip)]
         current_terms: Vec<String>,
     },
 }
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "lowercase")]
 pub enum ListVariant {
     Callout,
     Ordered,
     Unordered,
 }
 impl AnyList {
-    fn new_callout_list(marker: String, principal: String) -> Self {
-        let items = vec![ListItem::new(
+    pub(crate) fn new_callout_list(marker: String, principal: String) -> Self {
+        let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
-            Inlines::new_with_line(&principal),
-        )];
+            Inlines::new_with_text(&principal),
+        ));
 
         Self::List {
             node_type: NodeType::Block,
@@ -55,11 +53,11 @@ impl AnyList {
         }
     }
 
-    fn new_ordered_list(marker: String, principal: String) -> Self {
-        let items = vec![ListItem::new(
+    pub(crate) fn new_ordered_list(marker: String, principal: String) -> Self {
+        let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
-            Inlines::new_with_line(&principal),
-        )];
+            Inlines::new_with_text(&principal),
+        ));
 
         Self::List {
             node_type: NodeType::Block,
@@ -71,11 +69,11 @@ impl AnyList {
         }
     }
 
-    fn new_unordered_list(marker: String, principal: String) -> Self {
-        let items = vec![ListItem::new(
+    pub(crate) fn new_unordered_list(marker: String, principal: String) -> Self {
+        let items = NonEmptyVec::new(ListItem::new(
             marker.clone(),
-            Inlines::new_with_line(&principal),
-        )];
+            Inlines::new_with_text(&principal),
+        ));
 
         Self::List {
             node_type: NodeType::Block,
@@ -87,14 +85,18 @@ impl AnyList {
         }
     }
 
-    fn new_description_list(marker: String, term: String, principal: Option<String>) -> Self {
-        let mut items = Vec::with_capacity(1);
+    pub(crate) fn new_description_list(
+        marker: String,
+        term: String,
+        principal: Option<String>,
+    ) -> Self {
+        let mut items = NonEmptyVec::with_capacity(1);
         let current_terms = vec![term.clone()];
         if let Some(principal) = principal {
             items.push(DlistItem::new(
                 marker.clone(),
                 current_terms.to_owned(),
-                Inlines::new_with_line(&principal),
+                Inlines::new_with_text(&principal),
             ));
         }
 
@@ -108,14 +110,15 @@ impl AnyList {
         }
     }
 
-    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
+    pub(crate) fn push(&mut self, line: &str) -> Result<(), String> {
         match self {
             Self::List { marker, items, .. } => {
                 let prefix = marker.to_owned() + " ";
-                if let Some(principal) = line.trim_indent().strip_prefix(&prefix) {
+                if let Some(principal) = line.trim_start_matches(['\t', ' ']).strip_prefix(&prefix)
+                {
                     items.push(ListItem::new(
                         marker.to_owned(),
-                        Inlines::new_with_line(principal),
+                        Inlines::new_with_text(principal),
                     ));
 
                     return Ok(());
@@ -125,7 +128,7 @@ impl AnyList {
                     return last.push(line);
                 }
 
-                Err("not expected empty items of list".into())
+                Err("not expected empty items of list".to_string())
             }
             Self::Dlist {
                 marker,
@@ -142,7 +145,7 @@ impl AnyList {
                         items.push(DlistItem::new(
                             marker.clone(),
                             current_terms.to_owned(),
-                            Inlines::new_with_line(principal),
+                            Inlines::new_with_text(principal),
                         ));
                         current_terms.clear();
 
@@ -155,11 +158,11 @@ impl AnyList {
                         return Ok(());
                     }
 
-                    let principal = line.trim_indent();
+                    let principal = line.trim_start_matches(['\t', ' ']);
                     items.push(DlistItem::new(
                         marker.clone(),
                         current_terms.to_owned(),
-                        Inlines::new_with_line(principal),
+                        Inlines::new_with_text(principal),
                     ));
                     current_terms.clear();
 
@@ -171,7 +174,7 @@ impl AnyList {
                     items.push(DlistItem::new(
                         marker.clone(),
                         vec![term.to_owned()],
-                        Inlines::new_with_line(principal),
+                        Inlines::new_with_text(principal),
                     ));
 
                     return Ok(());
@@ -187,7 +190,7 @@ impl AnyList {
                     return last.push(line);
                 }
 
-                Err("not expected empty items of list".into())
+                Err("not expected empty items of list".to_string())
             }
         }
     }
@@ -216,8 +219,8 @@ impl ListItem {
         }
     }
 
-    pub(crate) fn push(&mut self, _line: &str) -> Result<(), Box<dyn Error>> {
-        Err("not implemented".into())
+    pub(crate) fn push(&mut self, _line: &str) -> Result<(), String> {
+        Err("not implemented".to_string())
     }
 }
 
@@ -231,7 +234,7 @@ pub struct DlistItem {
     principal: Inlines,
     blocks: Option<Vec<NonSectionBlockBody>>,
     location: Option<Location>,
-    terms: Vec<Inlines>,
+    terms: NonEmptyVec<Inlines>,
 }
 impl DlistItem {
     fn new(marker: String, _terms: Vec<String>, principal: Inlines) -> Self {
@@ -242,99 +245,114 @@ impl DlistItem {
             principal,
             blocks: Some(Vec::with_capacity(0)),
             location: None,
-            terms: Vec::with_capacity(0),
+            terms: NonEmptyVec::with_capacity(1),
         }
     }
 
-    pub(crate) fn push(&mut self, _line: &str) -> Result<(), Box<dyn Error>> {
-        Err("not implemented".into())
-    }
-}
-
-impl Block {
-    pub(crate) fn new_callout_list(marker: String, principal: String) -> Self {
-        Self::AnyList(AnyList::new_callout_list(marker, principal))
-    }
-
-    pub(crate) fn new_ordered_list(marker: String, principal: String) -> Self {
-        Self::AnyList(AnyList::new_ordered_list(marker, principal))
-    }
-
-    pub(crate) fn new_unordered_list(marker: String, principal: String) -> Self {
-        Self::AnyList(AnyList::new_unordered_list(marker, principal))
-    }
-
-    pub(crate) fn new_description_list(
-        marker: String,
-        term: String,
-        principal: Option<String>,
-    ) -> Self {
-        Self::AnyList(AnyList::new_description_list(marker, term, principal))
+    pub(crate) fn push(&mut self, _line: &str) -> Result<(), String> {
+        Err("not implemented".to_string())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::asg::{Inline, InlineLiteral, LiteralValue};
+    use std::assert_matches;
 
     #[test]
     fn unordered_list() {
-        let mut list = Block::new_unordered_list("*".to_owned(), "item 1".to_owned());
+        let mut list = AnyList::new_unordered_list("*".to_owned(), "item 1".to_owned());
 
-        list.push("* item 2");
-        list.push("  * item 3");
+        list.push("* item 2").unwrap();
+        list.push("  * item 3").unwrap();
 
-        let Block::AnyList(AnyList::List {
+        let AnyList::List {
             variant,
             marker,
             items,
             ..
-        }) = list
+        } = list
         else {
             panic!("not expected")
         };
-        let mut items = items.to_owned();
-
-        assert!(matches!(variant, ListVariant::Unordered));
+        assert_matches!(variant, ListVariant::Unordered);
         assert_eq!("*", marker);
+
         assert_eq!(3, items.len());
+        let items = &mut items.into_iter();
 
-        let item_3 = items.pop().unwrap();
-        let item_2 = items.pop().unwrap();
-        let item_1 = items.pop().unwrap();
-
-        assert_eq!(Inlines::new_with_line("item 1"), item_1.principal);
-        assert_eq!(Inlines::new_with_line("item 2"), item_2.principal);
-        assert_eq!(Inlines::new_with_line("item 3"), item_3.principal);
+        assert_matches!(
+            items.next(),
+            Some(ListItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "item 1")
+        );
+        assert_matches!(
+            items.next(),
+            Some(ListItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "item 2")
+        );
+        assert_matches!(
+            items.next(),
+            Some(ListItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "item 3")
+        );
     }
 
     #[test]
     fn description_list() {
-        let mut list = Block::new_description_list(
+        let mut list = AnyList::new_description_list(
             "::".to_owned(),
             "term 1".to_owned(),
             Some("description 1".to_owned()),
         );
 
-        list.push("term 2::");
-        list.push("  description 2");
-        list.push("term 3::");
-        list.push("    term 4:: description 3-4");
+        list.push("term 2::").unwrap();
+        list.push("  description 2").unwrap();
+        list.push("term 3::").unwrap();
+        list.push("    term 4:: description 3-4").unwrap();
 
-        let Block::AnyList(AnyList::Dlist { marker, items, .. }) = list else {
+        let AnyList::Dlist { marker, items, .. } = list else {
             panic!("not expected")
         };
-        let mut items = items.to_owned();
 
         assert_eq!("::", marker);
+
         assert_eq!(3, items.len());
+        let items = &mut items.into_iter();
 
-        let item_3 = items.pop().unwrap();
-        let item_2 = items.pop().unwrap();
-        let item_1 = items.pop().unwrap();
-
-        assert_eq!(Inlines::new_with_line("description 1"), item_1.principal);
-        assert_eq!(Inlines::new_with_line("description 2"), item_2.principal);
-        assert_eq!(Inlines::new_with_line("description 3-4"), item_3.principal);
+        assert_matches!(
+            items.next(),
+            Some(DlistItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "description 1")
+        );
+        assert_matches!(
+            items.next(),
+            Some(DlistItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "description 2")
+        );
+        assert_matches!(
+            items.next(),
+            Some(DlistItem { principal: Inlines(inlines), .. })
+                if matches!(
+                    inlines.as_slice(),
+                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                        if value == "description 3-4")
+        );
     }
 }
