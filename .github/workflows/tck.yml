@@ -15,6 +15,7 @@ jobs:
       tests: ${{ steps.tck.outputs.tests }}
       passed: ${{ steps.tck.outputs.pass }}
       failed: ${{ steps.tck.outputs.fail }}
+      results: ${{ steps.summary.outputs.result }}
 
     steps:
       - uses: actions/checkout@v7
@@ -59,32 +60,34 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Generate summary
+        id: summary
         continue-on-error: true
         uses: actions/github-script@v9
         env:
           WORKSPACE: ${{ github.workspace }}
         with:
           script: |
-            const {format} = await import('node:path')
+            const {format} = await import('node:path');
             const {parseOutputFile} = await import(`${process.env.WORKSPACE}/.github/scripts/tck-summary.js`);
-            await parseOutputFile({
+            return await parseOutputFile({
               path: format({
                 dir: `${process.env.WORKSPACE}/asciidoc-tck`,
                 name: 'output',
                 ext: 'txt',
               }),
               core,
-            })
+            });
 
 
   result:
 
-    name: result tests:${{ needs.tck.outputs.tests }} passed:${{ needs.tck.outputs.passed }} failed:${{ needs.tck.outputs.failed }}
     runs-on: ubuntu-latest
     needs: tck
     concurrency:
       group: tck
       cancel-in-progress: true
+    permissions:
+      checks: write
     env:
       BADGE_GIST_ID: e795d8d23466d049a08e03c23301e996
 
@@ -101,3 +104,58 @@ jobs:
           maxColorRange: ${{ needs.tck.outputs.tests }}
           minColorRange: 0
           message: ${{ needs.tck.outputs.passed }} / ${{ needs.tck.outputs.tests }}
+
+      - name: Status
+        uses: actions/github-script@v9
+        env:
+          RESULTS: ${{ needs.tck.outputs.results }}
+          TESTS: ${{ needs.tck.outputs.tests }}
+          PASSED: ${{ needs.tck.outputs.passed }}
+          FAILED: ${{ needs.tck.outputs.failed }}
+        with:
+          script: |
+            const results = JSON.parse(process.env.RESULTS);
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const summary = () => Object.create(Object.getPrototypeOf(core.summary)).emptyBuffer();
+            if (context.eventName === 'pull_request') {
+              await github.rest.checks.createCommitStatus({
+                owner,
+                repo,
+                sha: context.payload.pull_request.head.sha,
+                state: "success",
+                description: `TCK result: ${process.env.PASSED} passed, ${process.env.FAILED} failed`
+              });
+            } else {
+              await github.rest.checks.create({
+                owner,
+                repo,
+                name: `TCK result`,
+                head_sha: context.sha,
+                status: "completed",
+                conclusion: "success",
+                output: {
+                  title: `${process.env.PASSED} passed, ${process.env.FAILED} failed`,
+                  summary: summary().addRaw(`${process.env.PASSED} / ${process.env.TESTS}`)
+                    .addTable(results.reduce((buffer, test) => {
+                      return [...buffer, [
+                        test.status ? 'Pass&nbsp;✅' : 'Fail&nbsp;❌',
+                        test.name,
+                        test.time,
+                        test.status ? ''
+                        : test.detail == null ? 'Failed Command'
+                        : summary().addRaw(test.detail.message)
+                            .addDetails(
+                              'Error Info',
+                              summary().addCodeBlock(test.detail.diff, 'diff').stringify()
+                            ).stringify(),
+                      ]];
+                    }, [[
+                      {data: 'Status', header: true},
+                      {data: 'Test Case', header: true},
+                      {data: 'Execution Time', header: true},
+                      {data: '', header: true},
+                    ]])).stringify(),
+                },
+              });
+            }

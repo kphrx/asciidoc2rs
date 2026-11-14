@@ -209,4 +209,6 @@ export async function parseOutputFile({path, core}) {
     }
     await core.summary.write();
   }
+
+  return tests;
 }
