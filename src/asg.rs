@@ -48,3 +48,40 @@ pub enum NodeType {
     #[default]
     Block,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::assert_matches;
+
+    #[test]
+    fn serialize_location() {
+        assert_eq!(
+            serde_json::to_string(&Location {
+                start: LocationBoundary {
+                    line: NonZeroUsize::try_from(2).unwrap(),
+                    column: 0,
+                    file: None,
+                },
+                end: LocationBoundary {
+                    line: NonZeroUsize::try_from(3).unwrap(),
+                    column: 5,
+                    file: None,
+                },
+            })
+            .unwrap(),
+            r#"[{"line":2,"col":0},{"line":3,"col":5}]"#
+        );
+    }
+
+    #[test]
+    fn deserialize_location() {
+        assert_matches!(
+            serde_json::from_str(r#"[{"line":2,"col":0},{"line":3,"col":5}]"#).unwrap(),
+            Location {
+                start: LocationBoundary { line: start_line, column: 0, file: None },
+                end: LocationBoundary { line: end_line, column: 5, file: None },
+            } if start_line.get() == 2 && end_line.get() == 3
+        );
+    }
+}
