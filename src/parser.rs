@@ -1690,6 +1690,7 @@ mod tests {
 
     mod section_parser {
         use super::*;
+        use crate::asg::block::{Break, BreakInfo};
 
         #[test]
         fn line_prase_line_empty() {
@@ -2036,6 +2037,30 @@ mod tests {
                     if delimiter == "----"
                     && matches!(body[..], [])
             );
+        }
+
+        #[test]
+        fn break_page_prase_line_empty() {
+            let mut p = SectionParser::Break(BreakVariant::Page);
+            assert_matches!(
+                p.parse_line("", 0, 0),
+                Ok(SectionLineKind::NestedEnd(SectionBody::Block(
+                    Block::Break(Break::Page(BreakInfo { .. }))
+                )))
+            );
+            assert_matches!(p, SectionParser::Line);
+        }
+
+        #[test]
+        fn break_thematic_prase_line_empty() {
+            let mut p = SectionParser::Break(BreakVariant::Thematic);
+            assert_matches!(
+                p.parse_line("", 0, 0),
+                Ok(SectionLineKind::NestedEnd(SectionBody::Block(
+                    Block::Break(Break::Thematic(BreakInfo { .. }))
+                )))
+            );
+            assert_matches!(p, SectionParser::Line);
         }
     }
 
