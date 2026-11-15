@@ -1993,6 +1993,50 @@ mod tests {
                     && matches!(body[..], [])
             );
         }
+
+        #[test]
+        fn line_prase_line_page_break() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("<<<", 0, 1), Ok(SectionLineKind::Nest));
+            assert_matches!(p, SectionParser::Break(BreakVariant::Page));
+        }
+
+        #[test]
+        fn line_prase_line_page_break_no_empty_line_offset() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("<<<", 0, 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p, SectionParser::Paragraph(l) if l == "<<<");
+        }
+
+        #[test]
+        fn line_prase_line_thematic_break() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("'''", 0, 1), Ok(SectionLineKind::Nest));
+            assert_matches!(p, SectionParser::Break(BreakVariant::Thematic));
+        }
+
+        #[test]
+        fn line_prase_line_thematic_break_no_empty_line_offset() {
+            let mut p = SectionParser::Line;
+            assert_matches!(p.parse_line("'''", 0, 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p, SectionParser::Paragraph(l) if l == "'''");
+        }
+
+        #[test]
+        fn attributed_parse_line_listing_delimiter() {
+            let mut p = SectionParser::Attributed(
+                Box::new(["".to_string(), "ruby".to_string(), "linenums".to_string()]),
+                HashMap::from([("id".to_string(), "hello".to_string())]),
+                "[,ruby,linenums,id=\"hello\"]".to_string(),
+            );
+            assert_matches!(p.parse_line("----", 0, 0), Ok(SectionLineKind::Nest));
+            assert_matches!(
+                p,
+                SectionParser::DelimitedLeaf(LeafVariant::Listing, delimiter, body)
+                    if delimiter == "----"
+                    && matches!(body[..], [])
+            );
+        }
     }
 
     mod parent_parser {
