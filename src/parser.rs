@@ -269,12 +269,14 @@ pub(crate) enum SectionParser {
     DelimitedComment(String),
     Delimited(Box<ParentParser>, ParentVariant, String, Vec<Block>),
     DelimitedLeaf(LeafVariant, String, Vec<String>),
+    Break(BreakVariant),
 }
 impl SectionParser {
     pub(crate) fn parse_line(
         &mut self,
         line: &str,
         level: usize,
+        empty_count: usize,
     ) -> Result<SectionLineKind, String> {
         match self {
             Self::Line => match LineKind::parse(line) {
@@ -475,6 +477,24 @@ impl SectionParser {
                 } => {
                     *self = Self::Dlist(marker, vec![(term, principal)]);
                     Ok(SectionLineKind::Nest)
+                }
+                LineKind::PageBreak => {
+                    if empty_count > 0 {
+                        *self = Self::Break(BreakVariant::Page);
+                        Ok(SectionLineKind::Nest)
+                    } else {
+                        *self = Self::Paragraph(line.to_string());
+                        Ok(SectionLineKind::Nest)
+                    }
+                }
+                LineKind::ThematicBreak => {
+                    if empty_count > 0 {
+                        *self = Self::Break(BreakVariant::Thematic);
+                        Ok(SectionLineKind::Nest)
+                    } else {
+                        *self = Self::Paragraph(line.to_string());
+                        Ok(SectionLineKind::Nest)
+                    }
                 }
                 LineKind::Unknown
                 | LineKind::ClearDocumentAttribute(_)
@@ -863,7 +883,7 @@ impl SectionParser {
                 }
             }
             Self::Section(parser, sl, title, blocks) => {
-                match parser.parse_line(line, *sl)? {
+                match parser.parse_line(line, *sl, empty_count)? {
                     SectionLineKind::End(l, t) => {
                         let sec = Section::new_with_blocks(*sl, title, mem::take(blocks));
                         *self = Self::Line; // end
@@ -902,21 +922,23 @@ impl SectionParser {
                 }
                 _ => Ok(SectionLineKind::Comment),
             },
-            Self::Delimited(parser, variant, delimiter, blocks) => match parser.parse_line(line)? {
-                ParentLineKind::Delimiter(d) if d == *delimiter => {
-                    let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
-                    *self = Self::Line;
-                    Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
+            Self::Delimited(parser, variant, delimiter, blocks) => {
+                match parser.parse_line(line, empty_count)? {
+                    ParentLineKind::Delimiter(d) if d == *delimiter => {
+                        let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
+                        *self = Self::Line;
+                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
+                    }
+                    ParentLineKind::NestedEnd(block) => {
+                        blocks.push(block);
+                        Ok(SectionLineKind::Nest)
+                    }
+                    ParentLineKind::Comment
+                    | ParentLineKind::Skip
+                    | ParentLineKind::Delimiter(_)
+                    | ParentLineKind::Nest => Ok(SectionLineKind::Nest),
                 }
-                ParentLineKind::NestedEnd(block) => {
-                    blocks.push(block);
-                    Ok(SectionLineKind::Nest)
-                }
-                ParentLineKind::Comment
-                | ParentLineKind::Skip
-                | ParentLineKind::Delimiter(_)
-                | ParentLineKind::Nest => Ok(SectionLineKind::Nest),
-            },
+            }
             Self::DelimitedLeaf(variant, delimiter, lines) => match LineKind::parse(line) {
                 LineKind::QuoteDelimiter(d)
                 | LineKind::ListingDelimiter(d)
@@ -933,6 +955,30 @@ impl SectionParser {
                 _ => {
                     lines.push(line.to_string());
                     Ok(SectionLineKind::Nest)
+                }
+            },
+            Self::Break(BreakVariant::Page) => match LineKind::parse(line) {
+                LineKind::Empty => {
+                    *self = Self::Line;
+                    Ok(SectionLineKind::NestedEnd(SectionBody::Block(
+                        Block::new_page_break(),
+                    )))
+                }
+                _ => {
+                    *self = Self::Paragraph("<<<".to_string());
+                    self.parse_line(line, level, empty_count)
+                }
+            },
+            Self::Break(BreakVariant::Thematic) => match LineKind::parse(line) {
+                LineKind::Empty => {
+                    *self = Self::Line;
+                    Ok(SectionLineKind::NestedEnd(SectionBody::Block(
+                        Block::new_thematic_break(),
+                    )))
+                }
+                _ => {
+                    *self = Self::Paragraph("'''".to_string());
+                    self.parse_line(line, level, empty_count)
                 }
             },
         }
@@ -1030,7 +1076,7 @@ pub(crate) enum ParentParser {
     Delimited(Box<ParentParser>, ParentVariant, String, Vec<Block>),
 }
 impl ParentParser {
-    fn parse_line(&mut self, line: &str) -> Result<ParentLineKind, String> {
+    fn parse_line(&mut self, line: &str, _empty_count: usize) -> Result<ParentLineKind, String> {
         match self {
             Self::Line => match LineKind::parse(line) {
                 LineKind::Empty | LineKind::CommentMarker => Ok(ParentLineKind::Skip),
@@ -1086,14 +1132,16 @@ impl ParentParser {
                 }
                 _ => Ok(ParentLineKind::Comment),
             },
-            Self::Delimited(parser, variant, delimiter, blocks) => match parser.parse_line(line)? {
-                ParentLineKind::Delimiter(d) if d == *delimiter => {
-                    let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
-                    *self = Self::Line;
-                    Ok(ParentLineKind::NestedEnd(block))
+            Self::Delimited(parser, variant, delimiter, blocks) => {
+                match parser.parse_line(line, _empty_count)? {
+                    ParentLineKind::Delimiter(d) if d == *delimiter => {
+                        let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
+                        *self = Self::Line;
+                        Ok(ParentLineKind::NestedEnd(block))
+                    }
+                    _ => Ok(ParentLineKind::Nest),
                 }
-                _ => Ok(ParentLineKind::Nest),
-            },
+            }
         }
     }
 
@@ -1199,6 +1247,12 @@ impl LeafVariant {
             Self::Verse => Block::new_delimited_verse(delimiter, value),
         }
     }
+}
+
+#[derive(Debug)]
+pub(crate) enum BreakVariant {
+    Page,
+    Thematic,
 }
 
 #[cfg(test)]
@@ -1640,14 +1694,14 @@ mod tests {
         #[test]
         fn line_prase_line_empty() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("", 0), Ok(SectionLineKind::Skip));
+            assert_matches!(p.parse_line("", 0, 0), Ok(SectionLineKind::Skip));
             assert_matches!(p, SectionParser::Line);
         }
 
         #[test]
         fn line_parse_line_attribute_line_caution() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[CAUTION]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[CAUTION]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingParent(ParentVariant::Caution, positional, named, raw)
@@ -1660,7 +1714,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_important() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[IMPORTANT]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[IMPORTANT]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingParent(ParentVariant::Important, positional, named, raw)
@@ -1673,7 +1727,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_note() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[NOTE]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[NOTE]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingParent(ParentVariant::Note, positional, named, raw)
@@ -1686,7 +1740,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_tip() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[TIP]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[TIP]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingParent(ParentVariant::Tip, positional, named, raw)
@@ -1699,7 +1753,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_warning() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[WARNING]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[WARNING]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingParent(ParentVariant::Warning, positional, named, raw)
@@ -1712,7 +1766,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_example() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[example]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[example]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingParent(ParentVariant::Example, positional, named, raw)
@@ -1725,7 +1779,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_sidebar() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[sidebar]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[sidebar]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingParent(ParentVariant::Sidebar, positional, named, raw)
@@ -1738,7 +1792,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_quote() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[quote]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[quote]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingParent(ParentVariant::Quote, positional, named, raw)
@@ -1751,7 +1805,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_open() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[open]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[open]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingParent(ParentVariant::Open, positional, named, raw)
@@ -1764,7 +1818,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_listing() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[listing]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[listing]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingLeaf(LeafVariant::Listing, positional, named, raw)
@@ -1777,7 +1831,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_literal() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[literal]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[literal]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingLeaf(LeafVariant::Literal, positional, named, raw)
@@ -1790,7 +1844,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_source() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[source]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[source]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingLeaf(LeafVariant::Source, positional, named, raw)
@@ -1803,7 +1857,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_pass() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[pass]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[pass]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingLeaf(LeafVariant::Passthrough, positional, named, raw)
@@ -1816,7 +1870,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_stem() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[stem]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[stem]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingLeaf(LeafVariant::Stem, positional, named, raw)
@@ -1829,7 +1883,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_verse() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[verse]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[verse]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingLeaf(LeafVariant::Verse, positional, named, raw)
@@ -1842,7 +1896,7 @@ mod tests {
         #[test]
         fn line_parse_line_attribute_line_comment() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("[comment]", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("[comment]", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::MasqueradingComment(positional, named, raw)
@@ -1855,7 +1909,7 @@ mod tests {
         #[test]
         fn line_parse_line_example_delimiter() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("=====", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("=====", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::Delimited(parser, ParentVariant::Example, delimiter, body)
@@ -1868,7 +1922,7 @@ mod tests {
         #[test]
         fn line_parse_line_sidebar_delimiter() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("*****", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("*****", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::Delimited(parser, ParentVariant::Sidebar, delimiter, body)
@@ -1881,7 +1935,7 @@ mod tests {
         #[test]
         fn line_parse_line_quote_delimiter() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("_____", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("_____", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::Delimited(parser, ParentVariant::Quote, delimiter, body)
@@ -1894,7 +1948,7 @@ mod tests {
         #[test]
         fn line_parse_line_open_delimiter() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("~~~~~", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("~~~~~", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::Delimited(parser, ParentVariant::Open, delimiter, body)
@@ -1907,7 +1961,7 @@ mod tests {
         #[test]
         fn line_parse_line_listing_delimiter() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("-----", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("-----", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::DelimitedLeaf(LeafVariant::Listing, delimiter, body)
@@ -1919,7 +1973,7 @@ mod tests {
         #[test]
         fn line_parse_line_literal_delimiter() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line(".....", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line(".....", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::DelimitedLeaf(LeafVariant::Literal, delimiter, body)
@@ -1931,7 +1985,7 @@ mod tests {
         #[test]
         fn line_parse_line_pass_delimiter() {
             let mut p = SectionParser::Line;
-            assert_matches!(p.parse_line("+++++", 0), Ok(SectionLineKind::Nest));
+            assert_matches!(p.parse_line("+++++", 0, 0), Ok(SectionLineKind::Nest));
             assert_matches!(
                 p,
                 SectionParser::DelimitedLeaf(LeafVariant::Passthrough, delimiter, body)
@@ -1947,7 +2001,7 @@ mod tests {
         #[test]
         fn line_prase_line_empty() {
             let mut p = ParentParser::Line;
-            assert_matches!(p.parse_line(""), Ok(ParentLineKind::Skip));
+            assert_matches!(p.parse_line("", 0), Ok(ParentLineKind::Skip));
             assert_matches!(p, ParentParser::Line);
         }
     }

@@ -64,6 +64,8 @@ enum LineKind {
     UnsetDocumentAttribute(String),
     BooleanDocumentAttribute(String),
     DocumentAttribute(String, String),
+    ThematicBreak,
+    PageBreak,
 }
 
 impl LineKind {
@@ -334,6 +336,14 @@ impl LineKind {
             }
         }
 
+        if line == "<<<" {
+            return Self::PageBreak;
+        }
+
+        if line == "'''" {
+            return Self::ThematicBreak;
+        }
+
         Self::Unknown
     }
 
@@ -371,22 +381,28 @@ impl<'input> Parser<'input> {
     }
 
     pub fn parse_to_asg(mut self) -> Result<Document, String> {
+        let mut empty_count: usize = 0;
         for (index, line) in self.text.lines().enumerate() {
-            self.push_line(line, index + 1)?;
+            self.push_line(line, index + 1, empty_count)?;
+            if line.is_empty() {
+                empty_count += 1;
+            } else if empty_count != 0 {
+                empty_count = 0;
+            }
         }
         let doc = self.finish()?;
 
         Ok(doc)
     }
 
-    fn push_line(&mut self, line: &str, _num: usize) -> Result<(), String> {
+    fn push_line(&mut self, line: &str, _num: usize, empty_count: usize) -> Result<(), String> {
         match self.state {
             State::Start => {
                 if line.is_empty() || (line.starts_with("//") && !line.starts_with("///")) {
                     Ok(())
                 } else {
                     self.state = State::Header(Default::default(), Default::default());
-                    self.push_line(line, _num)
+                    self.push_line(line, _num, empty_count)
                 }
             }
             State::Header(ref mut parser, ref mut header) => match parser.parse_line(line)? {
@@ -402,7 +418,7 @@ impl<'input> Parser<'input> {
                     } else {
                         let doc = Document::new_with_header(header.as_deref().cloned());
                         self.state = State::Body(Default::default(), Box::new(doc));
-                        self.push_line(line, _num)
+                        self.push_line(line, _num, empty_count)
                     }
                 }
                 HeaderLineKind::End => {
@@ -429,7 +445,7 @@ impl<'input> Parser<'input> {
                         if matches!(self.doctype, Doctype::Book) {
                             let doc = Document::new_with_header(header.as_deref().cloned());
                             self.state = State::Body(Default::default(), Box::new(doc));
-                            self.push_line(line, _num)
+                            self.push_line(line, _num, empty_count)
                         } else {
                             Err("level 0 sections can only be used when doctype is book"
                                 .to_string())
@@ -553,45 +569,59 @@ impl<'input> Parser<'input> {
                 }
                 HeaderLineKind::Wrap | HeaderLineKind::Comment => Ok(()),
             },
-            State::Body(ref mut parser, ref mut doc) => match parser.parse_line(line, 0)? {
-                SectionLineKind::End(0, title) => match self.doctype {
-                    Doctype::Book => {
-                        *parser = SectionParser::Section(
-                            Default::default(),
-                            0,
-                            title,
-                            Vec::with_capacity(0),
-                        );
-                        Ok(())
+            State::Body(ref mut parser, ref mut doc) => {
+                match parser.parse_line(line, 0, empty_count)? {
+                    SectionLineKind::End(0, title) => {
+                        match self.doctype {
+                            Doctype::Book => {
+                                *parser = SectionParser::Section(
+                                    Default::default(),
+                                    0,
+                                    title,
+                                    Vec::with_capacity(0),
+                                );
+                                Ok(())
+                            }
+                            _ => Err("level 0 sections can only be used when doctype is book"
+                                .to_string()),
+                        }
                     }
-                    _ => Err("level 0 sections can only be used when doctype is book".to_string()),
-                },
-                SectionLineKind::End(..) => panic!("cannot call"),
-                SectionLineKind::SectionEnd(section, 0, title) => match self.doctype {
-                    Doctype::Book => {
+                    SectionLineKind::End(..) => panic!("cannot call"),
+                    SectionLineKind::SectionEnd(section, 0, title) => {
+                        match self.doctype {
+                            Doctype::Book => {
+                                doc.blocks.push(SectionBody::Section(section));
+                                *parser = SectionParser::Section(
+                                    Default::default(),
+                                    0,
+                                    title,
+                                    Vec::with_capacity(0),
+                                );
+                                Ok(())
+                            }
+                            _ => Err("level 0 sections can only be used when doctype is book"
+                                .to_string()),
+                        }
+                    }
+                    SectionLineKind::SectionEnd(section, l, title) => {
                         doc.blocks.push(SectionBody::Section(section));
                         *parser = SectionParser::Section(
                             Default::default(),
-                            0,
+                            l,
                             title,
                             Vec::with_capacity(0),
                         );
                         Ok(())
                     }
-                    _ => Err("level 0 sections can only be used when doctype is book".to_string()),
-                },
-                SectionLineKind::SectionEnd(section, l, title) => {
-                    doc.blocks.push(SectionBody::Section(section));
-                    *parser =
-                        SectionParser::Section(Default::default(), l, title, Vec::with_capacity(0));
-                    Ok(())
+                    SectionLineKind::NestedEnd(block) => {
+                        doc.blocks.push(block);
+                        Ok(())
+                    }
+                    SectionLineKind::Skip | SectionLineKind::Comment | SectionLineKind::Nest => {
+                        Ok(())
+                    }
                 }
-                SectionLineKind::NestedEnd(block) => {
-                    doc.blocks.push(block);
-                    Ok(())
-                }
-                SectionLineKind::Skip | SectionLineKind::Comment | SectionLineKind::Nest => Ok(()),
-            },
+            }
         }
     }
 
