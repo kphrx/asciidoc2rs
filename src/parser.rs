@@ -478,6 +478,24 @@ impl SectionParser {
                     *self = Self::Dlist(marker, vec![(term, principal)]);
                     Ok(SectionLineKind::Nest)
                 }
+                LineKind::BlockMacro(name, target, positional, named) => {
+                    let block = match (name, target, positional.as_ref(), named) {
+                        (n, t, _, _) if n == "image" && !t.is_empty() => Ok(Block::new_image(t)),
+                        (n, t, _, _) if n == "video" && !t.is_empty() => Ok(Block::new_video(t)),
+                        (n, t, _, _) if n == "audio" && !t.is_empty() => Ok(Block::new_audio(t)),
+                        (n, t, [p], a)
+                            if n == "toc" && t.is_empty() && p.is_empty() && a.is_empty() =>
+                        {
+                            Ok(Block::new_toc())
+                        }
+                        (n, _, _, _) if n == "toc" => Err(format!(
+                            "table of contents macro not allow target and attributes: {}",
+                            line
+                        )),
+                        (n, t, _, _) => Err(format!("unsupported block macro: {}::{}[]", n, t)),
+                    }?;
+                    Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
+                }
                 LineKind::PageBreak => {
                     if empty_count > 0 {
                         *self = Self::Break(BreakVariant::Page);
@@ -1690,7 +1708,7 @@ mod tests {
 
     mod section_parser {
         use super::*;
-        use crate::asg::block::{Break, BreakInfo};
+        use crate::asg::block::{BlockMacro, Break, BreakInfo, MacroBody};
 
         #[test]
         fn line_prase_line_empty() {
@@ -1993,6 +2011,63 @@ mod tests {
                     if delimiter == "+++++"
                     && matches!(body[..], [])
             );
+        }
+
+        #[test]
+        fn line_prase_line_block_image_macro() {
+            let mut p = SectionParser::Line;
+            assert_matches!(
+                p.parse_line("image::sunset.jpg[]", 0, 0),
+                Ok(SectionLineKind::NestedEnd(SectionBody::Block(
+                    Block::Macro(BlockMacro::Image(MacroBody {
+                        target: Some(t),
+                        ..
+                    }))
+                ))) if t == "sunset.jpg"
+            );
+            assert_matches!(p, SectionParser::Line);
+        }
+
+        #[test]
+        fn line_prase_line_block_video_macro() {
+            let mut p = SectionParser::Line;
+            assert_matches!(
+                p.parse_line("video::video-file.mp4[]", 0, 0),
+                Ok(SectionLineKind::NestedEnd(SectionBody::Block(
+                    Block::Macro(BlockMacro::Video(MacroBody {
+                        target: Some(t),
+                        ..
+                    }))
+                ))) if t == "video-file.mp4"
+            );
+            assert_matches!(p, SectionParser::Line);
+        }
+
+        #[test]
+        fn line_prase_line_block_audio_macro() {
+            let mut p = SectionParser::Line;
+            assert_matches!(
+                p.parse_line("audio::ocean-waves.wav[]", 0, 0),
+                Ok(SectionLineKind::NestedEnd(SectionBody::Block(
+                    Block::Macro(BlockMacro::Audio(MacroBody {
+                        target: Some(t),
+                        ..
+                    }))
+                ))) if t == "ocean-waves.wav"
+            );
+            assert_matches!(p, SectionParser::Line);
+        }
+
+        #[test]
+        fn line_prase_line_block_table_of_contents_macro() {
+            let mut p = SectionParser::Line;
+            assert_matches!(
+                p.parse_line("toc::[]", 0, 0),
+                Ok(SectionLineKind::NestedEnd(SectionBody::Block(
+                    Block::Macro(BlockMacro::Toc(MacroBody { target: None, .. }))
+                )))
+            );
+            assert_matches!(p, SectionParser::Line);
         }
 
         #[test]

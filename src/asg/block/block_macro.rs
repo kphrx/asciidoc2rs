@@ -13,16 +13,16 @@ pub enum BlockMacro {
     Toc(MacroBody),
 }
 impl BlockMacro {
-    fn new_audio() -> Self {
-        Self::Audio(MacroBody::new())
+    fn new_audio(target: String) -> Self {
+        Self::Audio(MacroBody::new_with_target(target))
     }
 
-    fn new_video() -> Self {
-        Self::Video(MacroBody::new())
+    fn new_video(target: String) -> Self {
+        Self::Video(MacroBody::new_with_target(target))
     }
 
-    fn new_image() -> Self {
-        Self::Image(MacroBody::new())
+    fn new_image(target: String) -> Self {
+        Self::Image(MacroBody::new_with_target(target))
     }
 
     fn new_toc() -> Self {
@@ -36,7 +36,7 @@ impl BlockMacro {
 pub struct MacroBody {
     #[serde(rename = "type")]
     node_type: NodeType,
-    target: Option<String>,
+    pub(crate) target: Option<String>,
     title: Option<Inlines>,
     location: Option<Location>,
 }
@@ -49,22 +49,30 @@ impl MacroBody {
             location: None,
         }
     }
+    fn new_with_target(target: String) -> Self {
+        Self {
+            node_type: NodeType::Block,
+            target: Some(target),
+            title: None,
+            location: None,
+        }
+    }
 }
 
 impl Block {
-    pub fn new_audio() -> Self {
-        Self::Macro(BlockMacro::new_audio())
+    pub(crate) fn new_audio(target: String) -> Self {
+        Self::Macro(BlockMacro::new_audio(target))
     }
 
-    pub fn new_video() -> Self {
-        Self::Macro(BlockMacro::new_video())
+    pub(crate) fn new_video(target: String) -> Self {
+        Self::Macro(BlockMacro::new_video(target))
     }
 
-    pub fn new_image() -> Self {
-        Self::Macro(BlockMacro::new_image())
+    pub(crate) fn new_image(target: String) -> Self {
+        Self::Macro(BlockMacro::new_image(target))
     }
 
-    pub fn new_toc() -> Self {
+    pub(crate) fn new_toc() -> Self {
         Self::Macro(BlockMacro::new_toc())
     }
 }

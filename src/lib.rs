@@ -64,6 +64,7 @@ enum LineKind {
     UnsetDocumentAttribute(String),
     BooleanDocumentAttribute(String),
     DocumentAttribute(String, String),
+    BlockMacro(String, String, Box<[String]>, HashMap<String, String>),
     ThematicBreak,
     PageBreak,
 }
@@ -178,33 +179,6 @@ impl LineKind {
             };
         }
 
-        if let Some((dlist_term, primary_text)) = line.split_once(":: ") {
-            let dlist_term = dlist_term.trim_start_matches(['\t', ' ']);
-            let term = dlist_term.trim_end_matches(':').to_owned();
-            let principal = Some(primary_text.trim_start_matches(' ').to_owned());
-            if !term.ends_with(' ') {
-                let marker = ":".repeat(dlist_term.len() - term.len() + 2);
-
-                return Self::DescriptionListMarker {
-                    marker,
-                    term,
-                    principal,
-                };
-            }
-        }
-
-        if line.ends_with("::") {
-            let dlist_term = line.trim_start_matches(['\t', ' ']);
-            let term = dlist_term.trim_end_matches(':').to_owned();
-            let marker = ":".repeat(dlist_term.len() - term.len());
-
-            return Self::DescriptionListMarker {
-                marker,
-                term,
-                principal: None,
-            };
-        }
-
         if let Some(attrlist) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
             let (positional, named) = Self::parse_attrlist(attrlist);
             return Self::AttributeLine(positional, named);
@@ -257,6 +231,54 @@ impl LineKind {
 
         if line == "'''" {
             return Self::ThematicBreak;
+        }
+
+        if let Some((macro_name, Some((macro_target, Some(macro_attrlist))))) =
+            line.split_once("::").map(|(name, target_and_attrlist)| {
+                (
+                    name,
+                    target_and_attrlist
+                        .split_once('[')
+                        .map(|(target, attrlist)| (target, attrlist.strip_suffix(']'))),
+                )
+            })
+        {
+            if !macro_name.contains(|c: char| !c.is_ascii_alphabetic()) {
+                let (positional, named) = Self::parse_attrlist(macro_attrlist);
+                return Self::BlockMacro(
+                    macro_name.to_string(),
+                    macro_target.to_string(),
+                    positional,
+                    named,
+                );
+            }
+        }
+
+        if let Some((dlist_term, primary_text)) = line.split_once(":: ") {
+            let dlist_term = dlist_term.trim_start_matches(['\t', ' ']);
+            let term = dlist_term.trim_end_matches(':').to_owned();
+            let principal = Some(primary_text.trim_start_matches(' ').to_owned());
+            if !term.ends_with(' ') {
+                let marker = ":".repeat(dlist_term.len() - term.len() + 2);
+
+                return Self::DescriptionListMarker {
+                    marker,
+                    term,
+                    principal,
+                };
+            }
+        }
+
+        if line.ends_with("::") {
+            let dlist_term = line.trim_start_matches(['\t', ' ']);
+            let term = dlist_term.trim_end_matches(':').to_owned();
+            let marker = ":".repeat(dlist_term.len() - term.len());
+
+            return Self::DescriptionListMarker {
+                marker,
+                term,
+                principal: None,
+            };
         }
 
         Self::Unknown
