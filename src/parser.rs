@@ -280,7 +280,8 @@ impl SectionParser {
     ) -> Result<SectionLineKind, String> {
         match self {
             Self::Line => match LineKind::parse(line) {
-                LineKind::Empty | LineKind::CommentMarker => Ok(SectionLineKind::Skip),
+                LineKind::Empty => Ok(SectionLineKind::Skip),
+                LineKind::CommentMarker => Ok(SectionLineKind::Comment),
                 LineKind::CommentDelimiter(delimiter) => {
                     *self = Self::DelimitedComment(delimiter);
                     Ok(SectionLineKind::Comment)
@@ -514,11 +515,15 @@ impl SectionParser {
                         Ok(SectionLineKind::Nest)
                     }
                 }
-                LineKind::Unknown
-                | LineKind::ClearDocumentAttribute(_)
+                LineKind::ClearDocumentAttribute(_)
                 | LineKind::UnsetDocumentAttribute(_)
                 | LineKind::BooleanDocumentAttribute(_)
                 | LineKind::DocumentAttribute(_, _) => {
+                    eprintln!("WARN: unsupported unset a document attribute in the body");
+                    *self = Self::Paragraph(line.to_string());
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::Unknown => {
                     *self = Self::Paragraph(line.to_string());
                     Ok(SectionLineKind::Nest)
                 }
@@ -776,7 +781,7 @@ impl SectionParser {
                     *self = Self::Line;
                     Ok(SectionLineKind::NestedEnd(SectionBody::Block(p)))
                 }
-                LineKind::CommentMarker => Ok(SectionLineKind::Skip),
+                LineKind::CommentMarker => Ok(SectionLineKind::Comment),
                 LineKind::CommentDelimiter(delimiter) => {
                     let p = Block::new_paragraph(l);
                     *self = Self::DelimitedComment(delimiter);
@@ -795,7 +800,7 @@ impl SectionParser {
                         *self = Self::Line;
                         Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
                     }
-                    LineKind::CommentMarker => Ok(SectionLineKind::Skip),
+                    LineKind::CommentMarker => Ok(SectionLineKind::Comment),
                     LineKind::CommentDelimiter(delimiter) => {
                         let block = variant.to_leaf(l);
                         *self = Self::DelimitedComment(delimiter);
@@ -1090,15 +1095,261 @@ pub(crate) enum SectionLineKind {
 pub(crate) enum ParentParser {
     #[default]
     Line,
+    Attributed(Box<[String]>, HashMap<String, String>, String),
+    MasqueradingParent(
+        ParentVariant,
+        Box<[String]>,
+        HashMap<String, String>,
+        String,
+    ),
+    MasqueradingLeaf(LeafVariant, Box<[String]>, HashMap<String, String>, String),
+    MasqueradingComment(Box<[String]>, HashMap<String, String>, String),
+    Paragraph(String),
+    AttributedParagraph(Box<[String]>, HashMap<String, String>, String),
+    MasqueradingParagraph(LeafVariant, Box<[String]>, HashMap<String, String>, String),
+    List(ListVariant, String, Vec<String>),
+    Dlist(String, Vec<(String, Option<String>)>),
     DelimitedComment(String),
     Delimited(Box<ParentParser>, ParentVariant, String, Vec<Block>),
+    DelimitedLeaf(LeafVariant, String, Vec<String>),
+    Break(BreakVariant),
 }
 impl ParentParser {
-    fn parse_line(&mut self, line: &str, _empty_count: usize) -> Result<ParentLineKind, String> {
+    fn parse_line(&mut self, line: &str, empty_count: usize) -> Result<ParentLineKind, String> {
         match self {
             Self::Line => match LineKind::parse(line) {
-                LineKind::Empty | LineKind::CommentMarker => Ok(ParentLineKind::Skip),
+                LineKind::Empty => Ok(ParentLineKind::Skip),
+                LineKind::CommentMarker => Ok(ParentLineKind::Comment),
                 LineKind::CommentDelimiter(delimiter) => {
+                    *self = Self::DelimitedComment(delimiter);
+                    Ok(ParentLineKind::Comment)
+                }
+                LineKind::HeadingMarker { level, title } => Ok(ParentLineKind::NestedEnd(
+                    Block::Heading(DiscreteHeading::new(level, &title)),
+                )),
+                LineKind::AttributeLine(positional, named) => {
+                    *self = match positional.first().map(String::as_str) {
+                        Some("CAUTION") => Self::MasqueradingParent(
+                            ParentVariant::Caution,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("IMPORTANT") => Self::MasqueradingParent(
+                            ParentVariant::Important,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("NOTE") => Self::MasqueradingParent(
+                            ParentVariant::Note,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("TIP") => Self::MasqueradingParent(
+                            ParentVariant::Tip,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("WARNING") => Self::MasqueradingParent(
+                            ParentVariant::Warning,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("example") => Self::MasqueradingParent(
+                            ParentVariant::Example,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("sidebar") => Self::MasqueradingParent(
+                            ParentVariant::Sidebar,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("quote") => Self::MasqueradingParent(
+                            ParentVariant::Quote,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("open") => Self::MasqueradingParent(
+                            ParentVariant::Open,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+
+                        Some("listing") => Self::MasqueradingLeaf(
+                            LeafVariant::Listing,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("literal") => Self::MasqueradingLeaf(
+                            LeafVariant::Literal,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("pass") => Self::MasqueradingLeaf(
+                            LeafVariant::Passthrough,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("source") => Self::MasqueradingLeaf(
+                            LeafVariant::Source,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("stem") => Self::MasqueradingLeaf(
+                            LeafVariant::Stem,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+                        Some("verse") => Self::MasqueradingLeaf(
+                            LeafVariant::Verse,
+                            positional,
+                            named,
+                            line.to_string(),
+                        ),
+
+                        Some("comment") => {
+                            Self::MasqueradingComment(positional, named, line.to_string())
+                        }
+                        _ => Self::Attributed(positional, named, line.to_string()),
+                    };
+                    Ok(ParentLineKind::Nest)
+                }
+                LineKind::ExampleDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        ParentVariant::Example,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ParentLineKind::Delimiter(delimiter))
+                }
+                LineKind::SidebarDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        ParentVariant::Sidebar,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ParentLineKind::Delimiter(delimiter))
+                }
+                LineKind::QuoteDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        ParentVariant::Quote,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ParentLineKind::Delimiter(delimiter))
+                }
+                LineKind::OpenDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        ParentVariant::Open,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ParentLineKind::Delimiter(delimiter))
+                }
+                LineKind::ListingDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        LeafVariant::Listing,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ParentLineKind::Delimiter(delimiter))
+                }
+                LineKind::LiteralDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        LeafVariant::Literal,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ParentLineKind::Delimiter(delimiter))
+                }
+                LineKind::PassthroughDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        LeafVariant::Passthrough,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ParentLineKind::Delimiter(delimiter))
+                }
+                LineKind::BlockMacro(name, target, positional, named) => {
+                    let block = match (name, target, positional.as_ref(), named) {
+                        (n, t, _, _) if n == "image" && !t.is_empty() => Ok(Block::new_image(t)),
+                        (n, t, _, _) if n == "video" && !t.is_empty() => Ok(Block::new_video(t)),
+                        (n, t, _, _) if n == "audio" && !t.is_empty() => Ok(Block::new_audio(t)),
+                        (n, t, [p], a)
+                            if n == "toc" && t.is_empty() && p.is_empty() && a.is_empty() =>
+                        {
+                            Ok(Block::new_toc())
+                        }
+                        (n, _, _, _) if n == "toc" => Err(format!(
+                            "table of contents macro not allow target and attributes: {}",
+                            line
+                        )),
+                        (n, t, _, _) => Err(format!("unsupported block macro: {}::{}[]", n, t)),
+                    }?;
+                    Ok(ParentLineKind::NestedEnd(block))
+                }
+                LineKind::PageBreak => {
+                    if empty_count > 0 {
+                        *self = Self::Break(BreakVariant::Page);
+                        Ok(ParentLineKind::Nest)
+                    } else {
+                        *self = Self::Paragraph(line.to_string());
+                        Ok(ParentLineKind::Nest)
+                    }
+                }
+                LineKind::ThematicBreak => {
+                    if empty_count > 0 {
+                        *self = Self::Break(BreakVariant::Thematic);
+                        Ok(ParentLineKind::Nest)
+                    } else {
+                        *self = Self::Paragraph(line.to_string());
+                        Ok(ParentLineKind::Nest)
+                    }
+                }
+                LineKind::ClearDocumentAttribute(_)
+                | LineKind::UnsetDocumentAttribute(_)
+                | LineKind::BooleanDocumentAttribute(_)
+                | LineKind::DocumentAttribute(_, _) => {
+                    eprintln!("WARN: unsupported unset a document attribute in the body");
+                    *self = Self::Paragraph(line.to_string());
+                    Ok(ParentLineKind::Nest)
+                }
+                LineKind::Unknown => {
+                    *self = Self::Paragraph(line.to_string());
+                    Ok(ParentLineKind::Nest)
+                }
+                k => todo!("parse_line ParentParser::Line: LineKind::{:?}", k),
+            },
+            Self::Attributed(positional, named, _raw) => match LineKind::parse(line) {
+                LineKind::Empty => {
+                    *self = Self::Line;
+                    Err("attribute lists deny?".to_string())
+                }
+                LineKind::CommentMarker => {
+                    eprintln!("WARN: attributed comment line");
+                    *self = Self::Line;
+                    Ok(ParentLineKind::Comment)
+                }
+                LineKind::CommentDelimiter(delimiter) => {
+                    eprintln!("WARN: attributed comment block");
                     *self = Self::DelimitedComment(delimiter);
                     Ok(ParentLineKind::Comment)
                 }
@@ -1138,28 +1389,309 @@ impl ParentParser {
                     );
                     Ok(ParentLineKind::Delimiter(delimiter))
                 }
-                LineKind::HeadingMarker { level, title } => Ok(ParentLineKind::NestedEnd(
-                    Block::Heading(DiscreteHeading::new(level, &title)),
-                )),
-                k => todo!("parse_line ParentParser::Line: LineKind::{:?}", k),
+                LineKind::ListingDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        LeafVariant::Listing,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ParentLineKind::Delimiter(delimiter))
+                }
+                LineKind::LiteralDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        LeafVariant::Literal,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ParentLineKind::Delimiter(delimiter))
+                }
+                LineKind::PassthroughDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        LeafVariant::Passthrough,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ParentLineKind::Delimiter(delimiter))
+                }
+                LineKind::Unknown => {
+                    *self = Self::AttributedParagraph(
+                        mem::take(positional),
+                        mem::take(named),
+                        line.to_string(),
+                    );
+                    Ok(ParentLineKind::Nest)
+                }
+                _ => todo!(),
             },
+            Self::MasqueradingParent(variant, _positional, _named, _raw) => {
+                match (LineKind::parse(line), *variant) {
+                    (LineKind::Empty, _) => {
+                        *self = Self::Line;
+                        Err("attribute lists deny?".to_string())
+                    }
+                    (LineKind::CommentMarker, _) => {
+                        eprintln!("WARN: masquerading comment line?");
+                        *self = Self::Line;
+                        Ok(ParentLineKind::Comment)
+                    }
+                    (LineKind::CommentDelimiter(delimiter), _) => {
+                        eprintln!("WARN: masquerading comment block?");
+                        *self = Self::DelimitedComment(delimiter);
+                        Ok(ParentLineKind::Comment)
+                    }
+                    (
+                        LineKind::ExampleDelimiter(delimiter),
+                        v @ (ParentVariant::Caution
+                        | ParentVariant::Important
+                        | ParentVariant::Note
+                        | ParentVariant::Tip
+                        | ParentVariant::Warning
+                        | ParentVariant::Example),
+                    ) => {
+                        *self = Self::Delimited(
+                            Default::default(),
+                            v,
+                            delimiter.clone(),
+                            Vec::with_capacity(0),
+                        );
+                        Ok(ParentLineKind::Delimiter(delimiter))
+                    }
+                    (LineKind::SidebarDelimiter(delimiter), ParentVariant::Sidebar) => {
+                        *self = Self::Delimited(
+                            Default::default(),
+                            ParentVariant::Sidebar,
+                            delimiter.clone(),
+                            Vec::with_capacity(0),
+                        );
+                        Ok(ParentLineKind::Delimiter(delimiter))
+                    }
+                    (LineKind::QuoteDelimiter(delimiter), ParentVariant::Quote) => {
+                        *self = Self::Delimited(
+                            Default::default(),
+                            ParentVariant::Quote,
+                            delimiter.clone(),
+                            Vec::with_capacity(0),
+                        );
+                        Ok(ParentLineKind::Delimiter(delimiter))
+                    }
+                    (LineKind::OpenDelimiter(delimiter), v) => {
+                        *self = Self::Delimited(
+                            Default::default(),
+                            v,
+                            delimiter.clone(),
+                            Vec::with_capacity(0),
+                        );
+                        Ok(ParentLineKind::Delimiter(delimiter))
+                    }
+                    _ => todo!(),
+                }
+            }
+            Self::MasqueradingLeaf(variant, positional, named, _raw) => {
+                match (LineKind::parse(line), *variant) {
+                    (LineKind::Empty, _) => {
+                        *self = Self::Line;
+                        Err("attribute lists deny?".to_string())
+                    }
+                    (LineKind::CommentMarker, _) => {
+                        eprintln!("WARN: masquerading comment line?");
+                        *self = Self::Line;
+                        Ok(ParentLineKind::Comment)
+                    }
+                    (LineKind::CommentDelimiter(delimiter), _) => {
+                        eprintln!("WARN: masquerading comment block?");
+                        *self = Self::DelimitedComment(delimiter);
+                        Ok(ParentLineKind::Comment)
+                    }
+                    (LineKind::QuoteDelimiter(delimiter), LeafVariant::Verse) => {
+                        *self = Self::DelimitedLeaf(
+                            LeafVariant::Verse,
+                            delimiter.clone(),
+                            Vec::with_capacity(0),
+                        );
+                        Ok(ParentLineKind::Delimiter(delimiter))
+                    }
+                    (
+                        LineKind::OpenDelimiter(delimiter),
+                        v @ (LeafVariant::Listing
+                        | LeafVariant::Source
+                        | LeafVariant::Literal
+                        | LeafVariant::Passthrough
+                        | LeafVariant::Verse),
+                    ) => {
+                        *self = Self::DelimitedLeaf(v, delimiter.clone(), Vec::with_capacity(0));
+                        Ok(ParentLineKind::Delimiter(delimiter))
+                    }
+                    (
+                        LineKind::ListingDelimiter(delimiter),
+                        v @ (LeafVariant::Listing | LeafVariant::Source | LeafVariant::Literal),
+                    ) => {
+                        *self = Self::DelimitedLeaf(v, delimiter.clone(), Vec::with_capacity(0));
+                        Ok(ParentLineKind::Delimiter(delimiter))
+                    }
+                    (
+                        LineKind::LiteralDelimiter(delimiter),
+                        v @ (LeafVariant::Listing | LeafVariant::Literal),
+                    ) => {
+                        *self = Self::DelimitedLeaf(v, delimiter.clone(), Vec::with_capacity(0));
+                        Ok(ParentLineKind::Delimiter(delimiter))
+                    }
+                    (
+                        LineKind::PassthroughDelimiter(delimiter),
+                        v @ (LeafVariant::Passthrough | LeafVariant::Stem),
+                    ) => {
+                        *self = Self::DelimitedLeaf(v, delimiter.clone(), Vec::with_capacity(0));
+                        Ok(ParentLineKind::Delimiter(delimiter))
+                    }
+                    (LineKind::Unknown, v) => {
+                        *self = Self::MasqueradingParagraph(
+                            v,
+                            mem::take(positional),
+                            mem::take(named),
+                            line.to_string(),
+                        );
+                        Ok(ParentLineKind::Nest)
+                    }
+                    _ => todo!(),
+                }
+            }
+            Self::MasqueradingComment(_positional, _named, _raw) => match LineKind::parse(line) {
+                LineKind::Empty => {
+                    *self = Self::Line;
+                    Err("attribute lists deny?".to_string())
+                }
+                LineKind::CommentMarker => {
+                    *self = Self::Line;
+                    Ok(ParentLineKind::Comment)
+                }
+                LineKind::CommentDelimiter(delimiter) => {
+                    *self = Self::DelimitedComment(delimiter);
+                    Ok(ParentLineKind::Comment)
+                }
+                LineKind::OpenDelimiter(delimiter) => {
+                    *self = Self::DelimitedComment(delimiter);
+                    Ok(ParentLineKind::Comment)
+                }
+                _ => todo!(),
+            },
+            Self::Paragraph(l) => match LineKind::parse(line) {
+                LineKind::Empty => {
+                    let p = Block::new_paragraph(l);
+                    *self = Self::Line;
+                    Ok(ParentLineKind::NestedEnd(p))
+                }
+                LineKind::CommentMarker => Ok(ParentLineKind::Comment),
+                LineKind::CommentDelimiter(delimiter) => {
+                    let p = Block::new_paragraph(l);
+                    *self = Self::DelimitedComment(delimiter);
+                    Ok(ParentLineKind::NestedEnd(p))
+                }
+                _ => {
+                    l.push('\n');
+                    l.push_str(line);
+                    Ok(ParentLineKind::Nest)
+                }
+            },
+            Self::AttributedParagraph(_positional, _named, l) => match LineKind::parse(line) {
+                LineKind::Empty => {
+                    let p = Block::new_paragraph(l);
+                    *self = Self::Line;
+                    Ok(ParentLineKind::NestedEnd(p))
+                }
+                LineKind::CommentMarker => Ok(ParentLineKind::Comment),
+                LineKind::CommentDelimiter(delimiter) => {
+                    let p = Block::new_paragraph(l);
+                    *self = Self::DelimitedComment(delimiter);
+                    Ok(ParentLineKind::NestedEnd(p))
+                }
+                _ => {
+                    l.push('\n');
+                    l.push_str(line);
+                    Ok(ParentLineKind::Nest)
+                }
+            },
+            Self::MasqueradingParagraph(variant, _positional, _named, l) => {
+                match LineKind::parse(line) {
+                    LineKind::Empty => {
+                        let block = variant.to_leaf(l);
+                        *self = Self::Line;
+                        Ok(ParentLineKind::NestedEnd(block))
+                    }
+                    LineKind::CommentMarker => Ok(ParentLineKind::Comment),
+                    LineKind::CommentDelimiter(delimiter) => {
+                        let block = variant.to_leaf(l);
+                        *self = Self::DelimitedComment(delimiter);
+                        Ok(ParentLineKind::NestedEnd(block))
+                    }
+                    _ => {
+                        l.push('\n');
+                        l.push_str(line);
+                        Ok(ParentLineKind::Nest)
+                    }
+                }
+            }
             Self::DelimitedComment(delimiter) => match LineKind::parse(line) {
-                LineKind::CommentDelimiter(d) if d == *delimiter => {
+                LineKind::CommentDelimiter(d) | LineKind::OpenDelimiter(d) if d == *delimiter => {
                     *self = Self::Line;
                     Ok(ParentLineKind::Comment)
                 }
                 _ => Ok(ParentLineKind::Comment),
             },
             Self::Delimited(parser, variant, delimiter, blocks) => {
-                match parser.parse_line(line, _empty_count)? {
+                match parser.parse_line(line, empty_count)? {
                     ParentLineKind::Delimiter(d) if d == *delimiter => {
                         let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
                         *self = Self::Line;
                         Ok(ParentLineKind::NestedEnd(block))
                     }
-                    _ => Ok(ParentLineKind::Nest),
+                    ParentLineKind::NestedEnd(block) => {
+                        blocks.push(block);
+                        Ok(ParentLineKind::Nest)
+                    }
+                    ParentLineKind::Comment
+                    | ParentLineKind::Skip
+                    | ParentLineKind::Delimiter(_)
+                    | ParentLineKind::Nest => Ok(ParentLineKind::Nest),
                 }
             }
+            Self::DelimitedLeaf(variant, delimiter, lines) => match LineKind::parse(line) {
+                LineKind::QuoteDelimiter(d)
+                | LineKind::ListingDelimiter(d)
+                | LineKind::LiteralDelimiter(d)
+                | LineKind::PassthroughDelimiter(d)
+                | LineKind::OpenDelimiter(d)
+                    if d == *delimiter =>
+                {
+                    let block =
+                        variant.to_leaf_with_delimiter(delimiter.to_string(), &lines.join("\n"));
+                    *self = Self::Line;
+                    Ok(ParentLineKind::NestedEnd(block))
+                }
+                _ => {
+                    lines.push(line.to_string());
+                    Ok(ParentLineKind::Nest)
+                }
+            },
+            Self::Break(BreakVariant::Page) => match LineKind::parse(line) {
+                LineKind::Empty => {
+                    *self = Self::Line;
+                    Ok(ParentLineKind::NestedEnd(Block::new_page_break()))
+                }
+                _ => {
+                    *self = Self::Paragraph("<<<".to_string());
+                    self.parse_line(line, empty_count)
+                }
+            },
+            Self::Break(BreakVariant::Thematic) => match LineKind::parse(line) {
+                LineKind::Empty => {
+                    *self = Self::Line;
+                    Ok(ParentLineKind::NestedEnd(Block::new_thematic_break()))
+                }
+                _ => {
+                    *self = Self::Paragraph("'''".to_string());
+                    self.parse_line(line, empty_count)
+                }
+            },
+            _ => todo!("parse_line: ParentParser::{:?}", self),
         }
     }
 
@@ -1177,6 +1709,11 @@ impl ParentParser {
                 }
                 Some(variant.to_block(delimiter, blocks))
             }
+            Self::DelimitedLeaf(variant, delimiter, lines) => {
+                eprintln!("WARN: unterminated: `{}`", delimiter);
+                Some(variant.to_leaf_with_delimiter(delimiter, &lines.join("\n")))
+            }
+            _ => todo!("finish: SectionParser::{:?}", self),
         }
     }
 }
