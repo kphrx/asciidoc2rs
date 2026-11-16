@@ -206,93 +206,8 @@ impl LineKind {
         }
 
         if let Some(attrlist) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
-            enum State {
-                Quoted(String),
-                Unquoted,
-                Escaped(String),
-            }
-            let mut state = State::Unquoted;
-            let value = &mut String::new();
-            let mut positional = vec![];
-            let mut named = HashMap::new();
-            let mut quoted_chars = attrlist.chars().filter(|c| *c == '"').count();
-            for c in attrlist.chars() {
-                match state {
-                    State::Unquoted => match c {
-                        '"' => {
-                            if quoted_chars > 0 {
-                                quoted_chars -= 1;
-                                state = State::Quoted(String::new());
-                            } else {
-                                value.push(c);
-                            }
-                        }
-                        ',' => {
-                            let item = mem::take(value);
-                            if let Some((name, value)) = item.split_once('=') {
-                                named.insert(name.to_string(), value.to_string());
-                            } else {
-                                positional.push(item);
-                            }
-                        }
-                        _ => {
-                            value.push(c);
-                        }
-                    },
-                    State::Quoted(ref mut v) => match c {
-                        '\\' => {
-                            state = State::Escaped(mem::take(v));
-                        }
-                        '"' => {
-                            if quoted_chars > 0 {
-                                quoted_chars -= 1;
-                                value.push_str(v);
-                                state = State::Unquoted;
-                            } else {
-                                value.push_str(&format!("\"{}\"", v.replace("\"", "\\\"")));
-                                state = State::Unquoted;
-                            }
-                        }
-                        ',' => {
-                            if quoted_chars > 0 {
-                                v.push(c);
-                            } else {
-                                value.push_str(&format!("\"{}\"", v.replace("\"", "\\\"")));
-                                let item = mem::take(value);
-                                if let Some((name, value)) = item.split_once('=') {
-                                    named.insert(name.to_string(), value.to_string());
-                                } else {
-                                    positional.push(item);
-                                }
-                                state = State::Unquoted;
-                            }
-                        }
-                        _ => {
-                            v.push(c);
-                        }
-                    },
-                    State::Escaped(mut v) => {
-                        match c {
-                            '"' => {
-                                quoted_chars = quoted_chars.saturating_sub(1);
-                                v.push('"');
-                            }
-                            _ => {
-                                v.push('\\');
-                                v.push(c);
-                            }
-                        }
-                        state = State::Quoted(v);
-                    }
-                }
-            }
-            let item = mem::take(value);
-            if let Some((name, value)) = item.split_once('=') {
-                named.insert(name.to_string(), value.to_string());
-            } else {
-                positional.push(item);
-            }
-            return Self::AttributeLine(positional.into(), named);
+            let (positional, named) = Self::parse_attrlist(attrlist);
+            return Self::AttributeLine(positional, named);
         }
 
         if let Some(docattr) = line.strip_prefix(':').and_then(|l| l.strip_suffix(':')) {
@@ -347,6 +262,169 @@ impl LineKind {
         Self::Unknown
     }
 
+    fn parse_attrlist(attrlist: &str) -> (Box<[String]>, HashMap<String, String>) {
+        enum State {
+            Unquoted,
+            SingleQuoted(String),
+            DoubleQuoted(String),
+            EscapedSingle(String),
+            EscapedDouble(String),
+        }
+        let mut state = State::Unquoted;
+        let value = &mut String::new();
+        let mut positional = vec![];
+        let mut named = HashMap::new();
+        let mut single_quote_chars = attrlist.chars().filter(|c| *c == '\'').count();
+        let mut double_quote_chars = attrlist.chars().filter(|c| *c == '"').count();
+        for c in attrlist.chars() {
+            match state {
+                State::Unquoted => match c {
+                    '\'' => {
+                        if single_quote_chars > 0 {
+                            single_quote_chars -= 1;
+                            state = State::SingleQuoted(String::new());
+                        } else {
+                            value.push(c);
+                        }
+                    }
+                    '"' => {
+                        if double_quote_chars > 0 {
+                            double_quote_chars -= 1;
+                            state = State::DoubleQuoted(String::new());
+                        } else {
+                            value.push(c);
+                        }
+                    }
+                    ',' => {
+                        let item = mem::take(value);
+                        if let Some((name, value)) = item.split_once('=') {
+                            named.insert(name.to_string(), value.to_string());
+                        } else {
+                            positional.push(item);
+                        }
+                    }
+                    _ => {
+                        value.push(c);
+                    }
+                },
+                State::SingleQuoted(ref mut v) => match c {
+                    '\\' => {
+                        state = State::EscapedSingle(mem::take(v));
+                    }
+                    '\'' => {
+                        if single_quote_chars > 0 {
+                            value.push_str(v);
+                        } else {
+                            value.push_str(&format!("'{}'", v.replace("'", "\\'")));
+                        }
+                        single_quote_chars = single_quote_chars.saturating_sub(1);
+                        state = State::Unquoted;
+                    }
+                    '"' => {
+                        double_quote_chars = double_quote_chars.saturating_sub(1);
+                        v.push(c);
+                    }
+                    ',' => {
+                        if single_quote_chars > 0 {
+                            v.push(c);
+                        } else {
+                            value.push_str(&format!("'{}'", v.replace("'", "\\'")));
+                            let item = mem::take(value);
+                            if let Some((name, value)) = item.split_once('=') {
+                                named.insert(name.to_string(), value.to_string());
+                            } else {
+                                positional.push(item);
+                            }
+                            state = State::Unquoted;
+                        }
+                    }
+                    _ => {
+                        v.push(c);
+                    }
+                },
+                State::DoubleQuoted(ref mut v) => match c {
+                    '\\' => {
+                        state = State::EscapedDouble(mem::take(v));
+                    }
+                    '\'' => {
+                        single_quote_chars = single_quote_chars.saturating_sub(1);
+                        v.push(c);
+                    }
+                    '"' => {
+                        if double_quote_chars > 0 {
+                            value.push_str(v);
+                        } else {
+                            value.push_str(&format!("\"{}\"", v.replace("\"", "\\\"")));
+                        }
+                        double_quote_chars = double_quote_chars.saturating_sub(1);
+                        state = State::Unquoted;
+                    }
+                    ',' => {
+                        if double_quote_chars > 0 {
+                            v.push(c);
+                        } else {
+                            value.push_str(&format!("\"{}\"", v.replace("\"", "\\\"")));
+                            let item = mem::take(value);
+                            if let Some((name, value)) = item.split_once('=') {
+                                named.insert(name.to_string(), value.to_string());
+                            } else {
+                                positional.push(item);
+                            }
+                            state = State::Unquoted;
+                        }
+                    }
+                    _ => {
+                        v.push(c);
+                    }
+                },
+                State::EscapedSingle(mut v) => {
+                    match c {
+                        '\'' => {
+                            single_quote_chars = single_quote_chars.saturating_sub(1);
+                            v.push('\'');
+                        }
+                        '"' => {
+                            double_quote_chars = double_quote_chars.saturating_sub(1);
+                            v.push('\\');
+                            v.push(c);
+                        }
+                        _ => {
+                            v.push('\\');
+                            v.push(c);
+                        }
+                    }
+                    state = State::SingleQuoted(v);
+                }
+                State::EscapedDouble(mut v) => {
+                    match c {
+                        '\'' => {
+                            single_quote_chars = single_quote_chars.saturating_sub(1);
+                            v.push('\\');
+                            v.push(c);
+                        }
+                        '"' => {
+                            double_quote_chars = double_quote_chars.saturating_sub(1);
+                            v.push('"');
+                        }
+                        _ => {
+                            v.push('\\');
+                            v.push(c);
+                        }
+                    }
+                    state = State::DoubleQuoted(v);
+                }
+            }
+        }
+        let item = mem::take(value);
+        if let Some((name, value)) = item.split_once('=') {
+            named.insert(name.to_string(), value.to_string());
+        } else {
+            positional.push(item);
+        }
+
+        (positional.into(), named)
+    }
+
     fn validate_document_attrname(name: &str) -> bool {
         name.starts_with(|c: char| c.is_ascii_alphanumeric() || c == '_')
             && !name.starts_with(|c: char| !c.is_ascii_alphanumeric() && c != '_' && c != '-')
@@ -381,7 +459,7 @@ impl<'input> Parser<'input> {
     }
 
     pub fn parse_to_asg(mut self) -> Result<Document, String> {
-        let mut empty_count: usize = 0;
+        let mut empty_count = 0usize;
         for (index, line) in self.text.lines().enumerate() {
             self.push_line(line, index + 1, empty_count)?;
             if line.is_empty() {
