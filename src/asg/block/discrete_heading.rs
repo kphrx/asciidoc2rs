@@ -7,8 +7,8 @@ use crate::asg::{Inlines, Location, NodeType};
 pub struct DiscreteHeading {
     #[serde(rename = "type")]
     node_type: NodeType,
-    level: usize,
-    title: Inlines,
+    pub level: usize,
+    pub title: Inlines,
     location: Option<Location>,
 }
 impl DiscreteHeading {

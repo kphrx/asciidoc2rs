@@ -2141,11 +2141,32 @@ mod tests {
 
     mod parent_parser {
         use super::*;
+        use crate::asg::{Inline, InlineLiteral, Inlines, LiteralValue};
 
         #[test]
         fn line_prase_line_empty() {
             let mut p = ParentParser::Line;
             assert_matches!(p.parse_line("", 0), Ok(ParentLineKind::Skip));
+            assert_matches!(p, ParentParser::Line);
+        }
+
+        #[test]
+        fn line_prase_line_heading() {
+            let mut p = ParentParser::Line;
+            assert_matches!(
+                p.parse_line("== Discrete Heading", 0),
+                Ok(ParentLineKind::NestedEnd(Block::Heading(DiscreteHeading {
+                    level,
+                    title: Inlines(title),
+                    ..
+                })))
+                    if level == 1
+                    && matches!(
+                        title.as_slice(),
+                        [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                            if value == "Discrete Heading"
+                    )
+            );
             assert_matches!(p, ParentParser::Line);
         }
     }
