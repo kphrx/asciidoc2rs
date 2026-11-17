@@ -1293,6 +1293,34 @@ impl ParentParser {
                     );
                     Ok(ParentLineKind::Delimiter(delimiter))
                 }
+                LineKind::UnorderedListMarker { marker, principal } => {
+                    *self = Self::List(ListVariant::Unordered, marker, vec![principal]);
+                    Ok(ParentLineKind::Nest)
+                }
+                LineKind::OrderedListMarker { marker, principal } => {
+                    *self = Self::List(ListVariant::Ordered, marker, vec![principal]);
+                    Ok(ParentLineKind::Nest)
+                }
+                LineKind::OffsetOrderedListMarker { offset, principal } => {
+                    *self = Self::List(
+                        ListVariant::Ordered,
+                        format!("{}.", offset),
+                        vec![principal],
+                    );
+                    Ok(ParentLineKind::Nest)
+                }
+                LineKind::CalloutListMarker { marker, principal } => {
+                    *self = Self::List(ListVariant::Callout, marker, vec![principal]);
+                    Ok(ParentLineKind::Nest)
+                }
+                LineKind::DescriptionListMarker {
+                    marker,
+                    term,
+                    principal,
+                } => {
+                    *self = Self::Dlist(marker, vec![(term, principal)]);
+                    Ok(ParentLineKind::Nest)
+                }
                 LineKind::BlockMacro(name, target, positional, named) => {
                     let block = match (name, target, positional.as_ref(), named) {
                         (n, t, _, _) if n == "image" && !t.is_empty() => Ok(Block::new_image(t)),
@@ -1703,6 +1731,32 @@ impl ParentParser {
     fn finish(self) -> Option<Block> {
         match self {
             Self::Line => None,
+            Self::List(v, m, i) => {
+                if let Ok(list) = Self::list_finish(&v, &m, i) {
+                    Some(Block::AnyList(list))
+                } else {
+                    None
+                }
+            }
+            Self::Dlist(m, i) => {
+                let mut items = i.into_iter();
+                if let Some((t, p)) = items.next() {
+                    let mut list = AnyList::new_description_list(m.clone(), t, p);
+                    for (t, p) in items {
+                        let principal = if let Some(principal) = p {
+                            format!("{}{} {}", t, m, principal)
+                        } else {
+                            format!("{}{}", t, m)
+                        };
+                        if list.push(&principal).is_err() {
+                            return None;
+                        }
+                    }
+                    Some(Block::AnyList(list))
+                } else {
+                    None
+                }
+            }
             Self::DelimitedComment(delimiter) => {
                 eprintln!("WARN: unterminated: `{}`", delimiter);
                 None
@@ -1719,6 +1773,19 @@ impl ParentParser {
                 Some(variant.to_leaf_with_delimiter(delimiter, &lines.join("\n")))
             }
             _ => todo!("finish: SectionParser::{:?}", self),
+        }
+    }
+
+    fn list_finish(v: &ListVariant, m: &str, i: Vec<String>) -> Result<AnyList, String> {
+        let mut items = i.into_iter();
+        if let Some(principal) = items.next() {
+            let mut list = v.to_list(m.to_string(), principal);
+            for p in items {
+                list.push(&format!("{} {}", m, p))?;
+            }
+            Ok(list)
+        } else {
+            Err("not expected empty items of list".to_string())
         }
     }
 }
