@@ -67,6 +67,7 @@ enum LineKind {
     BlockMacro(String, String, Box<[String]>, HashMap<String, String>),
     ThematicBreak,
     PageBreak,
+    InterruptingLine,
 }
 
 impl LineKind {
@@ -231,6 +232,10 @@ impl LineKind {
 
         if line == "'''" {
             return Self::ThematicBreak;
+        }
+
+        if line == "+" {
+            return Self::InterruptingLine;
         }
 
         if let Some((macro_name, Some((macro_target, Some(macro_attrlist))))) =

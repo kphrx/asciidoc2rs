@@ -523,7 +523,7 @@ impl SectionParser {
                     *self = Self::Paragraph(line.to_string());
                     Ok(SectionLineKind::Nest)
                 }
-                LineKind::Unknown => {
+                LineKind::Unknown | LineKind::InterruptingLine => {
                     *self = Self::Paragraph(line.to_string());
                     Ok(SectionLineKind::Nest)
                 }
@@ -767,6 +767,11 @@ impl SectionParser {
                 LineKind::CommentDelimiter(delimiter) => {
                     let p = Block::new_paragraph(l);
                     *self = Self::DelimitedComment(delimiter);
+                    Ok(SectionLineKind::NestedEnd(SectionBody::Block(p)))
+                }
+                LineKind::InterruptingLine => {
+                    let p = Block::new_paragraph(l);
+                    *self = Self::Paragraph(line.to_string());
                     Ok(SectionLineKind::NestedEnd(SectionBody::Block(p)))
                 }
                 _ => {
