@@ -605,7 +605,7 @@ impl SectionParser {
                     );
                     Ok(SectionLineKind::Nest)
                 }
-                _ => todo!(),
+                k => todo!("parse_line: SectionParser::{:?}: LineKind::{:?}", self, k),
             },
             Self::MasqueradingParent(variant, _positional, _named, _raw) => {
                 match (LineKind::parse(line), *variant) {
@@ -667,7 +667,7 @@ impl SectionParser {
                         );
                         Ok(SectionLineKind::Nest)
                     }
-                    _ => todo!(),
+                    (k, _) => todo!("parse_line: SectionParser::{:?}: LineKind::{:?}", self, k),
                 }
             }
             Self::MasqueradingLeaf(variant, positional, named, _raw) => {
@@ -735,7 +735,7 @@ impl SectionParser {
                         );
                         Ok(SectionLineKind::Nest)
                     }
-                    _ => todo!(),
+                    (k, _) => todo!("parse_line: SectionParser::{:?}: LineKind::{:?}", self, k),
                 }
             }
             Self::MasqueradingComment(_positional, _named, _raw) => match LineKind::parse(line) {
@@ -755,7 +755,7 @@ impl SectionParser {
                     *self = Self::DelimitedComment(delimiter);
                     Ok(SectionLineKind::Comment)
                 }
-                _ => todo!(),
+                k => todo!("parse_line: SectionParser::{:?}: LineKind::{:?}", self, k),
             },
             Self::Paragraph(l) => match LineKind::parse(line) {
                 LineKind::Empty => {
@@ -864,7 +864,7 @@ impl SectionParser {
                             Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
                         }
                     },
-                    k => todo!("parse_line SectionParser::List: LineKind::{:?}", k),
+                    k => todo!("parse_line: SectionParser::{:?}: LineKind::{:?}", self, k),
                 }
             }
             Self::Dlist(m, i) => {
@@ -902,7 +902,7 @@ impl SectionParser {
                             }
                         }
                     }
-                    k => todo!("parse_line SectionParser::Dlist: LineKind::{:?}", k),
+                    k => todo!("parse_line: SectionParser::{:?}: LineKind::{:?}", self, k),
                 }
             }
             Self::Section(parser, sl, title, blocks) => {
@@ -1336,7 +1336,7 @@ impl ParentParser {
                     *self = Self::Paragraph(line.to_string());
                     Ok(ParentLineKind::Nest)
                 }
-                k => todo!("parse_line ParentParser::Line: LineKind::{:?}", k),
+                k => todo!("parse_line: ParentParser::{:?}: LineKind::{:?}", self, k),
             },
             Self::Attributed(positional, named, _raw) => match LineKind::parse(line) {
                 LineKind::Empty => {
@@ -1421,7 +1421,7 @@ impl ParentParser {
                     );
                     Ok(ParentLineKind::Nest)
                 }
-                _ => todo!(),
+                k => todo!("parse_line: ParentParser::{:?}: LineKind::{:?}", self, k),
             },
             Self::MasqueradingParent(variant, _positional, _named, _raw) => {
                 match (LineKind::parse(line), *variant) {
@@ -1483,7 +1483,7 @@ impl ParentParser {
                         );
                         Ok(ParentLineKind::Delimiter(delimiter))
                     }
-                    _ => todo!(),
+                    (k, _) => todo!("parse_line: ParentParser::{:?}: LineKind::{:?}", self, k),
                 }
             }
             Self::MasqueradingLeaf(variant, positional, named, _raw) => {
@@ -1551,7 +1551,7 @@ impl ParentParser {
                         );
                         Ok(ParentLineKind::Nest)
                     }
-                    _ => todo!(),
+                    (k, _) => todo!("parse_line: ParentParser::{:?}: LineKind::{:?}", self, k),
                 }
             }
             Self::MasqueradingComment(_positional, _named, _raw) => match LineKind::parse(line) {
@@ -1571,7 +1571,7 @@ impl ParentParser {
                     *self = Self::DelimitedComment(delimiter);
                     Ok(ParentLineKind::Comment)
                 }
-                _ => todo!(),
+                k => todo!("parse_line: ParentParser::{:?}: LineKind::{:?}", self, k),
             },
             Self::Paragraph(l) => match LineKind::parse(line) {
                 LineKind::Empty => {
