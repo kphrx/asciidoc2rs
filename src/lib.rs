@@ -51,7 +51,10 @@ enum LineKind {
         principal: String,
     },
     CalloutListMarker {
-        marker: String,
+        principal: String,
+    },
+    OffsetCalloutListMarker {
+        offset: usize,
         principal: String,
     },
     DescriptionListMarker {
@@ -123,61 +126,61 @@ impl LineKind {
             }
         }
 
-        if let Some((list_marker, principal)) = line.split_once("* ") {
-            let mut marker = list_marker.trim_start_matches(['\t', ' ']).to_owned();
-            let principal = principal.trim_start_matches(' ').to_owned();
-            if marker.is_empty() || !marker.contains(|c: char| c != '*') {
-                marker.push('*');
-                return Self::UnorderedListMarker { marker, principal };
+        if let Some((marker, principal)) = line.trim_start_matches(['\t', ' ']).split_once("* ") {
+            let principal = principal.trim_start_matches(' ').to_string();
+            if !marker.contains(|c: char| c != '*') {
+                return Self::UnorderedListMarker {
+                    marker: format!("{}*", marker),
+                    principal,
+                };
             }
         }
 
-        if let Some((list_marker, principal)) = line.split_once("- ") {
-            let mut marker = list_marker.trim_start_matches(['\t', ' ']).to_owned();
-            let principal = principal.trim_start_matches(' ').to_owned();
+        if let Some((marker, principal)) = line.trim_start_matches(['\t', ' ']).split_once("- ") {
+            let principal = principal.trim_start_matches(' ').to_string();
             // Unknown `-` list marker can be repeated infinitely.
             if marker.is_empty() {
-                marker.push('-');
-                return Self::UnorderedListMarker { marker, principal };
+                return Self::UnorderedListMarker {
+                    marker: "-".to_string(),
+                    principal,
+                };
             }
         }
 
-        if let Some((list_marker, principal)) = line.split_once(". ") {
-            let mut marker = list_marker.trim_start_matches(['\t', ' ']).to_owned();
-            let principal = principal.trim_start_matches(' ').to_owned();
-            if marker.is_empty() || !marker.contains(|c: char| c != '.') {
-                marker.push('.');
-                return Self::OrderedListMarker { marker, principal };
+        if let Some((marker, principal)) = line.trim_start_matches(['\t', ' ']).split_once(". ") {
+            let principal = principal.trim_start_matches(' ').to_string();
+
+            if !marker.contains(|c: char| !c.is_ascii_digit()) && !marker.starts_with('0') {
+                return Self::OffsetOrderedListMarker {
+                    offset: usize::from_str(marker).unwrap(),
+                    principal,
+                };
             }
 
-            if let Ok(offset) = usize::from_str(&marker) {
-                if 0 < offset && offset <= 9 {
-                    return Self::OffsetOrderedListMarker { offset, principal };
-                }
+            if !marker.contains(|c: char| c != '.') {
+                return Self::OrderedListMarker {
+                    marker: format!("{}.", marker),
+                    principal,
+                };
             }
         }
 
-        if let Some((list_marker, principal)) = line.split_once("> ") {
-            if let Some(marker) = list_marker
-                .trim_start_matches(['\t', ' '])
-                .strip_prefix('<')
-                .to_owned()
-            {
-                let principal = principal.trim_start_matches(' ').to_owned();
-                if marker == "." {
-                    return Self::CalloutListMarker {
-                        marker: "<.>".to_owned(),
-                        principal,
-                    };
-                }
+        if let Some((marker, principal)) = line
+            .trim_start_matches(['\t', ' '])
+            .strip_prefix('<')
+            .and_then(|l| l.split_once("> "))
+        {
+            let principal = principal.trim_start_matches(' ').to_string();
+            if marker == "." {
+                return Self::CalloutListMarker { principal };
+            }
 
-                if let Ok(number) = usize::from_str(marker) {
-                    return Self::CalloutListMarker {
-                        marker: format!("<{}>", number),
-                        principal,
-                    };
-                }
-            };
+            if !marker.contains(|c: char| !c.is_ascii_digit()) && !marker.starts_with('0') {
+                return Self::OffsetCalloutListMarker {
+                    offset: usize::from_str(marker).unwrap(),
+                    principal,
+                };
+            }
         }
 
         if let Some(attrlist) = line.strip_prefix('[').and_then(|l| l.strip_suffix(']')) {
@@ -865,12 +868,12 @@ mod tests {
     fn line_kind_callout() {
         assert_matches!(
             LineKind::parse("<.> callout list"),
-            LineKind::CalloutListMarker { marker, principal }
-                if marker == "<.>" && principal == "callout list");
+            LineKind::CalloutListMarker { principal }
+                if principal == "callout list");
         assert_matches!(
             LineKind::parse("<3> callout list"),
-            LineKind::CalloutListMarker { marker, principal }
-                if marker == "<3>" && principal == "callout list");
+            LineKind::OffsetCalloutListMarker { offset, principal }
+                if offset == 3 && principal == "callout list");
     }
 
     #[test]

@@ -467,8 +467,16 @@ impl SectionParser {
                     );
                     Ok(SectionLineKind::Nest)
                 }
-                LineKind::CalloutListMarker { marker, principal } => {
-                    *self = Self::List(ListVariant::Callout, marker, vec![principal]);
+                LineKind::CalloutListMarker { principal } => {
+                    *self = Self::List(ListVariant::Callout, "<.>".to_string(), vec![principal]);
+                    Ok(SectionLineKind::Nest)
+                }
+                LineKind::OffsetCalloutListMarker { offset, principal } => {
+                    *self = Self::List(
+                        ListVariant::Callout,
+                        format!("<{}>", offset),
+                        vec![principal],
+                    );
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::DescriptionListMarker {
@@ -859,16 +867,26 @@ impl SectionParser {
                             Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
                         }
                     },
-                    LineKind::CalloutListMarker { marker, principal } => {
-                        if matches!(v, ListVariant::Callout) && marker == *m {
+                    LineKind::CalloutListMarker { principal } => {
+                        if matches!(v, ListVariant::Callout) && *m == "<.>" {
                             i.push(principal);
                             Ok(SectionLineKind::Nest)
                         } else {
                             let list = Self::list_finish(v, m, mem::take(i))?;
-                            *self = Self::List(ListVariant::Callout, marker, vec![principal.to_string()]);
+                            *self = Self::List(ListVariant::Callout, "<.>".to_string(), vec![principal.to_string()]);
                             Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
                         }
                     },
+                    LineKind::OffsetCalloutListMarker { offset, principal } => {
+                        if matches!(v, ListVariant::Callout) && *m != "<.>" {
+                            i.push(principal);
+                            Ok(SectionLineKind::Nest)
+                        } else {
+                            let list = Self::list_finish(v, m, mem::take(i))?;
+                            *self = Self::List(ListVariant::Callout, format!("<{}>", offset), vec![principal.to_string()]);
+                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
+                        }
+                    }
                     k => todo!("parse_line: SectionParser::{:?}: LineKind::{:?}", self, k),
                 }
             }
@@ -1309,8 +1327,16 @@ impl ParentParser {
                     );
                     Ok(ParentLineKind::Nest)
                 }
-                LineKind::CalloutListMarker { marker, principal } => {
-                    *self = Self::List(ListVariant::Callout, marker, vec![principal]);
+                LineKind::CalloutListMarker { principal } => {
+                    *self = Self::List(ListVariant::Callout, "<.>".to_string(), vec![principal]);
+                    Ok(ParentLineKind::Nest)
+                }
+                LineKind::OffsetCalloutListMarker { offset, principal } => {
+                    *self = Self::List(
+                        ListVariant::Callout,
+                        format!("<{}>", offset),
+                        vec![principal],
+                    );
                     Ok(ParentLineKind::Nest)
                 }
                 LineKind::DescriptionListMarker {
