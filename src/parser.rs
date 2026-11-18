@@ -874,6 +874,10 @@ impl SectionParser {
                             Block::AnyList(list),
                         )))
                     }
+                    ListLineKind::Principal(p) => {
+                        principal.push_str(&p);
+                        Ok(SectionLineKind::Nest)
+                    }
                     ListLineKind::Marker(m, p) if m == *marker => {
                         items.push(ListItem::new_with_blocks(
                             marker.to_string(),
@@ -1732,6 +1736,10 @@ impl ParentParser {
                         *self = Self::Line;
                         Ok(ParentLineKind::NestedEnd(Block::AnyList(list)))
                     }
+                    ListLineKind::Principal(p) => {
+                        principal.push_str(&p);
+                        Ok(ParentLineKind::Nest)
+                    }
                     ListLineKind::Marker(m, p) if m == *marker => {
                         items.push(ListItem::new_with_blocks(
                             marker.to_string(),
@@ -2102,6 +2110,10 @@ impl ListParser {
                             ))
                         }
                     }
+                    ListLineKind::Principal(p) => {
+                        principal.push_str(&p);
+                        Ok(ListLineKind::Nest)
+                    }
                     ListLineKind::Marker(m, p) if m == *marker => {
                         items.push(ListItem::new_with_blocks(
                             marker.to_string(),
@@ -2112,6 +2124,47 @@ impl ListParser {
                         Ok(ListLineKind::Nest)
                     }
                     ListLineKind::Marker(m, p) => Ok(ListLineKind::Marker(m, p)),
+                    ListLineKind::OffsetOrderedMarker(offset, p)
+                        if marker.contains(|c| c != '.')
+                            && matches!(variant, ListVariant::Ordered) =>
+                    {
+                        items.push(ListItem::new_with_blocks(
+                            marker.to_string(),
+                            principal,
+                            Some(blocks.to_vec()),
+                        ));
+                        *marker = format!("{}.", offset);
+                        *principal = p;
+                        Ok(ListLineKind::Nest)
+                    }
+                    ListLineKind::OffsetOrderedMarker(offset, p) => {
+                        Ok(ListLineKind::OffsetOrderedMarker(offset, p))
+                    }
+                    ListLineKind::OffsetCalloutMarker(offset, p)
+                        if marker != "<.>" && matches!(variant, ListVariant::Callout) =>
+                    {
+                        items.push(ListItem::new_with_blocks(
+                            marker.to_string(),
+                            principal,
+                            Some(blocks.to_vec()),
+                        ));
+                        *marker = format!("<{}>", offset);
+                        *principal = p;
+                        Ok(ListLineKind::Nest)
+                    }
+                    ListLineKind::OffsetCalloutMarker(offset, p) => {
+                        Ok(ListLineKind::OffsetCalloutMarker(offset, p))
+                    }
+                    ListLineKind::NestedEnd(child) => {
+                        blocks.push(child);
+                        items.push(ListItem::new_with_blocks(
+                            marker.to_string(),
+                            principal,
+                            Some(blocks.to_vec()),
+                        ));
+                        *self = Self::Line;
+                        Ok(ListLineKind::Nest)
+                    }
                     k => todo!("parse_line: ListParser::{:?}: ListLineKind::{:?}", self, k),
                 }
             }
@@ -2158,7 +2211,6 @@ impl ListParser {
 
 #[derive(Debug)]
 pub(crate) enum ListLineKind {
-    Comment,
     Skip,
     End(usize),
     ContinuationEnd(usize, Block),
