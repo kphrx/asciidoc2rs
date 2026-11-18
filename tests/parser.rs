@@ -1,4 +1,7 @@
-use asciidoc2rs::asg::block::{Author, Block, Document, LeafBlock, SectionBody, TitleAndAuthors};
+use asciidoc2rs::asg::block::{
+    AnyList, Author, Block, Document, LeafBlock, ListItem, ListVariant, SectionBody,
+    TitleAndAuthors,
+};
 use asciidoc2rs::asg::{Inline, InlineLiteral, Inlines, LiteralValue};
 use asciidoc2rs::{Doctype, Parser};
 use std::assert_matches;
@@ -307,4 +310,50 @@ fn nested_section_block() {
 #[should_panic]
 fn illegal_level_skipped_section_block() {
     parse("== First Section\n\n==== Illegal Nested Section (violates rule #2)").unwrap();
+}
+
+#[test]
+fn unordered_list() {
+    let document = parse("* item 1\n* item 2\n  * item 3").unwrap();
+
+    let Some(SectionBody::Block(Block::AnyList(AnyList::List {
+        variant,
+        marker,
+        items,
+        ..
+    }))) = document.blocks.first()
+    else {
+        panic!("cannot call");
+    };
+
+    assert_matches!(variant, ListVariant::Unordered);
+    assert_eq!("*", marker);
+
+    assert_eq!(3, items.len());
+    let items = &mut items.clone().into_iter();
+
+    assert_matches!(
+        items.next(),
+        Some(ListItem { principal: Inlines(inlines), .. })
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "item 1")
+    );
+    assert_matches!(
+        items.next(),
+        Some(ListItem { principal: Inlines(inlines), .. })
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "item 2")
+    );
+    assert_matches!(
+        items.next(),
+        Some(ListItem { principal: Inlines(inlines), .. })
+            if matches!(
+                inlines.as_slice(),
+                [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
+                    if value == "item 3")
+    );
 }

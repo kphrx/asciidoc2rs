@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::mem;
 
-use crate::asg::block::{AnyList, Block, DiscreteHeading, Section, SectionBody};
+use crate::asg::block::{AnyList, Block, DiscreteHeading, ListItem, Section, SectionBody};
 use crate::LineKind;
 
 #[derive(Debug, Default)]
@@ -263,7 +263,14 @@ pub(crate) enum SectionParser {
     Paragraph(String),
     AttributedParagraph(Box<[String]>, HashMap<String, String>, String),
     MasqueradingParagraph(LeafVariant, Box<[String]>, HashMap<String, String>, String),
-    List(ListVariant, String, Vec<String>),
+    List(
+        Box<ListParser>,
+        ListVariant,
+        Vec<ListItem>,
+        String,
+        String,
+        Vec<Block>,
+    ),
     Dlist(String, Vec<(String, Option<String>)>),
     Section(Box<SectionParser>, usize, String, Vec<SectionBody>),
     DelimitedComment(String),
@@ -452,30 +459,57 @@ impl SectionParser {
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::UnorderedListMarker { marker, principal } => {
-                    *self = Self::List(ListVariant::Unordered, marker, vec![principal]);
+                    *self = Self::List(
+                        Default::default(),
+                        ListVariant::Unordered,
+                        Vec::with_capacity(0),
+                        marker,
+                        principal,
+                        Vec::with_capacity(0),
+                    );
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::OrderedListMarker { marker, principal } => {
-                    *self = Self::List(ListVariant::Ordered, marker, vec![principal]);
+                    *self = Self::List(
+                        Default::default(),
+                        ListVariant::Ordered,
+                        Vec::with_capacity(0),
+                        marker,
+                        principal,
+                        Vec::with_capacity(0),
+                    );
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::OffsetOrderedListMarker { offset, principal } => {
                     *self = Self::List(
+                        Default::default(),
                         ListVariant::Ordered,
+                        Vec::with_capacity(0),
                         format!("{}.", offset),
-                        vec![principal],
+                        principal,
+                        Vec::with_capacity(0),
                     );
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::CalloutListMarker { principal } => {
-                    *self = Self::List(ListVariant::Callout, "<.>".to_string(), vec![principal]);
+                    *self = Self::List(
+                        Default::default(),
+                        ListVariant::Callout,
+                        Vec::with_capacity(0),
+                        "<.>".to_string(),
+                        principal,
+                        Vec::with_capacity(0),
+                    );
                     Ok(SectionLineKind::Nest)
                 }
                 LineKind::OffsetCalloutListMarker { offset, principal } => {
                     *self = Self::List(
+                        Default::default(),
                         ListVariant::Callout,
+                        Vec::with_capacity(0),
                         format!("<{}>", offset),
-                        vec![principal],
+                        principal,
+                        Vec::with_capacity(0),
                     );
                     Ok(SectionLineKind::Nest)
                 }
@@ -826,68 +860,36 @@ impl SectionParser {
                     }
                 }
             }
-            Self::List(v, m, i) => {
-                match LineKind::parse(line) {
-                    LineKind::Empty => {
-                        // TODO: Separating Lists, Compound List Items and list continuation
-                        let list = Self::list_finish(v, m, mem::take(i))?;
+            Self::List(parser, variant, items, marker, principal, blocks) => {
+                match parser.parse_line(line, empty_count)? {
+                    ListLineKind::End(_) => {
+                        items.push(ListItem::new_with_blocks(
+                            marker.to_string(),
+                            principal,
+                            Some(blocks.to_vec()),
+                        ));
+                        let list = variant.to_list(marker.to_string(), items.to_vec())?;
                         *self = Self::Line;
-                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
+                        Ok(SectionLineKind::NestedEnd(SectionBody::Block(
+                            Block::AnyList(list),
+                        )))
                     }
-                    LineKind::CommentMarker => todo!("separating lists: require surrounded by empty lines. currently not keep state"),
-                    LineKind::UnorderedListMarker { marker, principal } => {
-                        // TODO: Nesting List
-                        if matches!(v, ListVariant::Unordered) && marker == *m {
-                            i.push(principal);
-                            Ok(SectionLineKind::Nest)
-                        } else {
-                            let list = Self::list_finish(v, m, mem::take(i))?;
-                            *self = Self::List(ListVariant::Unordered, marker, vec![principal.to_string()]);
-                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
-                        }
-                    },
-                    LineKind::OrderedListMarker { marker, principal } => {
-                        if matches!(v, ListVariant::Ordered) && marker == *m {
-                            i.push(principal);
-                            Ok(SectionLineKind::Nest)
-                        } else {
-                            let list = Self::list_finish(v, m, mem::take(i))?;
-                            *self = Self::List(ListVariant::Ordered, marker, vec![principal.to_string()]);
-                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
-                        }
-                    },
-                    LineKind::OffsetOrderedListMarker { offset, principal } => {
-                        let marker = format!("{}.", offset);
-                        if matches!(v, ListVariant::Ordered) && marker == *m {
-                            i.push(principal);
-                            Ok(SectionLineKind::Nest)
-                        } else {
-                            let list = Self::list_finish(v, m, mem::take(i))?;
-                            *self = Self::List(ListVariant::Ordered, marker, vec![principal.to_string()]);
-                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
-                        }
-                    },
-                    LineKind::CalloutListMarker { principal } => {
-                        if matches!(v, ListVariant::Callout) && *m == "<.>" {
-                            i.push(principal);
-                            Ok(SectionLineKind::Nest)
-                        } else {
-                            let list = Self::list_finish(v, m, mem::take(i))?;
-                            *self = Self::List(ListVariant::Callout, "<.>".to_string(), vec![principal.to_string()]);
-                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
-                        }
-                    },
-                    LineKind::OffsetCalloutListMarker { offset, principal } => {
-                        if matches!(v, ListVariant::Callout) && *m != "<.>" {
-                            i.push(principal);
-                            Ok(SectionLineKind::Nest)
-                        } else {
-                            let list = Self::list_finish(v, m, mem::take(i))?;
-                            *self = Self::List(ListVariant::Callout, format!("<{}>", offset), vec![principal.to_string()]);
-                            Ok(SectionLineKind::NestedEnd(SectionBody::Block(Block::AnyList(list))))
-                        }
+                    ListLineKind::Marker(m, p) if m == *marker => {
+                        items.push(ListItem::new_with_blocks(
+                            marker.to_string(),
+                            principal,
+                            Some(blocks.to_vec()),
+                        ));
+                        *principal = p;
+                        **parser = Default::default();
+                        Ok(SectionLineKind::Nest)
                     }
-                    k => todo!("parse_line: SectionParser::{:?}: LineKind::{:?}", self, k),
+                    ListLineKind::Marker(_, _) => Ok(SectionLineKind::Nest),
+                    k => todo!(
+                        "parse_line: SectionParser::{:?}: ListLineKind::{:?}",
+                        self,
+                        k
+                    ),
                 }
             }
             Self::Dlist(m, i) => {
@@ -971,6 +973,9 @@ impl SectionParser {
             Self::Delimited(parser, variant, delimiter, blocks) => {
                 match parser.parse_line(line, empty_count)? {
                     ParentLineKind::Delimiter(d) if d == *delimiter => {
+                        if let Some(block) = parser.finish() {
+                            blocks.push(block)
+                        }
                         let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
                         *self = Self::Line;
                         Ok(SectionLineKind::NestedEnd(SectionBody::Block(block)))
@@ -1043,12 +1048,18 @@ impl SectionParser {
             }
             Self::Line => None,
             Self::Paragraph(line) => Some(SectionBody::Block(Block::new_paragraph(&line))),
-            Self::List(v, m, i) => {
-                if let Ok(list) = Self::list_finish(&v, &m, i) {
-                    Some(SectionBody::Block(Block::AnyList(list)))
-                } else {
-                    None
+            Self::List(parser, variant, mut items, marker, principal, mut blocks) => {
+                if let Some(body) = parser.finish() {
+                    blocks.push(body);
                 }
+                items.push(ListItem::new_with_blocks(
+                    marker.to_string(),
+                    &principal,
+                    Some(blocks),
+                ));
+                Some(SectionBody::Block(Block::AnyList(
+                    variant.to_list(marker.to_string(), items.to_vec()).unwrap(),
+                )))
             }
             Self::Dlist(m, i) => {
                 let mut items = i.into_iter();
@@ -1089,19 +1100,6 @@ impl SectionParser {
             _ => todo!("finish: SectionParser::{:?}", self),
         }
     }
-
-    fn list_finish(v: &ListVariant, m: &str, i: Vec<String>) -> Result<AnyList, String> {
-        let mut items = i.into_iter();
-        if let Some(principal) = items.next() {
-            let mut list = v.to_list(m.to_string(), principal);
-            for p in items {
-                list.push(&format!("{} {}", m, p))?;
-            }
-            Ok(list)
-        } else {
-            Err("not expected empty items of list".to_string())
-        }
-    }
 }
 
 #[derive(Debug)]
@@ -1130,7 +1128,14 @@ pub(crate) enum ParentParser {
     Paragraph(String),
     AttributedParagraph(Box<[String]>, HashMap<String, String>, String),
     MasqueradingParagraph(LeafVariant, Box<[String]>, HashMap<String, String>, String),
-    List(ListVariant, String, Vec<String>),
+    List(
+        Box<ListParser>,
+        ListVariant,
+        Vec<ListItem>,
+        String,
+        String,
+        Vec<Block>,
+    ),
     Dlist(String, Vec<(String, Option<String>)>),
     DelimitedComment(String),
     Delimited(Box<ParentParser>, ParentVariant, String, Vec<Block>),
@@ -1312,30 +1317,57 @@ impl ParentParser {
                     Ok(ParentLineKind::Delimiter(delimiter))
                 }
                 LineKind::UnorderedListMarker { marker, principal } => {
-                    *self = Self::List(ListVariant::Unordered, marker, vec![principal]);
+                    *self = Self::List(
+                        Default::default(),
+                        ListVariant::Unordered,
+                        Vec::with_capacity(0),
+                        marker,
+                        principal,
+                        Vec::with_capacity(0),
+                    );
                     Ok(ParentLineKind::Nest)
                 }
                 LineKind::OrderedListMarker { marker, principal } => {
-                    *self = Self::List(ListVariant::Ordered, marker, vec![principal]);
+                    *self = Self::List(
+                        Default::default(),
+                        ListVariant::Ordered,
+                        Vec::with_capacity(0),
+                        marker,
+                        principal,
+                        Vec::with_capacity(0),
+                    );
                     Ok(ParentLineKind::Nest)
                 }
                 LineKind::OffsetOrderedListMarker { offset, principal } => {
                     *self = Self::List(
+                        Default::default(),
                         ListVariant::Ordered,
+                        Vec::with_capacity(0),
                         format!("{}.", offset),
-                        vec![principal],
+                        principal,
+                        Vec::with_capacity(0),
                     );
                     Ok(ParentLineKind::Nest)
                 }
                 LineKind::CalloutListMarker { principal } => {
-                    *self = Self::List(ListVariant::Callout, "<.>".to_string(), vec![principal]);
+                    *self = Self::List(
+                        Default::default(),
+                        ListVariant::Ordered,
+                        Vec::with_capacity(0),
+                        "<.>".to_string(),
+                        principal,
+                        Vec::with_capacity(0),
+                    );
                     Ok(ParentLineKind::Nest)
                 }
                 LineKind::OffsetCalloutListMarker { offset, principal } => {
                     *self = Self::List(
-                        ListVariant::Callout,
+                        Default::default(),
+                        ListVariant::Ordered,
+                        Vec::with_capacity(0),
                         format!("<{}>", offset),
-                        vec![principal],
+                        principal,
+                        Vec::with_capacity(0),
                     );
                     Ok(ParentLineKind::Nest)
                 }
@@ -1688,6 +1720,37 @@ impl ParentParser {
                     }
                 }
             }
+            Self::List(parser, variant, items, marker, principal, blocks) => {
+                match parser.parse_line(line, empty_count)? {
+                    ListLineKind::End(_) => {
+                        items.push(ListItem::new_with_blocks(
+                            marker.to_string(),
+                            principal,
+                            Some(blocks.to_vec()),
+                        ));
+                        let list = variant.to_list(marker.to_string(), items.to_vec())?;
+                        *self = Self::Line;
+                        Ok(ParentLineKind::NestedEnd(Block::AnyList(list)))
+                    }
+                    ListLineKind::Marker(m, p) if m == *marker => {
+                        items.push(ListItem::new_with_blocks(
+                            marker.to_string(),
+                            principal,
+                            Some(blocks.to_vec()),
+                        ));
+                        *principal = p;
+                        **parser = Default::default();
+                        Ok(ParentLineKind::Nest)
+                    }
+                    ListLineKind::Marker(_, _) => Ok(ParentLineKind::Nest),
+                    ListLineKind::Delimiter(delimiter) => Ok(ParentLineKind::Delimiter(delimiter)),
+                    k => todo!(
+                        "parse_line: ParentParser::{:?}: ListLineKind::{:?}",
+                        self,
+                        k
+                    ),
+                }
+            }
             Self::DelimitedComment(delimiter) => match LineKind::parse(line) {
                 LineKind::CommentDelimiter(d) | LineKind::OpenDelimiter(d) if d == *delimiter => {
                     *self = Self::Line;
@@ -1698,6 +1761,9 @@ impl ParentParser {
             Self::Delimited(parser, variant, delimiter, blocks) => {
                 match parser.parse_line(line, empty_count)? {
                     ParentLineKind::Delimiter(d) if d == *delimiter => {
+                        if let Some(block) = parser.finish() {
+                            blocks.push(block)
+                        }
                         let block = variant.to_block(delimiter.to_string(), mem::take(blocks));
                         *self = Self::Line;
                         Ok(ParentLineKind::NestedEnd(block))
@@ -1754,20 +1820,29 @@ impl ParentParser {
         }
     }
 
-    fn finish(self) -> Option<Block> {
+    fn finish(&self) -> Option<Block> {
         match self {
             Self::Line => None,
-            Self::List(v, m, i) => {
-                if let Ok(list) = Self::list_finish(&v, &m, i) {
-                    Some(Block::AnyList(list))
-                } else {
-                    None
+            Self::List(parser, variant, items, marker, principal, blocks) => {
+                let mut items = items.to_vec();
+                let mut blocks = blocks.to_vec();
+                if let Some(body) = parser.finish() {
+                    blocks.push(body);
                 }
+                items.push(ListItem::new_with_blocks(
+                    marker.to_string(),
+                    principal,
+                    Some(blocks),
+                ));
+                Some(Block::AnyList(
+                    variant.to_list(marker.to_string(), items).unwrap(),
+                ))
             }
             Self::Dlist(m, i) => {
-                let mut items = i.into_iter();
+                let mut items = i.iter();
                 if let Some((t, p)) = items.next() {
-                    let mut list = AnyList::new_description_list(m.clone(), t, p);
+                    let mut list =
+                        AnyList::new_description_list(m.clone(), t.to_string(), p.clone());
                     for (t, p) in items {
                         let principal = if let Some(principal) = p {
                             format!("{}{} {}", t, m, principal)
@@ -1787,31 +1862,23 @@ impl ParentParser {
                 eprintln!("WARN: unterminated: `{}`", delimiter);
                 None
             }
-            Self::Delimited(parser, variant, delimiter, mut blocks) => {
-                eprintln!("WARN: unterminated: `{}`", delimiter);
+            Self::Delimited(parser, variant, delimiter, blocks) => {
+                let mut blocks = blocks.to_vec();
                 if let Some(block) = parser.finish() {
                     blocks.push(block)
                 }
-                Some(variant.to_block(delimiter, blocks))
+                if blocks.is_empty() {
+                    None
+                } else {
+                    eprintln!("WARN: unterminated: `{}`", delimiter);
+                    Some(variant.to_block(delimiter.to_string(), blocks))
+                }
             }
             Self::DelimitedLeaf(variant, delimiter, lines) => {
                 eprintln!("WARN: unterminated: `{}`", delimiter);
-                Some(variant.to_leaf_with_delimiter(delimiter, &lines.join("\n")))
+                Some(variant.to_leaf_with_delimiter(delimiter.to_string(), &lines.join("\n")))
             }
-            _ => todo!("finish: SectionParser::{:?}", self),
-        }
-    }
-
-    fn list_finish(v: &ListVariant, m: &str, i: Vec<String>) -> Result<AnyList, String> {
-        let mut items = i.into_iter();
-        if let Some(principal) = items.next() {
-            let mut list = v.to_list(m.to_string(), principal);
-            for p in items {
-                list.push(&format!("{} {}", m, p))?;
-            }
-            Ok(list)
-        } else {
-            Err("not expected empty items of list".to_string())
+            _ => todo!("finish: ParentParser::{:?}", self),
         }
     }
 }
@@ -1825,6 +1892,285 @@ pub(crate) enum ParentLineKind {
     NestedEnd(Block),
 }
 
+#[derive(Debug, Default)]
+pub(crate) enum ListParser {
+    #[default]
+    Principal,
+    Line,
+    ListContinuation,
+    ContinuedParagraph(String),
+    Child(
+        Box<ListParser>,
+        ListVariant,
+        Vec<ListItem>,
+        String,
+        String,
+        Vec<Block>,
+    ),
+    Delimited(Box<ParentParser>, ParentVariant, String, Vec<Block>),
+    DelimitedLeaf(LeafVariant, String, Vec<String>),
+}
+impl ListParser {
+    fn parse_line(&mut self, line: &str, empty_count: usize) -> Result<ListLineKind, String> {
+        match self {
+            Self::Principal => match LineKind::parse(line) {
+                LineKind::Empty => {
+                    *self = Self::Line;
+                    Ok(ListLineKind::Skip)
+                }
+                LineKind::InterruptingLine => {
+                    *self = Self::ListContinuation;
+                    Ok(ListLineKind::Nest)
+                }
+                LineKind::UnorderedListMarker { marker, principal } => {
+                    *self = Self::Child(
+                        Default::default(),
+                        ListVariant::Unordered,
+                        Vec::with_capacity(0),
+                        marker.clone(),
+                        principal.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::Marker(marker, principal))
+                }
+                LineKind::OrderedListMarker { marker, principal } => {
+                    *self = Self::Child(
+                        Default::default(),
+                        ListVariant::Ordered,
+                        Vec::with_capacity(0),
+                        marker.clone(),
+                        principal.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::Marker(marker, principal))
+                }
+                LineKind::OffsetOrderedListMarker { offset, principal } => {
+                    *self = Self::Child(
+                        Default::default(),
+                        ListVariant::Ordered,
+                        Vec::with_capacity(0),
+                        format!("{}.", offset),
+                        principal.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::OffsetOrderedMarker(offset, principal))
+                }
+                LineKind::CalloutListMarker { principal } => {
+                    let marker = "<.>".to_string();
+                    *self = Self::Child(
+                        Default::default(),
+                        ListVariant::Callout,
+                        Vec::with_capacity(0),
+                        marker.clone(),
+                        principal.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::Marker(marker, principal))
+                }
+                LineKind::OffsetCalloutListMarker { offset, principal } => {
+                    *self = Self::Child(
+                        Default::default(),
+                        ListVariant::Callout,
+                        Vec::with_capacity(0),
+                        format!("<{}>", offset),
+                        principal.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::OffsetCalloutMarker(offset, principal))
+                }
+                LineKind::ExampleDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        ParentVariant::Example,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::Delimiter(delimiter))
+                }
+                LineKind::SidebarDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        ParentVariant::Sidebar,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::Delimiter(delimiter))
+                }
+                LineKind::QuoteDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        ParentVariant::Quote,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::Delimiter(delimiter))
+                }
+                LineKind::OpenDelimiter(delimiter) => {
+                    *self = Self::Delimited(
+                        Default::default(),
+                        ParentVariant::Open,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::Delimiter(delimiter))
+                }
+                LineKind::ListingDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        LeafVariant::Listing,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::Delimiter(delimiter))
+                }
+                LineKind::LiteralDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        LeafVariant::Literal,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::Delimiter(delimiter))
+                }
+                LineKind::PassthroughDelimiter(delimiter) => {
+                    *self = Self::DelimitedLeaf(
+                        LeafVariant::Passthrough,
+                        delimiter.clone(),
+                        Vec::with_capacity(0),
+                    );
+                    Ok(ListLineKind::Delimiter(delimiter))
+                }
+                LineKind::Unknown if empty_count == 0 => {
+                    Ok(ListLineKind::Principal(line.to_string()))
+                }
+                k => todo!("parse_line: ListParser::{:?}: LineKind::{:?}", self, k),
+            },
+            Self::Line => match LineKind::parse(line) {
+                // TODO: Separating Lists, Compound List Items and list continuation
+                LineKind::InterruptingLine => Ok(ListLineKind::End(empty_count - 1)),
+                LineKind::CommentMarker => todo!(
+                    "separating lists: require surrounded by empty lines. currently not keep state"
+                ),
+                k => todo!("parse_line: ListParser::{:?}: LineKind::{:?}", self, k),
+            },
+            Self::ListContinuation => match LineKind::parse(line) {
+                LineKind::Unknown => {
+                    *self = Self::ContinuedParagraph(format!("+\n{}", line));
+                    Ok(ListLineKind::Skip)
+                }
+                k => todo!("parse_line: ListParser::{:?}: LineKind::{:?}", self, k),
+            },
+            Self::ContinuedParagraph(paragraph) => match LineKind::parse(line) {
+                LineKind::Unknown => {
+                    paragraph.push_str(line);
+                    Ok(ListLineKind::Skip)
+                }
+                k => todo!("parse_line: ListParser::{:?}: LineKind::{:?}", self, k),
+            },
+            Self::Child(parser, variant, items, marker, principal, blocks) => {
+                match parser.parse_line(line, empty_count)? {
+                    ListLineKind::End(count) => {
+                        items.push(ListItem::new_with_blocks(
+                            marker.to_string(),
+                            principal,
+                            Some(blocks.to_vec()),
+                        ));
+                        let list = variant.to_list(marker.to_string(), items.to_vec())?;
+                        *self = Self::ListContinuation;
+                        if count == 0 {
+                            Ok(ListLineKind::NestedEnd(Block::AnyList(list)))
+                        } else {
+                            Ok(ListLineKind::ContinuationEnd(
+                                count - 1,
+                                Block::AnyList(list),
+                            ))
+                        }
+                    }
+                    ListLineKind::ContinuationEnd(count, child) => {
+                        blocks.push(child);
+                        items.push(ListItem::new_with_blocks(
+                            marker.to_string(),
+                            principal,
+                            Some(blocks.to_vec()),
+                        ));
+                        let list = variant.to_list(marker.to_string(), items.to_vec())?;
+                        *self = Self::ListContinuation;
+                        if count == 0 {
+                            Ok(ListLineKind::NestedEnd(Block::AnyList(list)))
+                        } else {
+                            Ok(ListLineKind::ContinuationEnd(
+                                count - 1,
+                                Block::AnyList(list),
+                            ))
+                        }
+                    }
+                    ListLineKind::Marker(m, p) if m == *marker => {
+                        items.push(ListItem::new_with_blocks(
+                            marker.to_string(),
+                            principal,
+                            Some(blocks.to_vec()),
+                        ));
+                        *principal = p;
+                        Ok(ListLineKind::Nest)
+                    }
+                    ListLineKind::Marker(m, p) => Ok(ListLineKind::Marker(m, p)),
+                    k => todo!("parse_line: ListParser::{:?}: ListLineKind::{:?}", self, k),
+                }
+            }
+            _ => todo!("parse_line: ListParser::{:?}", self),
+        }
+    }
+
+    fn finish(&self) -> Option<Block> {
+        match self {
+            Self::Principal | Self::Line => None,
+            Self::ListContinuation => Some(Block::new_paragraph("+")),
+            Self::ContinuedParagraph(p) => Some(Block::new_paragraph(p)),
+            Self::Child(parser, variant, items, marker, principal, blocks) => {
+                let mut items = items.to_vec();
+                let mut blocks = blocks.to_vec();
+                if let Some(child) = parser.finish() {
+                    blocks.push(child);
+                }
+                items.push(ListItem::new_with_blocks(
+                    marker.to_string(),
+                    principal,
+                    Some(blocks),
+                ));
+                Some(Block::AnyList(
+                    variant.to_list(marker.to_string(), items).unwrap(),
+                ))
+            }
+            Self::Delimited(parser, variant, delimiter, blocks) => {
+                let mut blocks = blocks.to_vec();
+                if let Some(block) = parser.finish() {
+                    blocks.push(block)
+                }
+                if blocks.is_empty() {
+                    None
+                } else {
+                    eprintln!("WARN: unterminated: `{}`", delimiter);
+                    Some(variant.to_block(delimiter.to_string(), blocks))
+                }
+            }
+            _ => todo!("finish: ListParser::{:?}", self),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub(crate) enum ListLineKind {
+    Comment,
+    Skip,
+    End(usize),
+    ContinuationEnd(usize, Block),
+    Principal(String),
+    Marker(String, String),
+    OffsetOrderedMarker(usize, String),
+    OffsetCalloutMarker(usize, String),
+    Delimiter(String),
+    Nest,
+    NestedEnd(Block),
+}
+
 #[derive(Debug)]
 pub(crate) enum ListVariant {
     Callout,
@@ -1832,11 +2178,11 @@ pub(crate) enum ListVariant {
     Unordered,
 }
 impl ListVariant {
-    fn to_list(&self, marker: String, principal: String) -> AnyList {
+    fn to_list(&self, marker: String, items: Vec<ListItem>) -> Result<AnyList, String> {
         match self {
-            Self::Callout => AnyList::new_callout_list(marker, principal),
-            Self::Ordered => AnyList::new_ordered_list(marker, principal),
-            Self::Unordered => AnyList::new_unordered_list(marker, principal),
+            Self::Callout => AnyList::new_callout_list(marker, items),
+            Self::Ordered => AnyList::new_ordered_list(marker, items),
+            Self::Unordered => AnyList::new_unordered_list(marker, items),
         }
     }
 }

@@ -37,52 +37,43 @@ pub enum ListVariant {
     Unordered,
 }
 impl AnyList {
-    pub(crate) fn new_callout_list(marker: String, principal: String) -> Self {
-        let items = NonEmptyVec::new(ListItem::new(
-            marker.clone(),
-            Inlines::new_with_text(&principal),
-        ));
+    pub(crate) fn new_callout_list(marker: String, items: Vec<ListItem>) -> Result<Self, String> {
+        let items = NonEmptyVec::try_from(items)?;
 
-        Self::List {
+        Ok(Self::List {
             node_type: NodeType::Block,
             variant: ListVariant::Callout,
             marker,
             title: None,
             location: None,
             items,
-        }
+        })
     }
 
-    pub(crate) fn new_ordered_list(marker: String, principal: String) -> Self {
-        let items = NonEmptyVec::new(ListItem::new(
-            marker.clone(),
-            Inlines::new_with_text(&principal),
-        ));
+    pub(crate) fn new_ordered_list(marker: String, items: Vec<ListItem>) -> Result<Self, String> {
+        let items = NonEmptyVec::try_from(items)?;
 
-        Self::List {
+        Ok(Self::List {
             node_type: NodeType::Block,
             variant: ListVariant::Ordered,
             marker,
             title: None,
             location: None,
             items,
-        }
+        })
     }
 
-    pub(crate) fn new_unordered_list(marker: String, principal: String) -> Self {
-        let items = NonEmptyVec::new(ListItem::new(
-            marker.clone(),
-            Inlines::new_with_text(&principal),
-        ));
+    pub(crate) fn new_unordered_list(marker: String, items: Vec<ListItem>) -> Result<Self, String> {
+        let items = NonEmptyVec::try_from(items)?;
 
-        Self::List {
+        Ok(Self::List {
             node_type: NodeType::Block,
             variant: ListVariant::Unordered,
             marker,
             title: None,
             location: None,
             items,
-        }
+        })
     }
 
     pub(crate) fn new_description_list(
@@ -203,7 +194,7 @@ pub struct ListItem {
     #[serde(rename = "type")]
     node_type: NodeType,
     marker: String,
-    principal: Inlines,
+    pub principal: Inlines,
     blocks: Option<Vec<NonSectionBlockBody>>,
     location: Option<Location>,
 }
@@ -215,6 +206,21 @@ impl ListItem {
             marker,
             principal,
             blocks: Some(Vec::with_capacity(0)),
+            location: None,
+        }
+    }
+
+    pub(crate) fn new_with_blocks(
+        marker: String,
+        principal: &str,
+        blocks: Option<Vec<NonSectionBlockBody>>,
+    ) -> Self {
+        Self {
+            name: "listItem".to_owned(),
+            node_type: NodeType::Block,
+            marker,
+            principal: Inlines::new_with_text(principal),
+            blocks,
             location: None,
         }
     }
@@ -259,54 +265,6 @@ mod tests {
     use super::*;
     use crate::asg::{Inline, InlineLiteral, LiteralValue};
     use std::assert_matches;
-
-    #[test]
-    fn unordered_list() {
-        let mut list = AnyList::new_unordered_list("*".to_owned(), "item 1".to_owned());
-
-        list.push("* item 2").unwrap();
-        list.push("  * item 3").unwrap();
-
-        let AnyList::List {
-            variant,
-            marker,
-            items,
-            ..
-        } = list
-        else {
-            panic!("not expected")
-        };
-        assert_matches!(variant, ListVariant::Unordered);
-        assert_eq!("*", marker);
-
-        assert_eq!(3, items.len());
-        let items = &mut items.into_iter();
-
-        assert_matches!(
-            items.next(),
-            Some(ListItem { principal: Inlines(inlines), .. })
-                if matches!(
-                    inlines.as_slice(),
-                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
-                        if value == "item 1")
-        );
-        assert_matches!(
-            items.next(),
-            Some(ListItem { principal: Inlines(inlines), .. })
-                if matches!(
-                    inlines.as_slice(),
-                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
-                        if value == "item 2")
-        );
-        assert_matches!(
-            items.next(),
-            Some(ListItem { principal: Inlines(inlines), .. })
-                if matches!(
-                    inlines.as_slice(),
-                    [Inline::Literal(InlineLiteral::Text(LiteralValue { value, .. }))]
-                        if value == "item 3")
-        );
-    }
 
     #[test]
     fn description_list() {
