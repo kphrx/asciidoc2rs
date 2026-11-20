@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use serde::{Deserialize, Serialize};
 use serde_with_macros::skip_serializing_none;
 
@@ -7,115 +5,145 @@ use super::Block;
 use crate::asg::{Inlines, Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
-pub enum BlockLeaf {
-    Listing(BlockLeafBody),
-    Literal(BlockLeafBody),
-    Paragraph(BlockLeafBody),
-    Pass(BlockLeafBody),
-    Stem(BlockLeafBody),
-    Verse(BlockLeafBody),
+#[serde(tag = "name", rename_all = "lowercase")]
+pub enum LeafBlock {
+    Listing(LeafBody),
+    Literal(LeafBody),
+    Paragraph(LeafBody),
+    Pass(LeafBody),
+    Stem(LeafBody),
+    Verse(LeafBody),
 }
 
-impl BlockLeaf {
-    fn new_listing() -> Self {
-        Self::Listing(BlockLeafBody::new())
+impl LeafBlock {
+    fn new_listing(text: &str) -> Self {
+        Self::Listing(LeafBody::new_text(text))
     }
 
-    fn new_literal() -> Self {
-        Self::Literal(BlockLeafBody::new())
+    fn new_delimited_listing(delimiter: String, text: &str) -> Self {
+        Self::Listing(LeafBody::new_delimited_text(delimiter, text))
     }
 
-    fn new_paragraph(line: &str) -> Self {
-        Self::Paragraph(BlockLeafBody::new_text(line))
+    fn new_literal(text: &str) -> Self {
+        Self::Literal(LeafBody::new_text(text))
     }
 
-    fn new_pass() -> Self {
-        Self::Pass(BlockLeafBody::new())
+    fn new_delimited_literal(delimiter: String, text: &str) -> Self {
+        Self::Literal(LeafBody::new_delimited_text(delimiter, text))
     }
 
-    fn new_stem() -> Self {
-        Self::Stem(BlockLeafBody::new())
+    fn new_paragraph(text: &str) -> Self {
+        Self::Paragraph(LeafBody::new_text(text))
     }
 
-    fn new_verse() -> Self {
-        Self::Verse(BlockLeafBody::new())
+    fn new_pass(text: &str) -> Self {
+        Self::Pass(LeafBody::new_text(text))
     }
 
-    pub(crate) fn push(&mut self, line: &str) -> Result<(), Box<dyn Error>> {
-        match self {
-            Self::Paragraph(body) => body.inlines.push(line),
-            _ => Err("not implemented".into()),
-        }
+    fn new_delimited_pass(delimiter: String, text: &str) -> Self {
+        Self::Pass(LeafBody::new_delimited_text(delimiter, text))
     }
 
-    pub(crate) fn delimiter(&self) -> Option<String> {
-        match self {
-            BlockLeaf::Listing(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Literal(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Paragraph(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Pass(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Stem(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-            BlockLeaf::Verse(BlockLeafBody { delimiter, .. }) => delimiter.to_owned(),
-        }
+    fn new_stem(text: &str) -> Self {
+        Self::Stem(LeafBody::new_text(text))
+    }
+
+    fn new_delimited_stem(delimiter: String, text: &str) -> Self {
+        Self::Stem(LeafBody::new_delimited_text(delimiter, text))
+    }
+
+    fn new_verse(text: &str) -> Self {
+        Self::Verse(LeafBody::new_text(text))
+    }
+
+    fn new_delimited_verse(delimiter: String, text: &str) -> Self {
+        Self::Verse(LeafBody::new_delimited_text(delimiter, text))
     }
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+#[serde(tag = "form", content = "delimiter", rename_all = "lowercase")]
+pub(crate) enum LeafForm {
+    Delimited(String),
+    Indented,
+    Paragraph,
+}
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BlockLeafBody {
+pub struct LeafBody {
     #[serde(rename = "type")]
     node_type: NodeType,
-    delimiter: Option<String>,
+    #[serde(flatten)]
+    pub(crate) form: Option<LeafForm>,
     title: Option<Inlines>,
-    pub(crate) inlines: Inlines,
+    pub inlines: Inlines,
     location: Option<Location>,
 }
 
-impl BlockLeafBody {
-    fn new() -> Self {
+impl LeafBody {
+    fn new_text(text: &str) -> Self {
         Self {
             node_type: NodeType::Block,
-            delimiter: None,
+            form: None,
             title: None,
-            inlines: Inlines::new(),
+            inlines: Inlines::new_with_text(text),
             location: None,
         }
     }
 
-    fn new_text(line: &str) -> Self {
+    fn new_delimited_text(delimiter: String, text: &str) -> Self {
         Self {
             node_type: NodeType::Block,
-            delimiter: None,
+            form: Some(LeafForm::Delimited(delimiter)),
             title: None,
-            inlines: Inlines::new_with_line(line),
+            inlines: Inlines::new_with_text(text),
             location: None,
         }
     }
 }
 
 impl Block {
-    pub fn new_listing() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_listing())
+    pub(crate) fn new_listing(text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_listing(text))
     }
 
-    pub fn new_literal() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_literal())
+    pub(crate) fn new_delimited_listing(delimiter: String, text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_delimited_listing(delimiter, text))
     }
 
-    pub fn new_paragraph(line: &str) -> Self {
-        Self::BlockLeaf(BlockLeaf::new_paragraph(line))
+    pub(crate) fn new_literal(text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_literal(text))
     }
 
-    pub fn new_pass() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_pass())
+    pub(crate) fn new_delimited_literal(delimiter: String, text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_delimited_literal(delimiter, text))
     }
 
-    pub fn new_stem() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_stem())
+    pub(crate) fn new_paragraph(text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_paragraph(text))
     }
 
-    pub fn new_verse() -> Self {
-        Self::BlockLeaf(BlockLeaf::new_verse())
+    pub(crate) fn new_pass(text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_pass(text))
+    }
+
+    pub(crate) fn new_delimited_pass(delimiter: String, text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_delimited_pass(delimiter, text))
+    }
+
+    pub(crate) fn new_stem(text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_stem(text))
+    }
+
+    pub(crate) fn new_delimited_stem(delimiter: String, text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_delimited_stem(delimiter, text))
+    }
+
+    pub(crate) fn new_verse(text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_verse(text))
+    }
+
+    pub(crate) fn new_delimited_verse(delimiter: String, text: &str) -> Self {
+        Self::Leaf(LeafBlock::new_delimited_verse(delimiter, text))
     }
 }

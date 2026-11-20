@@ -6,46 +6,41 @@ use crate::asg::{Location, NodeType};
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
-pub enum BlockBreak {
-    Break {
-        #[serde(rename = "type")]
-        node_type: NodeType,
-        variant: BlockBreakVariant,
-        location: Option<Location>,
-    },
+#[serde(tag = "variant", rename_all = "lowercase")]
+pub enum Break {
+    Page(BreakInfo),
+    Thematic(BreakInfo),
 }
-impl BlockBreak {
+impl Break {
     fn new_page() -> Self {
-        Self::Break {
+        Self::Page(BreakInfo {
             node_type: NodeType::Block,
-            variant: BlockBreakVariant::Page,
             location: None,
-        }
+        })
     }
 
     fn new_thematic() -> Self {
-        Self::Break {
+        Self::Thematic(BreakInfo {
             node_type: NodeType::Block,
-            variant: BlockBreakVariant::Thematic,
             location: None,
-        }
+        })
     }
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(rename_all = "camelCase")]
-pub enum BlockBreakVariant {
-    Page,
-    Thematic,
+#[serde(tag = "name", rename = "break")]
+pub struct BreakInfo {
+    #[serde(rename = "type")]
+    node_type: NodeType,
+    location: Option<Location>,
 }
 
 impl Block {
     pub fn new_page_break() -> Self {
-        Self::BlockBreak(BlockBreak::new_page())
+        Self::Break(Break::new_page())
     }
 
     pub fn new_thematic_break() -> Self {
-        Self::BlockBreak(BlockBreak::new_thematic())
+        Self::Break(Break::new_thematic())
     }
 }

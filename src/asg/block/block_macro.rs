@@ -5,41 +5,42 @@ use super::Block;
 use crate::asg::{Inlines, Location, NodeType};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(tag = "name", rename_all = "camelCase")]
+#[serde(tag = "name", rename_all = "lowercase")]
 pub enum BlockMacro {
-    Audio(BlockMacroBody),
-    Video(BlockMacroBody),
-    Image(BlockMacroBody),
-    Toc(BlockMacroBody),
+    Audio(MacroBody),
+    Video(MacroBody),
+    Image(MacroBody),
+    Toc(MacroBody),
 }
 impl BlockMacro {
-    fn new_audio() -> Self {
-        Self::Audio(BlockMacroBody::new())
+    fn new_audio(target: String) -> Self {
+        Self::Audio(MacroBody::new_with_target(target))
     }
 
-    fn new_video() -> Self {
-        Self::Video(BlockMacroBody::new())
+    fn new_video(target: String) -> Self {
+        Self::Video(MacroBody::new_with_target(target))
     }
 
-    fn new_image() -> Self {
-        Self::Image(BlockMacroBody::new())
+    fn new_image(target: String) -> Self {
+        Self::Image(MacroBody::new_with_target(target))
     }
 
     fn new_toc() -> Self {
-        Self::Toc(BlockMacroBody::new())
+        Self::Toc(MacroBody::new())
     }
 }
 
 #[skip_serializing_none]
 #[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct BlockMacroBody {
+#[serde(tag = "form", rename = "macro")]
+pub struct MacroBody {
     #[serde(rename = "type")]
     node_type: NodeType,
-    target: Option<String>,
+    pub(crate) target: Option<String>,
     title: Option<Inlines>,
     location: Option<Location>,
 }
-impl BlockMacroBody {
+impl MacroBody {
     fn new() -> Self {
         Self {
             node_type: NodeType::Block,
@@ -48,22 +49,30 @@ impl BlockMacroBody {
             location: None,
         }
     }
+    fn new_with_target(target: String) -> Self {
+        Self {
+            node_type: NodeType::Block,
+            target: Some(target),
+            title: None,
+            location: None,
+        }
+    }
 }
 
 impl Block {
-    pub fn new_audio() -> Self {
-        Self::BlockMacro(BlockMacro::new_audio())
+    pub(crate) fn new_audio(target: String) -> Self {
+        Self::Macro(BlockMacro::new_audio(target))
     }
 
-    pub fn new_video() -> Self {
-        Self::BlockMacro(BlockMacro::new_video())
+    pub(crate) fn new_video(target: String) -> Self {
+        Self::Macro(BlockMacro::new_video(target))
     }
 
-    pub fn new_image() -> Self {
-        Self::BlockMacro(BlockMacro::new_image())
+    pub(crate) fn new_image(target: String) -> Self {
+        Self::Macro(BlockMacro::new_image(target))
     }
 
-    pub fn new_toc() -> Self {
-        Self::BlockMacro(BlockMacro::new_toc())
+    pub(crate) fn new_toc() -> Self {
+        Self::Macro(BlockMacro::new_toc())
     }
 }
