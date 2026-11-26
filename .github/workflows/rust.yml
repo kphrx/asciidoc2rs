@@ -32,19 +32,31 @@ jobs:
       - name: Build
         id: tests
         run: |
-          cargo test --no-run --all-features --verbose
-          cargo test --no-run --all-features 2>&1 | grep Executable \
-            | sed 's# src/\(.*\)\.rs#/\1#;s#\(unittests/\)main#\1bin/main#;s#\(unittests/bin/.*\)/main#\1#;s#tests/\(.*\)\.rs#\integration/\1#;s/(\(.*\))/\1/' \
-            | awk '{print "{\"name\":\""$2"\",\"path\":\""$3"\"}"}' > tests.jsonl
-          jq -c '.' tests.jsonl | while read -r row; do
-            binary=$(echo "$row" | jq -r '.name')
-            path=$(echo "$row" | jq -r '.path')
-            mkdir -p "$(dirname "$binary")"
-            cp "$path" "$binary"
-          done
+          cargo test --no-run --all-features --verbose --message-format=json \
+            | jq -c 'select(.reason == "compiler-artifact" and .profile.test == true and .executable != null)' > tests.jsonl
           {
             echo -n "${{ matrix.toolchain }}-list="
-            jq -c '{name,"toolchain":"${{ matrix.toolchain }}"}' tests.jsonl | jq -sc '.'
+            jq -c '.' tests.jsonl | while read -r row; do
+              binary=$(echo "$row" | jq -r '.executable')
+              name=$(echo "$row" | jq -r '.target.name')
+              case "$(echo "$row" | jq -r '.target.kind[0]')" in
+                "lib")
+                  mkdir -p unittests/
+                  cp "$binary" "unittests/lib"
+                  echo "{\"name\":\"unittests/lib\",\"toolchain\":\"${{ matrix.toolchain }}\"}"
+                  ;;
+                "bin")
+                  mkdir -p unittests/bin
+                  cp "$binary" "unittests/bin/$name"
+                  echo "{\"name\":\"unittests/bin/$name\",\"toolchain\":\"${{ matrix.toolchain }}\"}"
+                  ;;
+                "test")
+                  mkdir -p integration/
+                  cp "$binary" "integration/$name"
+                  echo "{\"name\":\"integration/$name\",\"toolchain\":\"${{ matrix.toolchain }}\"}"
+                  ;;
+              esac
+            done | jq -sc '.'
           } >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v7
         with:
