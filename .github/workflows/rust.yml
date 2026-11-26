@@ -123,6 +123,7 @@ jobs:
         run: |
           llvm-profdata merge -sparse default_*.profraw -o asciidoc2rs.profdata
           llvm-cov export --format="lcov" \
+            --ignore-filename-regex='/.cargo/registry' \
             --instr-profile=asciidoc2rs.profdata \
             --object ${{ matrix.name }} >> asciidoc2rs.lcov
       - uses: codecov/codecov-action@v7
