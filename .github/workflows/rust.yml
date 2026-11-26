@@ -13,6 +13,11 @@ jobs:
     continue-on-error: ${{ matrix.toolchain != 'stable' }}
     env:
       CARGO_TERM_COLOR: always
+      RUSTFLAGS: ${{ case(matrix.toolchain == 'stable', '-C instrument-coverage', '') }}
+    outputs:
+      stable-tests: ${{ steps.tests.outputs.stable-list }}
+      beta-tests: ${{ steps.tests.outputs.beta-list }}
+      nightly-tests: ${{ steps.tests.outputs.nightly-list }}
     strategy:
       matrix:
         toolchain:
@@ -24,47 +29,107 @@ jobs:
       - uses: actions/checkout@v7
       - name: Setup Rust ${{ matrix.toolchain }}
         run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-
       - name: Build
-        run: cargo build --verbose
-
-      - name: Run tests
-        if: matrix.toolchain != 'stable'
-        run: cargo test --all-targets --all-features --workspace --verbose
-
-      - name: Install cargo-llvm-cov
-        if: matrix.toolchain == 'stable'
-        uses: taiki-e/install-action@cargo-llvm-cov
-      - name: Run tests & Generate code coverage
-        if: matrix.toolchain == 'stable'
-        run: cargo llvm-cov --all-targets --all-features --workspace --codecov --output-path codecov.json -vv
-      - name: Upload coverage artifact
-        if: matrix.toolchain == 'stable'
-        uses: actions/upload-artifact@v7
+        id: tests
+        run: |
+          cargo test --no-run --all-features --verbose --message-format=json \
+            | jq -c 'select(.reason == "compiler-artifact" and .profile.test == true and .executable != null)' > tests.jsonl
+          mkdir -p unittests/
+          mkdir -p integration/
+          {
+            echo -n "${{ matrix.toolchain }}-list="
+            jq -c '.' tests.jsonl | while read -r row; do
+              binary=$(echo "$row" | jq -r '.executable')
+              name=$(echo "$row" | jq -r '.target.name')
+              case "$(echo "$row" | jq -r '.target.kind[0]')" in
+                "lib")
+                  cp "$binary" "unittests/lib"
+                  echo "{\"name\":\"unittests/lib\",\"toolchain\":\"${{ matrix.toolchain }}\"}"
+                  ;;
+                "bin")
+                  mkdir -p unittests/bin
+                  cp "$binary" "unittests/bin/$name"
+                  echo "{\"name\":\"unittests/bin/$name\",\"toolchain\":\"${{ matrix.toolchain }}\"}"
+                  ;;
+                "test")
+                  cp "$binary" "integration/$name"
+                  echo "{\"name\":\"integration/$name\",\"toolchain\":\"${{ matrix.toolchain }}\"}"
+                  ;;
+              esac
+            done | jq -sc '.'
+          } >> "$GITHUB_OUTPUT"
+      - name: Archive
+        run: tar -cvf test-binaries-${{ matrix.toolchain }}.tar unittests/ integration/
+      - uses: actions/upload-artifact@v7
         with:
-          if-no-files-found: error
-          name: coverage
-          path: codecov.json
-          retention-days: 7
-
+          path: test-binaries-${{ matrix.toolchain }}.tar
+          archive: false
       - name: Run doc-tests
-        run: cargo test --doc --verbose
+        run: cargo test --doc --all-features --verbose
 
 
-  upload-coverage:
+  test-jobs:
 
     runs-on: ubuntu-latest
     needs: build
+    outputs:
+      matrix: ${{ steps.generate-matrix.outputs.matrix }}
+
+    steps:
+      - name: Generate Matrix
+        id: generate-matrix
+        env:
+          STABLE_TESTS: ${{ needs.build.outputs.stable-tests }}
+          BETA_TESTS: ${{ needs.build.outputs.beta-tests }}
+          NIGHTLY_TESTS: ${{ needs.build.outputs.nightly-tests }}
+        run: |
+          {
+            echo -n 'matrix='
+            {
+              echo "$STABLE_TESTS"
+              echo "$BETA_TESTS"
+              echo "$NIGHTLY_TESTS"
+            } | jq -c '.[]' | jq -sc '.'
+          } >> "$GITHUB_OUTPUT"
+
+
+  tests:
+
+    runs-on: ubuntu-latest
+    needs: test-jobs
+    strategy:
+      matrix:
+        include: ${{ fromJSON(needs.test-jobs.outputs.matrix) }}
 
     steps:
       - uses: actions/checkout@v7
-      - name: Download coverage artifact
-        uses: actions/download-artifact@v8
+        if: matrix.toolchain == 'stable'
+      - uses: actions/download-artifact@v8
         with:
-          name: coverage
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v7
+          name: test-binaries-${{ matrix.toolchain }}.tar
+      - name: Extract
+        run: tar -xvf test-binaries-${{ matrix.toolchain }}.tar
+      - name: Setup LLVM Tools
+        if: matrix.toolchain == 'stable'
+        run: |
+          rustup update ${{ matrix.toolchain }}
+          rustup component add llvm-tools --toolchain ${{ matrix.toolchain }}
+          rustup default ${{ matrix.toolchain }}
+          echo "$(dirname "$(rustup which rustc)")/../lib/rustlib/$(rustc --print host-tuple)/bin" >> "$GITHUB_PATH"
+      - name: Run tests
+        run: ${{ matrix.name }}
+      - name: Generate LCOV
+        if: matrix.toolchain == 'stable'
+        run: |
+          llvm-profdata merge -sparse default_*.profraw -o asciidoc2rs.profdata
+          llvm-cov export --format="lcov" \
+            --ignore-filename-regex='/.cargo/registry' \
+            --instr-profile=asciidoc2rs.profdata \
+            --object ${{ matrix.name }} >> asciidoc2rs.lcov
+      - uses: codecov/codecov-action@v7
+        if: matrix.toolchain == 'stable'
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: codecov.json
+          files: asciidoc2rs.lcov
+          flags: ${{ matrix.toolchain }}/${{ matrix.name }}
           fail_ci_if_error: true
