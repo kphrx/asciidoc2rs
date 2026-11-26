@@ -34,6 +34,8 @@ jobs:
         run: |
           cargo test --no-run --all-features --verbose --message-format=json \
             | jq -c 'select(.reason == "compiler-artifact" and .profile.test == true and .executable != null)' > tests.jsonl
+          mkdir -p unittests/
+          mkdir -p integration/
           {
             echo -n "${{ matrix.toolchain }}-list="
             jq -c '.' tests.jsonl | while read -r row; do
@@ -41,7 +43,6 @@ jobs:
               name=$(echo "$row" | jq -r '.target.name')
               case "$(echo "$row" | jq -r '.target.kind[0]')" in
                 "lib")
-                  mkdir -p unittests/
                   cp "$binary" "unittests/lib"
                   echo "{\"name\":\"unittests/lib\",\"toolchain\":\"${{ matrix.toolchain }}\"}"
                   ;;
@@ -51,19 +52,18 @@ jobs:
                   echo "{\"name\":\"unittests/bin/$name\",\"toolchain\":\"${{ matrix.toolchain }}\"}"
                   ;;
                 "test")
-                  mkdir -p integration/
                   cp "$binary" "integration/$name"
                   echo "{\"name\":\"integration/$name\",\"toolchain\":\"${{ matrix.toolchain }}\"}"
                   ;;
               esac
             done | jq -sc '.'
           } >> "$GITHUB_OUTPUT"
+      - name: Archive
+        run: tar -cvf test-binaries-${{ matrix.toolchain }}.tar unittests/ integration/
       - uses: actions/upload-artifact@v7
         with:
-          name: test-binaries-${{ matrix.toolchain }}
-          path: |
-            unittests/
-            integration/
+          path: test-binaries-${{ matrix.toolchain }}.tar
+          archive: false
       - name: Run doc-tests
         run: cargo test --doc --all-features --verbose
 
@@ -106,7 +106,9 @@ jobs:
         if: matrix.toolchain == 'stable'
       - uses: actions/download-artifact@v8
         with:
-          name: test-binaries-${{ matrix.toolchain }}
+          name: test-binaries-${{ matrix.toolchain }}.tar
+      - name: Extract
+        run: tar -xvf test-binaries-${{ matrix.toolchain }}.tar
       - name: Setup LLVM Tools
         if: matrix.toolchain == 'stable'
         run: |
